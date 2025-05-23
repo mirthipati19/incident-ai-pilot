@@ -3,12 +3,13 @@ import React, { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PromptAnimator from '@/components/Assistant/PromptAnimator';
 import VoiceAssistant from '@/components/Assistant/VoiceAssistant';
+import ChatSupport from '@/components/Assistant/ChatSupport';
 import CreateIncidentForm from '@/components/Incidents/CreateIncidentForm';
 import IncidentList from '@/components/Incidents/IncidentList';
 import IncidentDetails from '@/components/Incidents/IncidentDetails';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { HeadphonesIcon, Plus, List, CheckCircle, XCircle, Clock } from 'lucide-react';
+import { HeadphonesIcon, Plus, List, CheckCircle, XCircle, Clock, MessageCircle } from 'lucide-react';
 
 interface Incident {
   id: string;
@@ -41,6 +42,10 @@ const ITSMPage = () => {
         setCurrentPrompt('I can help you with incident management, status checks, or creating new tickets.');
       }
     }, 2000);
+  };
+
+  const handleChatMessage = (message: string) => {
+    console.log('Chat message sent:', message);
   };
 
   const handleIncidentCreated = (incidentData: any) => {
@@ -80,15 +85,26 @@ const ITSMPage = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div 
+      className="min-h-screen relative p-4"
+      style={{
+        backgroundImage: `url('/lovable-uploads/50b753fc-5735-49ae-ad55-1cc4efdd1bc3.png')`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
+      {/* Overlay for better readability */}
+      <div className="absolute inset-0 bg-black/20"></div>
+      
+      <div className="relative z-10 max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="text-center space-y-4">
-          <h1 className="text-4xl font-bold text-gray-900 flex items-center justify-center gap-3">
-            <HeadphonesIcon className="w-10 h-10 text-blue-600" />
-            Smart Support Assistant
+          <h1 className="text-4xl font-bold text-white flex items-center justify-center gap-3 drop-shadow-lg">
+            <HeadphonesIcon className="w-10 h-10 text-blue-300" />
+            Mouritech Support Dashboard
           </h1>
-          <p className="text-lg text-gray-600">
+          <p className="text-lg text-white/90 drop-shadow-md">
             AI-powered IT Service Management with voice and automation
           </p>
         </div>
@@ -96,14 +112,14 @@ const ITSMPage = () => {
         {/* Statistics Dashboard */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {stats.map((stat) => (
-            <Card key={stat.label}>
+            <Card key={stat.label} className="bg-white/10 backdrop-blur-sm border border-white/20">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">{stat.label}</p>
-                    <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
+                    <p className="text-sm font-medium text-white/80">{stat.label}</p>
+                    <p className="text-2xl font-bold text-white">{stat.value}</p>
                   </div>
-                  <stat.icon className={`w-8 h-8 ${stat.color}`} />
+                  <stat.icon className={`w-8 h-8 ${stat.color.replace('text-', 'text-').replace('-600', '-300')}`} />
                 </div>
               </CardContent>
             </Card>
@@ -111,28 +127,47 @@ const ITSMPage = () => {
         </div>
 
         {/* AI Assistant Section */}
-        <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 border-blue-200">
-          <CardHeader>
-            <CardTitle className="text-center text-blue-800">AI Support Assistant</CardTitle>
-          </CardHeader>
-          <CardContent className="text-center space-y-4">
-            <PromptAnimator text={currentPrompt} />
-            <VoiceAssistant onVoiceResult={handleVoiceResult} />
-          </CardContent>
-        </Card>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Voice Assistant */}
+          <Card className="bg-white/10 backdrop-blur-sm border border-white/20">
+            <CardHeader>
+              <CardTitle className="text-center text-white flex items-center justify-center gap-2">
+                <HeadphonesIcon className="w-5 h-5" />
+                Voice Assistant
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="text-center space-y-4">
+              <PromptAnimator text={currentPrompt} />
+              <VoiceAssistant onVoiceResult={handleVoiceResult} />
+            </CardContent>
+          </Card>
+
+          {/* Chat Support */}
+          <Card className="bg-white/10 backdrop-blur-sm border border-white/20">
+            <CardHeader>
+              <CardTitle className="text-center text-white flex items-center justify-center gap-2">
+                <MessageCircle className="w-5 h-5" />
+                Chat Support
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              <ChatSupport onMessageSent={handleChatMessage} />
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="incidents" className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="incidents" className="flex items-center gap-2">
+          <TabsList className="grid w-full grid-cols-3 bg-white/10 backdrop-blur-sm border border-white/20">
+            <TabsTrigger value="incidents" className="flex items-center gap-2 text-white data-[state=active]:bg-white/20 data-[state=active]:text-white">
               <List className="w-4 h-4" />
               All Incidents
             </TabsTrigger>
-            <TabsTrigger value="create" className="flex items-center gap-2">
+            <TabsTrigger value="create" className="flex items-center gap-2 text-white data-[state=active]:bg-white/20 data-[state=active]:text-white">
               <Plus className="w-4 h-4" />
               Create Incident
             </TabsTrigger>
-            <TabsTrigger value="my-incidents" className="flex items-center gap-2">
+            <TabsTrigger value="my-incidents" className="flex items-center gap-2 text-white data-[state=active]:bg-white/20 data-[state=active]:text-white">
               <CheckCircle className="w-4 h-4" />
               My Incidents
             </TabsTrigger>
@@ -152,13 +187,13 @@ const ITSMPage = () => {
           </TabsContent>
 
           <TabsContent value="my-incidents" className="mt-6">
-            <Card>
+            <Card className="bg-white/10 backdrop-blur-sm border border-white/20">
               <CardHeader>
-                <CardTitle>My Assigned Incidents</CardTitle>
+                <CardTitle className="text-white">My Assigned Incidents</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8 text-gray-500">
-                  <CheckCircle className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+                <div className="text-center py-8 text-white/70">
+                  <CheckCircle className="w-12 h-12 mx-auto mb-4 text-white/40" />
                   <p>No incidents assigned to you at the moment.</p>
                   <p className="text-sm">Great job keeping up with your workload!</p>
                 </div>
