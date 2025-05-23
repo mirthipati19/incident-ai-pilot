@@ -1,6 +1,5 @@
-
-import React, { useState } from 'react';
-import { Mic, MicOff } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { PhoneCall } from 'lucide-react';
 
 interface VoiceAssistantProps {
   onVoiceResult?: (text: string) => void;
@@ -9,6 +8,19 @@ interface VoiceAssistantProps {
 const VoiceAssistant = ({ onVoiceResult }: VoiceAssistantProps) => {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
+  const [showRing, setShowRing] = useState(false);
+
+  useEffect(() => {
+    if (isListening) {
+      setShowRing(true);
+    } else {
+      // Keep the ring visible for a moment after listening stops
+      const timer = setTimeout(() => {
+        setShowRing(false);
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isListening]);
 
   const handleVoice = () => {
     if (!('webkitSpeechRecognition' in window)) {
@@ -54,24 +66,33 @@ const VoiceAssistant = ({ onVoiceResult }: VoiceAssistantProps) => {
 
   return (
     <div className="flex flex-col items-center gap-4 p-6">
-      <div className="relative">
-        <div 
-          className={`rounded-full w-24 h-24 border-4 flex items-center justify-center transition-all duration-300 ${
-            isListening 
-              ? 'border-blue-500 bg-blue-50 animate-pulse shadow-lg shadow-blue-200' 
-              : 'border-gray-400 bg-gray-50 hover:border-blue-400 hover:bg-blue-50'
-          }`}
-        >
-          {isListening ? (
-            <Mic className="w-8 h-8 text-blue-600" />
-          ) : (
-            <MicOff className="w-8 h-8 text-gray-600" />
-          )}
-        </div>
-        
-        {isListening && (
-          <div className="absolute inset-0 rounded-full border-4 border-blue-300 animate-ping opacity-50"></div>
+      <div className="relative flex justify-center items-center">
+        {/* Siri-like pulsing ring */}
+        {showRing && (
+          <div className="absolute inset-0">
+            <div className="absolute inset-0 rounded-full border-4 border-cyan-300 animate-ping opacity-30"></div>
+            <div className="absolute inset-0 rounded-full border-4 border-blue-400 animate-ping opacity-20" style={{ animationDelay: '0.5s' }}></div>
+          </div>
         )}
+        
+        {/* Main gradient ring - inspired by Siri */}
+        <div className="relative w-40 h-40">
+          <div className={`absolute inset-0 rounded-full ${isListening ? 'animate-pulse' : ''} overflow-hidden`}>
+            <div className="w-full h-full bg-gradient-to-br from-cyan-400 via-blue-500 to-violet-500 opacity-80"></div>
+          </div>
+          
+          {/* Inner circle with hole */}
+          <div className="absolute inset-0 flex items-center justify-center">
+            <div className="w-24 h-24 rounded-full bg-slate-900 flex items-center justify-center">
+              {isListening && (
+                <div className="absolute inset-0">
+                  <div className="absolute inset-0 rounded-full border-2 border-cyan-400 animate-ping opacity-50"></div>
+                </div>
+              )}
+              <PhoneCall className={`w-10 h-10 ${isListening ? 'text-cyan-400 animate-pulse' : 'text-white'}`} />
+            </div>
+          </div>
+        </div>
       </div>
       
       <div className="text-center">
@@ -80,21 +101,21 @@ const VoiceAssistant = ({ onVoiceResult }: VoiceAssistantProps) => {
             onClick={stopListening}
             className="bg-red-600 text-white px-6 py-2 rounded-xl hover:bg-red-700 transition-colors"
           >
-            Stop Listening
+            End Call
           </button>
         ) : (
           <button 
             onClick={handleVoice}
-            className="bg-blue-600 text-white px-6 py-2 rounded-xl hover:bg-blue-700 transition-colors"
+            className="bg-cyan-500 text-white px-6 py-2 rounded-xl hover:bg-cyan-600 transition-colors"
           >
-            Start Speaking
+            Call Assistant
           </button>
         )}
       </div>
       
       {transcript && (
-        <div className="mt-4 p-3 bg-gray-100 rounded-lg max-w-md text-center">
-          <p className="text-sm text-gray-700">{transcript}</p>
+        <div className="mt-4 p-3 bg-slate-800/50 backdrop-blur-sm rounded-lg max-w-md text-center border border-cyan-500/30">
+          <p className="text-sm text-cyan-100">{transcript}</p>
         </div>
       )}
     </div>

@@ -111,9 +111,9 @@ const ChatSupport = ({ onMessageSent }: ChatSupportProps) => {
   };
 
   return (
-    <div className="flex flex-col h-[500px] bg-purple-600/90 backdrop-blur-md border border-purple-400/30 rounded-xl shadow-2xl">
+    <div className="flex flex-col h-[500px] bg-blue-900/90 backdrop-blur-md border border-blue-700/30 rounded-xl shadow-2xl">
       {/* Chat Header */}
-      <div className="flex items-center p-4 border-b border-purple-400/30 bg-purple-700/50 rounded-t-xl">
+      <div className="flex items-center p-4 border-b border-blue-700/30 bg-blue-950/50 rounded-t-xl">
         <Bot className="w-6 h-6 text-white mr-3" />
         <h3 className="font-bold text-white text-lg">Mouritech Support Chat</h3>
       </div>
@@ -128,8 +128,8 @@ const ChatSupport = ({ onMessageSent }: ChatSupportProps) => {
             <div
               className={`max-w-xs lg:max-w-md px-4 py-3 rounded-xl shadow-lg ${
                 message.sender === 'user'
-                  ? 'bg-purple-500/90 text-white ml-4'
-                  : 'bg-purple-400/30 text-white border border-purple-300/40 mr-4'
+                  ? 'bg-blue-700/90 text-white ml-4'
+                  : 'bg-blue-800/50 text-white border border-blue-600/40 mr-4'
               }`}
             >
               <div className="flex items-start gap-2">
@@ -146,7 +146,7 @@ const ChatSupport = ({ onMessageSent }: ChatSupportProps) => {
         ))}
         {isTyping && (
           <div className="flex justify-start">
-            <div className="bg-purple-400/30 text-white border border-purple-300/40 px-4 py-3 rounded-xl max-w-xs mr-4 shadow-lg">
+            <div className="bg-blue-800/50 text-white border border-blue-600/40 px-4 py-3 rounded-xl max-w-xs mr-4 shadow-lg">
               <div className="flex items-center gap-2">
                 <Bot className="w-4 h-4 text-white" />
                 <div className="flex space-x-1">
@@ -162,20 +162,20 @@ const ChatSupport = ({ onMessageSent }: ChatSupportProps) => {
       </div>
 
       {/* Input */}
-      <div className="p-4 border-t border-purple-400/30 bg-purple-700/50 rounded-b-xl">
+      <div className="p-4 border-t border-blue-700/30 bg-blue-950/50 rounded-b-xl">
         <div className="flex gap-3">
           <Textarea
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="Type your message..."
-            className="flex-1 min-h-[45px] max-h-32 bg-purple-500/20 border-purple-300/40 text-white placeholder:text-white/70 focus:ring-purple-300/50 focus:border-purple-300/50 rounded-lg font-medium"
+            className="flex-1 min-h-[45px] max-h-32 bg-blue-800/20 border-blue-600/40 text-white placeholder:text-white/70 focus:ring-blue-500/50 focus:border-blue-500/50 rounded-lg font-medium"
             disabled={isTyping}
           />
           <Button
             onClick={handleSendMessage}
             disabled={!inputMessage.trim() || isTyping}
-            className="bg-purple-600/90 hover:bg-purple-700/90 text-white border-none px-4 py-2 rounded-lg shadow-lg"
+            className="bg-blue-700/90 hover:bg-blue-800/90 text-white border-none px-4 py-2 rounded-lg shadow-lg"
           >
             <Send className="w-4 h-4" />
           </Button>
