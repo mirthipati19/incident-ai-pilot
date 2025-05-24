@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Bot, User, AlertCircle } from 'lucide-react';
+import { Send, Bot, User, AlertCircle, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -10,6 +10,8 @@ interface Message {
   sender: 'user' | 'bot';
   timestamp: string;
   isTicketCreated?: boolean;
+  isTicketClosed?: boolean;
+  ticketId?: string;
 }
 
 interface ChatSupportProps {
@@ -27,6 +29,7 @@ const ChatSupport = ({ onMessageSent }: ChatSupportProps) => {
   ]);
   const [inputMessage, setInputMessage] = useState('');
   const [isTyping, setIsTyping] = useState(false);
+  const [activeTickets, setActiveTickets] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -37,34 +40,80 @@ const ChatSupport = ({ onMessageSent }: ChatSupportProps) => {
     scrollToBottom();
   }, [messages]);
 
-  const generateBotResponse = (userMessage: string): string => {
+  const generateBotResponse = (userMessage: string): { response: string, shouldCloseTicket: boolean, ticketId?: string } => {
     const lowerMessage = userMessage.toLowerCase();
     const problemKeywords = ['problem', 'issue', 'error', 'not working', 'broken', 'help', 'trouble', 'cant', "can't", 'unable', 'need'];
     const containsProblemKeyword = problemKeywords.some(keyword => lowerMessage.includes(keyword));
     
+    // Check if user is confirming a solution worked
+    const confirmationKeywords = ['thanks', 'thank you', 'worked', 'fixed', 'resolved', 'good', 'perfect', 'solved', 'done'];
+    const isConfirmingFix = confirmationKeywords.some(keyword => lowerMessage.includes(keyword));
+    
+    if (isConfirmingFix && activeTickets.size > 0) {
+      const ticketId = Array.from(activeTickets)[0];
+      return {
+        response: `Excellent! I'm glad the solution worked. I've automatically closed ticket #${ticketId}. If you need any further assistance, just let me know!`,
+        shouldCloseTicket: true,
+        ticketId
+      };
+    }
+    
     if (containsProblemKeyword && userMessage.length > 10) {
       const ticketId = Date.now().toString();
-      return `I've automatically created incident ticket #${ticketId} for your issue. I'm analyzing: "${userMessage}" and will provide a solution shortly. You can track this ticket in the Incidents tab.`;
+      return {
+        response: `I've automatically created incident ticket #${ticketId} for your issue. I'm analyzing: "${userMessage}" and will provide a solution shortly. You can track this ticket in the Incidents tab.`,
+        shouldCloseTicket: false,
+        ticketId
+      };
     } else if (lowerMessage.includes('password') || lowerMessage.includes('reset')) {
-      return 'I can help you reset your password. I\'ll initiate the password reset process for your account and create a ticket to track this request.';
+      const hasActiveTicket = activeTickets.size > 0;
+      const ticketId = hasActiveTicket ? Array.from(activeTickets)[0] : Date.now().toString();
+      
+      return {
+        response: `I can help you reset your password. Please go to the login page and click "Forgot Password", then check your email for reset instructions. Once you've successfully reset your password, your issue should be resolved. ${hasActiveTicket ? `I'll close ticket #${ticketId} once you confirm this worked.` : `I've created ticket #${ticketId} to track this request.`}`,
+        shouldCloseTicket: false,
+        ticketId: hasActiveTicket ? undefined : ticketId
+      };
     } else if (lowerMessage.includes('software') || lowerMessage.includes('install')) {
-      return 'I can assist with software installation and configuration. What software do you need help with? I\'ll create a ticket and can connect to your device if needed.';
+      const hasActiveTicket = activeTickets.size > 0;
+      const ticketId = hasActiveTicket ? Array.from(activeTickets)[0] : Date.now().toString();
+      
+      return {
+        response: `I can assist with software installation. I've provided step-by-step installation instructions and can connect to your device if needed. Follow the installation guide in your email, and let me know if you encounter any issues. ${hasActiveTicket ? `I'll close ticket #${ticketId} once installation is complete.` : `I've created ticket #${ticketId} to track this installation.`}`,
+        shouldCloseTicket: false,
+        ticketId: hasActiveTicket ? undefined : ticketId
+      };
     } else if (lowerMessage.includes('status') || lowerMessage.includes('check')) {
-      return 'I can help you check the status of your existing tickets or incidents. Do you have a ticket number you\'d like me to look up?';
+      return {
+        response: 'I can help you check the status of your existing tickets or incidents. Do you have a ticket number you\'d like me to look up?',
+        shouldCloseTicket: false
+      };
     } else if (lowerMessage.includes('hello') || lowerMessage.includes('hi')) {
-      return 'Hello! I\'m here to assist you with any IT support needs. Just describe your problem and I\'ll automatically create and manage tickets for you.';
+      return {
+        response: 'Hello! I\'m here to assist you with any IT support needs. Just describe your problem and I\'ll automatically create and manage tickets for you.',
+        shouldCloseTicket: false
+      };
     } else {
-      return 'I understand. Please provide more details about your issue so I can create an appropriate support ticket and help resolve your problem.';
+      return {
+        response: 'I understand. Please provide more details about your issue so I can create an appropriate support ticket and help resolve your problem.',
+        shouldCloseTicket: false
+      };
     }
   };
 
-  const typeMessage = (text: string, messageId: string, isTicketMessage = false) => {
+  const typeMessage = (text: string, messageId: string, isTicketMessage = false, isClosureMessage = false, ticketId?: string) => {
     let index = 0;
     const interval = setInterval(() => {
       setMessages(prev => 
         prev.map(msg => 
           msg.id === messageId 
-            ? { ...msg, text: text.slice(0, index + 1), isTicketCreated: isTicketMessage }
+            ? { 
+                ...msg, 
+                text: text.slice(0, index + 1), 
+                isTicketCreated: isTicketMessage,
+                isTicketClosed: isClosureMessage,
+                ticketId: ticketId
+              }
             : msg
         )
       );
@@ -89,22 +138,35 @@ const ChatSupport = ({ onMessageSent }: ChatSupportProps) => {
     setMessages(prev => [...prev, userMessage]);
     onMessageSent?.(inputMessage);
 
-    // Check if this is a problem description for ticket creation
+    // Generate bot response with ticket management logic
+    const { response: botResponseText, shouldCloseTicket, ticketId } = generateBotResponse(inputMessage);
+    const botMessageId = (Date.now() + 1).toString();
+    
+    // Handle ticket creation
     const lowerMessage = inputMessage.toLowerCase();
     const problemKeywords = ['problem', 'issue', 'error', 'not working', 'broken', 'help', 'trouble', 'cant', "can't", 'unable', 'need'];
     const containsProblemKeyword = problemKeywords.some(keyword => lowerMessage.includes(keyword));
     const isTicketMessage = containsProblemKeyword && inputMessage.length > 10;
 
-    // Generate bot response
-    const botResponseText = generateBotResponse(inputMessage);
-    const botMessageId = (Date.now() + 1).toString();
+    // Update active tickets
+    if (isTicketMessage && ticketId) {
+      setActiveTickets(prev => new Set(prev).add(ticketId));
+    } else if (shouldCloseTicket && ticketId) {
+      setActiveTickets(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(ticketId);
+        return newSet;
+      });
+    }
     
     const botMessage: Message = {
       id: botMessageId,
       text: '',
       sender: 'bot',
       timestamp: new Date().toISOString(),
-      isTicketCreated: isTicketMessage
+      isTicketCreated: isTicketMessage,
+      isTicketClosed: shouldCloseTicket,
+      ticketId: ticketId
     };
 
     setInputMessage('');
@@ -112,7 +174,7 @@ const ChatSupport = ({ onMessageSent }: ChatSupportProps) => {
 
     setTimeout(() => {
       setMessages(prev => [...prev, botMessage]);
-      typeMessage(botResponseText, botMessageId, isTicketMessage);
+      typeMessage(botResponseText, botMessageId, isTicketMessage, shouldCloseTicket, ticketId);
     }, 500);
   };
 
@@ -147,6 +209,8 @@ const ChatSupport = ({ onMessageSent }: ChatSupportProps) => {
                   ? 'bg-blue-600/90 text-white ml-4 border border-blue-500/50'
                   : message.isTicketCreated
                   ? 'bg-green-800/90 text-white border border-green-500/50 mr-4'
+                  : message.isTicketClosed
+                  ? 'bg-purple-800/90 text-white border border-purple-500/50 mr-4'
                   : 'bg-slate-800/90 text-white border border-slate-600/50 mr-4'
               }`}
             >
@@ -154,6 +218,8 @@ const ChatSupport = ({ onMessageSent }: ChatSupportProps) => {
                 {message.sender === 'bot' && (
                   message.isTicketCreated ? (
                     <AlertCircle className="w-4 h-4 mt-1 text-green-300 flex-shrink-0" />
+                  ) : message.isTicketClosed ? (
+                    <CheckCircle className="w-4 h-4 mt-1 text-purple-300 flex-shrink-0" />
                   ) : (
                     <Bot className="w-4 h-4 mt-1 text-white flex-shrink-0" />
                   )
