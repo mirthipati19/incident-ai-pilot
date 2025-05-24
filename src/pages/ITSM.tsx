@@ -9,7 +9,7 @@ import IncidentList from '@/components/Incidents/IncidentList';
 import IncidentDetails from '@/components/Incidents/IncidentDetails';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { HeadphonesIcon, List, CheckCircle, XCircle, Clock, MessageCircle, Phone, Shield, Settings, Users, AlertTriangle } from 'lucide-react';
+import { MessageSquare, List, CheckCircle, XCircle, Clock, Phone, Shield, Settings, Users, AlertTriangle } from 'lucide-react';
 
 interface Incident {
   id: string;
@@ -119,7 +119,7 @@ const ITSMPage = () => {
     );
   };
 
-  // Enhanced statistics with ServiceNow-style metrics
+  // Enhanced statistics with enterprise-style metrics
   const stats = [
     { label: 'Open Incidents', value: incidents.filter(i => i.status === 'Open').length || 12, icon: XCircle, color: 'text-red-600' },
     { label: 'In Progress', value: incidents.filter(i => i.status === 'In Progress').length || 8, icon: Clock, color: 'text-yellow-600' },
@@ -128,206 +128,190 @@ const ITSMPage = () => {
   ];
 
   return (
-    <div 
-      className="min-h-screen relative p-4"
-      style={{
-        backgroundImage: `url('/lovable-uploads/50b753fc-5735-49ae-ad55-1cc4efdd1bc3.png')`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat'
-      }}
-    >
-      {/* Overlay for better readability */}
-      <div className="absolute inset-0 bg-black/30"></div>
-      
-      <div className="relative z-10 max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="text-center space-y-4">
-          <h1 className="text-4xl font-bold text-white flex items-center justify-center gap-3 drop-shadow-lg">
-            <HeadphonesIcon className="w-10 h-10 text-blue-300" />
-            Mouritech Support
-          </h1>
-          <p className="text-lg text-white/90 drop-shadow-md">
-            AI-powered IT Service Management with voice, automation and smart device integration
-          </p>
+    <div className="p-6 space-y-6 bg-gray-50 min-h-screen">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">IT Service Management</h1>
+          <p className="text-gray-600 mt-1">Incident management and support system</p>
         </div>
+      </div>
 
-        {/* Statistics Dashboard */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {stats.map((stat) => (
-            <Card key={stat.label} className="bg-white/10 backdrop-blur-sm border border-white/20 hover:bg-white/15 transition-all">
-              <CardContent className="p-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-white/80">{stat.label}</p>
-                    <p className="text-2xl font-bold text-white">{stat.value}</p>
-                  </div>
-                  <stat.icon className={`w-8 h-8 ${stat.color.replace('text-', 'text-').replace('-600', '-300')}`} />
+      {/* Statistics Dashboard */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        {stats.map((stat) => (
+          <Card key={stat.label} className="hover:shadow-md transition-shadow">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-gray-600">{stat.label}</p>
+                  <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {/* AI Assistant Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Call Support */}
-          <Card className="bg-white/10 backdrop-blur-sm border border-white/20">
-            <CardHeader>
-              <CardTitle className="text-center text-white flex items-center justify-center gap-2">
-                <Phone className="w-5 h-5" />
-                Call Support
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="text-center space-y-4">
-              <PromptAnimator text={currentPrompt} />
-              <CallSupport onCallResult={handleCallResult} />
+                <stat.icon className={`w-8 h-8 ${stat.color}`} />
+              </div>
             </CardContent>
           </Card>
+        ))}
+      </div>
 
-          {/* Chat Support */}
-          <Card className="bg-white/10 backdrop-blur-sm border border-white/20">
-            <CardHeader>
-              <CardTitle className="text-center text-white flex items-center justify-center gap-2">
-                <MessageCircle className="w-5 h-5" />
-                Chat Support
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <ChatSupport onMessageSent={handleChatMessage} />
-            </CardContent>
-          </Card>
+      {/* AI Assistant Section */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Call Support */}
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader>
+            <CardTitle className="text-center flex items-center justify-center gap-2">
+              <Phone className="w-5 h-5" />
+              Call Support
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="text-center space-y-4">
+            <PromptAnimator text={currentPrompt} />
+            <CallSupport onCallResult={handleCallResult} />
+          </CardContent>
+        </Card>
 
-          {/* Device Connection */}
-          <Card className="bg-white/10 backdrop-blur-sm border border-white/20">
+        {/* Chat Support */}
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader>
+            <CardTitle className="text-center flex items-center justify-center gap-2">
+              <MessageSquare className="w-5 h-5" />
+              Chat Support
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <ChatSupport onMessageSent={handleChatMessage} />
+          </CardContent>
+        </Card>
+
+        {/* Device Connection */}
+        <Card className="hover:shadow-md transition-shadow">
+          <CardHeader>
+            <CardTitle className="text-center flex items-center justify-center gap-2">
+              <Shield className="w-5 h-5" />
+              Smart Agent
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {showConnectPrompt ? (
+              <ConnectPermissionPrompt onApproval={() => setShowConnectPrompt(false)} />
+            ) : (
+              <div className="text-center py-8">
+                <Shield className="w-12 h-12 mx-auto mb-4 text-gray-400" />
+                <p className="text-gray-600 text-sm">Ready to connect when needed</p>
+                <button 
+                  onClick={() => setShowConnectPrompt(true)}
+                  className="mt-3 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm transition-colors"
+                >
+                  Request Connection
+                </button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Main Content Tabs */}
+      <Tabs defaultValue="incidents" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="incidents" className="flex items-center gap-2">
+            <List className="w-4 h-4" />
+            Incidents
+          </TabsTrigger>
+          <TabsTrigger value="my-work" className="flex items-center gap-2">
+            <Users className="w-4 h-4" />
+            My Work
+          </TabsTrigger>
+          <TabsTrigger value="admin" className="flex items-center gap-2">
+            <Settings className="w-4 h-4" />
+            Admin
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="incidents" className="mt-6">
+          <IncidentList 
+            incidents={incidents}
+            onIncidentSelect={handleIncidentSelect}
+          />
+        </TabsContent>
+
+        <TabsContent value="my-work" className="mt-6">
+          <Card>
             <CardHeader>
-              <CardTitle className="text-center text-white flex items-center justify-center gap-2">
-                <Shield className="w-5 h-5" />
-                Smart Agent
-              </CardTitle>
+              <CardTitle>My Assigned Work</CardTitle>
             </CardHeader>
             <CardContent>
-              {showConnectPrompt ? (
-                <ConnectPermissionPrompt onApproval={() => setShowConnectPrompt(false)} />
-              ) : (
-                <div className="text-center py-8">
-                  <Shield className="w-12 h-12 mx-auto mb-4 text-white/60" />
-                  <p className="text-white/80 text-sm">Ready to connect when needed</p>
-                  <button 
-                    onClick={() => setShowConnectPrompt(true)}
-                    className="mt-3 bg-blue-600/80 hover:bg-blue-700/80 text-white px-4 py-2 rounded-lg text-sm"
-                  >
-                    Request Connection
-                  </button>
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="text-center p-4 bg-blue-50 rounded-lg border border-blue-200">
+                    <h4 className="text-gray-700 font-medium mb-2">Active Tickets</h4>
+                    <p className="text-2xl font-bold text-blue-600">5</p>
+                  </div>
+                  <div className="text-center p-4 bg-yellow-50 rounded-lg border border-yellow-200">
+                    <h4 className="text-gray-700 font-medium mb-2">Pending Review</h4>
+                    <p className="text-2xl font-bold text-yellow-600">2</p>
+                  </div>
+                  <div className="text-center p-4 bg-green-50 rounded-lg border border-green-200">
+                    <h4 className="text-gray-700 font-medium mb-2">Completed Today</h4>
+                    <p className="text-2xl font-bold text-green-600">8</p>
+                  </div>
                 </div>
-              )}
+              </div>
             </CardContent>
           </Card>
-        </div>
+        </TabsContent>
 
-        {/* Main Content Tabs */}
-        <Tabs defaultValue="incidents" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-white/10 backdrop-blur-sm border border-white/20">
-            <TabsTrigger value="incidents" className="flex items-center gap-2 text-white data-[state=active]:bg-white/20 data-[state=active]:text-white">
-              <List className="w-4 h-4" />
-              Incidents
-            </TabsTrigger>
-            <TabsTrigger value="my-work" className="flex items-center gap-2 text-white data-[state=active]:bg-white/20 data-[state=active]:text-white">
-              <Users className="w-4 h-4" />
-              My Work
-            </TabsTrigger>
-            <TabsTrigger value="admin" className="flex items-center gap-2 text-white data-[state=active]:bg-white/20 data-[state=active]:text-white">
-              <Settings className="w-4 h-4" />
-              Admin
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="incidents" className="mt-6">
-            <IncidentList 
-              incidents={incidents}
-              onIncidentSelect={handleIncidentSelect}
-            />
-          </TabsContent>
-
-          <TabsContent value="my-work" className="mt-6">
-            <Card className="bg-white/10 backdrop-blur-sm border border-white/20">
-              <CardHeader>
-                <CardTitle className="text-white">My Assigned Work</CardTitle>
-              </CardHeader>
-              <CardContent>
+        <TabsContent value="admin" className="mt-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>System Administration</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="text-center p-4 bg-blue-600/20 rounded-lg border border-blue-500/30">
-                      <h4 className="text-white font-medium mb-2">Active Tickets</h4>
-                      <p className="text-2xl font-bold text-blue-300">5</p>
+                  <h4 className="text-gray-700 font-medium">System Health</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-200">
+                      <span className="text-gray-700">Database</span>
+                      <Badge className="bg-green-600 text-white">Healthy</Badge>
                     </div>
-                    <div className="text-center p-4 bg-yellow-600/20 rounded-lg border border-yellow-500/30">
-                      <h4 className="text-white font-medium mb-2">Pending Review</h4>
-                      <p className="text-2xl font-bold text-yellow-300">2</p>
+                    <div className="flex justify-between items-center p-3 bg-green-50 rounded-lg border border-green-200">
+                      <span className="text-gray-700">API Services</span>
+                      <Badge className="bg-green-600 text-white">Online</Badge>
                     </div>
-                    <div className="text-center p-4 bg-green-600/20 rounded-lg border border-green-500/30">
-                      <h4 className="text-white font-medium mb-2">Completed Today</h4>
-                      <p className="text-2xl font-bold text-green-300">8</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="admin" className="mt-6">
-            <Card className="bg-white/10 backdrop-blur-sm border border-white/20">
-              <CardHeader>
-                <CardTitle className="text-white">System Administration</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <h4 className="text-white font-medium">System Health</h4>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center p-3 bg-green-600/20 rounded-lg">
-                        <span className="text-white">Database</span>
-                        <Badge className="bg-green-600 text-white">Healthy</Badge>
-                      </div>
-                      <div className="flex justify-between items-center p-3 bg-green-600/20 rounded-lg">
-                        <span className="text-white">API Services</span>
-                        <Badge className="bg-green-600 text-white">Online</Badge>
-                      </div>
-                      <div className="flex justify-between items-center p-3 bg-yellow-600/20 rounded-lg">
-                        <span className="text-white">Smart Agent</span>
-                        <Badge className="bg-yellow-600 text-white">Standby</Badge>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <h4 className="text-white font-medium">Quick Actions</h4>
-                    <div className="space-y-2">
-                      <button className="w-full p-3 bg-blue-600/30 hover:bg-blue-600/50 text-white rounded-lg text-left transition-colors">
-                        Bulk Import Users
-                      </button>
-                      <button className="w-full p-3 bg-purple-600/30 hover:bg-purple-600/50 text-white rounded-lg text-left transition-colors">
-                        Generate Reports
-                      </button>
-                      <button className="w-full p-3 bg-orange-600/30 hover:bg-orange-600/50 text-white rounded-lg text-left transition-colors">
-                        System Maintenance
-                      </button>
+                    <div className="flex justify-between items-center p-3 bg-yellow-50 rounded-lg border border-yellow-200">
+                      <span className="text-gray-700">Smart Agent</span>
+                      <Badge className="bg-yellow-600 text-white">Standby</Badge>
                     </div>
                   </div>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+                <div className="space-y-4">
+                  <h4 className="text-gray-700 font-medium">Quick Actions</h4>
+                  <div className="space-y-2">
+                    <button className="w-full p-3 bg-blue-50 hover:bg-blue-100 text-blue-700 rounded-lg text-left transition-colors border border-blue-200">
+                      Bulk Import Users
+                    </button>
+                    <button className="w-full p-3 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg text-left transition-colors border border-purple-200">
+                      Generate Reports
+                    </button>
+                    <button className="w-full p-3 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-lg text-left transition-colors border border-orange-200">
+                      System Maintenance
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
-        {/* Incident Details Modal */}
-        {selectedIncident && (
-          <IncidentDetails
-            incident={selectedIncident}
-            onClose={() => setSelectedIncident(null)}
-            onStatusUpdate={handleStatusUpdate}
-          />
-        )}
-      </div>
+      {/* Incident Details Modal */}
+      {selectedIncident && (
+        <IncidentDetails
+          incident={selectedIncident}
+          onClose={() => setSelectedIncident(null)}
+          onStatusUpdate={handleStatusUpdate}
+        />
+      )}
     </div>
   );
 };
