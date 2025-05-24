@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Phone, PhoneCall, PhoneOff } from 'lucide-react';
+import { Phone, PhoneCall, PhoneOff, Mic, MicOff } from 'lucide-react';
 
 interface CallSupportProps {
   onCallResult?: (text: string) => void;
@@ -8,9 +8,11 @@ interface CallSupportProps {
 
 const CallSupport = ({ onCallResult }: CallSupportProps) => {
   const [isConnected, setIsConnected] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [showRing, setShowRing] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState('Ready to connect');
+  const [recognition, setRecognition] = useState<any>(null);
 
   useEffect(() => {
     if (isConnected) {
@@ -32,6 +34,7 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
     }
 
     setIsConnected(true);
+    setIsMuted(false);
     setTranscript('');
     setConnectionStatus('Connecting...');
     
@@ -43,14 +46,17 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
       speechSynthesis.speak(utterance);
     }
     
-    const recognition = new (window as any).webkitSpeechRecognition();
-    recognition.lang = 'en-US';
-    recognition.continuous = true;
-    recognition.interimResults = true;
+    const recognitionInstance = new (window as any).webkitSpeechRecognition();
+    recognitionInstance.lang = 'en-US';
+    recognitionInstance.continuous = true;
+    recognitionInstance.interimResults = true;
     
-    recognition.start();
+    recognitionInstance.start();
+    setRecognition(recognitionInstance);
 
-    recognition.onresult = (event: any) => {
+    recognitionInstance.onresult = (event: any) => {
+      if (isMuted) return; // Don't process if muted
+      
       const current = event.resultIndex;
       const voiceText = event.results[current][0].transcript;
       setTranscript(voiceText);
@@ -66,21 +72,43 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
       }
     };
 
-    recognition.onerror = (event: any) => {
+    recognitionInstance.onerror = (event: any) => {
       console.error('Speech recognition error:', event.error);
       setConnectionStatus('Connection error - please try again');
       setIsConnected(false);
     };
 
-    recognition.onend = () => {
-      if (isConnected) {
-        recognition.start(); // Keep listening during call
+    recognitionInstance.onend = () => {
+      if (isConnected && !isMuted) {
+        recognitionInstance.start(); // Keep listening during call if not muted
       }
     };
 
     setTimeout(() => {
       setConnectionStatus('Connected to Mouritech Support');
     }, 1500);
+  };
+
+  const handleMuteToggle = () => {
+    setIsMuted(!isMuted);
+    
+    if (recognition) {
+      if (!isMuted) {
+        // Muting - stop recognition
+        recognition.stop();
+        if ('speechSynthesis' in window) {
+          const utterance = new SpeechSynthesisUtterance("Microphone muted");
+          speechSynthesis.speak(utterance);
+        }
+      } else {
+        // Unmuting - restart recognition
+        recognition.start();
+        if ('speechSynthesis' in window) {
+          const utterance = new SpeechSynthesisUtterance("Microphone unmuted");
+          speechSynthesis.speak(utterance);
+        }
+      }
+    }
   };
 
   const handleAIResponse = (userInput: string) => {
@@ -99,7 +127,7 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
       response = 'I understand. Let me transfer you to the appropriate support specialist who can assist you further.';
     }
 
-    if ('speechSynthesis' in window) {
+    if ('speechSynthesis' in window && !isMuted) {
       const utterance = new SpeechSynthesisUtterance(response);
       speechSynthesis.speak(utterance);
     }
@@ -107,7 +135,13 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
 
   const handleEndCall = () => {
     setIsConnected(false);
+    setIsMuted(false);
     setTranscript('');
+    
+    if (recognition) {
+      recognition.stop();
+      setRecognition(null);
+    }
     
     if ('speechSynthesis' in window) {
       speechSynthesis.cancel();
@@ -167,18 +201,51 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
             📞 Call Support
           </button>
         ) : (
-          <button 
-            onClick={handleEndCall}
-            className="bg-gradient-to-r from-red-600 to-red-700 text-white px-8 py-3 rounded-xl hover:from-red-700 hover:to-red-800 transition-all shadow-lg font-medium"
-          >
-            <PhoneOff className="w-5 h-5 inline mr-2" />
-            End Call
-          </button>
+          <div className="flex gap-4">
+            {/* Mute/Unmute Button */}
+            <button 
+              onClick={handleMuteToggle}
+              className={`${
+                isMuted 
+                  ? 'bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700' 
+                  : 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800'
+              } text-white px-6 py-3 rounded-xl transition-all shadow-lg font-medium flex items-center gap-2`}
+            >
+              {isMuted ? (
+                <>
+                  <MicOff className="w-5 h-5" />
+                  Unmute
+                </>
+              ) : (
+                <>
+                  <Mic className="w-5 h-5" />
+                  Mute
+                </>
+              )}
+            </button>
+            
+            {/* End Call Button */}
+            <button 
+              onClick={handleEndCall}
+              className="bg-gradient-to-r from-red-600 to-red-700 text-white px-6 py-3 rounded-xl hover:from-red-700 hover:to-red-800 transition-all shadow-lg font-medium flex items-center gap-2"
+            >
+              <PhoneOff className="w-5 h-5" />
+              End Call
+            </button>
+          </div>
         )}
       </div>
       
+      {/* Mute Status */}
+      {isConnected && isMuted && (
+        <div className="flex items-center gap-2 px-4 py-2 bg-yellow-600/20 backdrop-blur-sm rounded-lg border border-yellow-500/30">
+          <MicOff className="w-4 h-4 text-yellow-300" />
+          <span className="text-yellow-200 text-sm font-medium">Microphone Muted</span>
+        </div>
+      )}
+      
       {/* Live Transcript */}
-      {transcript && isConnected && (
+      {transcript && isConnected && !isMuted && (
         <div className="mt-4 p-4 bg-slate-800/60 backdrop-blur-sm rounded-xl max-w-md text-center border border-cyan-500/30 shadow-lg">
           <p className="text-sm text-cyan-100 font-medium">Live Transcript:</p>
           <p className="text-cyan-200 mt-2">{transcript}</p>
