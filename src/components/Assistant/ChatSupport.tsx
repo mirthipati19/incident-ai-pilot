@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Bot, User } from 'lucide-react';
+import { Send, Bot, User, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -9,6 +9,7 @@ interface Message {
   text: string;
   sender: 'user' | 'bot';
   timestamp: string;
+  isTicketCreated?: boolean;
 }
 
 interface ChatSupportProps {
@@ -19,7 +20,7 @@ const ChatSupport = ({ onMessageSent }: ChatSupportProps) => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: 'Hello! I\'m your Mouritech support assistant. How can I help you today?',
+      text: 'Hello! I\'m your Mouritech support assistant. Describe any issues you\'re experiencing and I\'ll automatically create and manage tickets for you.',
       sender: 'bot',
       timestamp: new Date().toISOString()
     }
@@ -38,29 +39,32 @@ const ChatSupport = ({ onMessageSent }: ChatSupportProps) => {
 
   const generateBotResponse = (userMessage: string): string => {
     const lowerMessage = userMessage.toLowerCase();
+    const problemKeywords = ['problem', 'issue', 'error', 'not working', 'broken', 'help', 'trouble', 'cant', "can't", 'unable', 'need'];
+    const containsProblemKeyword = problemKeywords.some(keyword => lowerMessage.includes(keyword));
     
-    if (lowerMessage.includes('incident') || lowerMessage.includes('ticket')) {
-      return 'I can help you create a new incident ticket. Please provide details about the issue you\'re experiencing, including any error messages and when it started.';
+    if (containsProblemKeyword && userMessage.length > 10) {
+      const ticketId = Date.now().toString();
+      return `I've automatically created incident ticket #${ticketId} for your issue. I'm analyzing: "${userMessage}" and will provide a solution shortly. You can track this ticket in the Incidents tab.`;
     } else if (lowerMessage.includes('password') || lowerMessage.includes('reset')) {
-      return 'For password reset requests, I can guide you through the process. Would you like me to send a password reset link to your registered email?';
+      return 'I can help you reset your password. I\'ll initiate the password reset process for your account and create a ticket to track this request.';
+    } else if (lowerMessage.includes('software') || lowerMessage.includes('install')) {
+      return 'I can assist with software installation and configuration. What software do you need help with? I\'ll create a ticket and can connect to your device if needed.';
     } else if (lowerMessage.includes('status') || lowerMessage.includes('check')) {
       return 'I can help you check the status of your existing tickets or incidents. Do you have a ticket number you\'d like me to look up?';
-    } else if (lowerMessage.includes('software') || lowerMessage.includes('install')) {
-      return 'I can assist with software installation and configuration. What software do you need help with?';
     } else if (lowerMessage.includes('hello') || lowerMessage.includes('hi')) {
-      return 'Hello! I\'m here to assist you with any IT support needs. What can I help you with today?';
+      return 'Hello! I\'m here to assist you with any IT support needs. Just describe your problem and I\'ll automatically create and manage tickets for you.';
     } else {
-      return 'I understand you need assistance. Could you please provide more details about your issue so I can better help you?';
+      return 'I understand. Please provide more details about your issue so I can create an appropriate support ticket and help resolve your problem.';
     }
   };
 
-  const typeMessage = (text: string, messageId: string) => {
+  const typeMessage = (text: string, messageId: string, isTicketMessage = false) => {
     let index = 0;
     const interval = setInterval(() => {
       setMessages(prev => 
         prev.map(msg => 
           msg.id === messageId 
-            ? { ...msg, text: text.slice(0, index + 1) }
+            ? { ...msg, text: text.slice(0, index + 1), isTicketCreated: isTicketMessage }
             : msg
         )
       );
@@ -85,6 +89,12 @@ const ChatSupport = ({ onMessageSent }: ChatSupportProps) => {
     setMessages(prev => [...prev, userMessage]);
     onMessageSent?.(inputMessage);
 
+    // Check if this is a problem description for ticket creation
+    const lowerMessage = inputMessage.toLowerCase();
+    const problemKeywords = ['problem', 'issue', 'error', 'not working', 'broken', 'help', 'trouble', 'cant', "can't", 'unable', 'need'];
+    const containsProblemKeyword = problemKeywords.some(keyword => lowerMessage.includes(keyword));
+    const isTicketMessage = containsProblemKeyword && inputMessage.length > 10;
+
     // Generate bot response
     const botResponseText = generateBotResponse(inputMessage);
     const botMessageId = (Date.now() + 1).toString();
@@ -93,7 +103,8 @@ const ChatSupport = ({ onMessageSent }: ChatSupportProps) => {
       id: botMessageId,
       text: '',
       sender: 'bot',
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      isTicketCreated: isTicketMessage
     };
 
     setInputMessage('');
@@ -101,7 +112,7 @@ const ChatSupport = ({ onMessageSent }: ChatSupportProps) => {
 
     setTimeout(() => {
       setMessages(prev => [...prev, botMessage]);
-      typeMessage(botResponseText, botMessageId);
+      typeMessage(botResponseText, botMessageId, isTicketMessage);
     }, 500);
   };
 
@@ -134,12 +145,18 @@ const ChatSupport = ({ onMessageSent }: ChatSupportProps) => {
               className={`max-w-xs lg:max-w-md px-4 py-3 rounded-xl shadow-lg ${
                 message.sender === 'user'
                   ? 'bg-blue-600/90 text-white ml-4 border border-blue-500/50'
+                  : message.isTicketCreated
+                  ? 'bg-green-800/90 text-white border border-green-500/50 mr-4'
                   : 'bg-slate-800/90 text-white border border-slate-600/50 mr-4'
               }`}
             >
               <div className="flex items-start gap-2">
                 {message.sender === 'bot' && (
-                  <Bot className="w-4 h-4 mt-1 text-white flex-shrink-0" />
+                  message.isTicketCreated ? (
+                    <AlertCircle className="w-4 h-4 mt-1 text-green-300 flex-shrink-0" />
+                  ) : (
+                    <Bot className="w-4 h-4 mt-1 text-white flex-shrink-0" />
+                  )
                 )}
                 {message.sender === 'user' && (
                   <User className="w-4 h-4 mt-1 text-white flex-shrink-0" />
@@ -173,7 +190,7 @@ const ChatSupport = ({ onMessageSent }: ChatSupportProps) => {
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Type your message..."
+            placeholder="Describe your issue and I'll create a ticket..."
             className="flex-1 min-h-[45px] max-h-32 bg-slate-700/50 border-slate-600/50 text-white placeholder:text-white/70 focus:ring-blue-500/50 focus:border-blue-500/50 rounded-lg font-medium"
             disabled={isTyping}
           />

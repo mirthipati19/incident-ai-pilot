@@ -5,12 +5,11 @@ import PromptAnimator from '@/components/Assistant/PromptAnimator';
 import CallSupport from '@/components/Assistant/CallSupport';
 import ChatSupport from '@/components/Assistant/ChatSupport';
 import ConnectPermissionPrompt from '@/components/Assistant/ConnectPermissionPrompt';
-import CreateIncidentForm from '@/components/Incidents/CreateIncidentForm';
 import IncidentList from '@/components/Incidents/IncidentList';
 import IncidentDetails from '@/components/Incidents/IncidentDetails';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { HeadphonesIcon, Plus, List, CheckCircle, XCircle, Clock, MessageCircle, Phone, Shield, Settings, Users, AlertTriangle } from 'lucide-react';
+import { HeadphonesIcon, List, CheckCircle, XCircle, Clock, MessageCircle, Phone, Shield, Settings, Users, AlertTriangle } from 'lucide-react';
 
 interface Incident {
   id: string;
@@ -30,39 +29,77 @@ const ITSMPage = () => {
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [showConnectPrompt, setShowConnectPrompt] = useState(false);
 
+  const createIncidentFromInput = (text: string, source: 'call' | 'chat') => {
+    const lowerText = text.toLowerCase();
+    
+    // Determine priority and category based on keywords
+    let priority: 'low' | 'medium' | 'high' | 'critical' = 'medium';
+    let category = 'other';
+    
+    if (lowerText.includes('urgent') || lowerText.includes('critical') || lowerText.includes('down')) {
+      priority = 'critical';
+    } else if (lowerText.includes('important') || lowerText.includes('asap')) {
+      priority = 'high';
+    }
+    
+    if (lowerText.includes('software') || lowerText.includes('install') || lowerText.includes('application')) {
+      category = 'software';
+    } else if (lowerText.includes('network') || lowerText.includes('internet') || lowerText.includes('connection')) {
+      category = 'network';
+    } else if (lowerText.includes('hardware') || lowerText.includes('computer') || lowerText.includes('laptop')) {
+      category = 'hardware';
+    } else if (lowerText.includes('password') || lowerText.includes('login') || lowerText.includes('access')) {
+      category = 'access';
+    }
+
+    const newIncident: Incident = {
+      id: Date.now().toString(),
+      title: `${source === 'call' ? 'Voice' : 'Chat'} Support Request - ${text.slice(0, 50)}${text.length > 50 ? '...' : ''}`,
+      description: text,
+      status: 'Open',
+      priority,
+      category,
+      assignee: 'auto',
+      createdAt: new Date().toISOString()
+    };
+
+    setIncidents(prev => [newIncident, ...prev]);
+    return newIncident;
+  };
+
   const handleCallResult = (text: string) => {
     console.log('Call input received:', text);
-    setCurrentPrompt(`Call transcript: "${text}". Processing your request...`);
     
-    // Simulate processing the call command
-    setTimeout(() => {
-      if (text.toLowerCase().includes('incident') || text.toLowerCase().includes('problem') || text.toLowerCase().includes('issue')) {
-        setCurrentPrompt('I can help you create a new incident. Please fill out the form or continue describing the issue.');
-      } else if (text.toLowerCase().includes('install') || text.toLowerCase().includes('software')) {
-        setCurrentPrompt('I can help you install software. Would you like me to connect to your device?');
-        setShowConnectPrompt(true);
-      } else if (text.toLowerCase().includes('status') || text.toLowerCase().includes('check')) {
-        setCurrentPrompt('Let me show you the current incident status dashboard.');
-      } else {
-        setCurrentPrompt('I can help you with incident management, software installation, status checks, or creating new tickets.');
-      }
-    }, 2000);
+    // Check if this looks like a problem description
+    const problemKeywords = ['problem', 'issue', 'error', 'not working', 'broken', 'help', 'trouble', 'cant', "can't", 'unable', 'need'];
+    const containsProblemKeyword = problemKeywords.some(keyword => text.toLowerCase().includes(keyword));
+    
+    if (containsProblemKeyword && text.length > 10) {
+      const incident = createIncidentFromInput(text, 'call');
+      setCurrentPrompt(`I've created incident #${incident.id} for your issue. Let me help you resolve: "${text}"`);
+    } else if (text.toLowerCase().includes('install') || text.toLowerCase().includes('software')) {
+      setCurrentPrompt('I can help you install software. Would you like me to connect to your device?');
+      setShowConnectPrompt(true);
+    } else if (text.toLowerCase().includes('status') || text.toLowerCase().includes('check')) {
+      setCurrentPrompt('Let me show you the current incident status dashboard.');
+    } else {
+      setCurrentPrompt('I can help you with incident management, software installation, status checks, or creating new tickets. Please describe your issue.');
+    }
   };
 
   const handleChatMessage = (message: string) => {
     console.log('Chat message sent:', message);
-    setCurrentPrompt(`Chat: "${message}". How else can I help you?`);
-  };
-
-  const handleIncidentCreated = (incidentData: any) => {
-    const newIncident: Incident = {
-      ...incidentData,
-      id: Date.now().toString(),
-      status: 'Open' as const,
-      createdAt: new Date().toISOString()
-    };
-    setIncidents(prev => [newIncident, ...prev]);
-    setCurrentPrompt('Great! Your incident has been created and assigned to the appropriate team.');
+    
+    // Check if this looks like a problem description
+    const problemKeywords = ['problem', 'issue', 'error', 'not working', 'broken', 'help', 'trouble', 'cant', "can't", 'unable', 'need'];
+    const containsProblemKeyword = problemKeywords.some(keyword => message.toLowerCase().includes(keyword));
+    
+    if (containsProblemKeyword && message.length > 10) {
+      const incident = createIncidentFromInput(message, 'chat');
+      setCurrentPrompt(`I've automatically created incident #${incident.id} for your issue. I'm working on a solution for: "${message}"`);
+    } else {
+      setCurrentPrompt(`Chat: "${message}". How else can I help you?`);
+    }
   };
 
   const handleIncidentSelect = (incident: Incident) => {
@@ -108,7 +145,7 @@ const ITSMPage = () => {
         <div className="text-center space-y-4">
           <h1 className="text-4xl font-bold text-white flex items-center justify-center gap-3 drop-shadow-lg">
             <HeadphonesIcon className="w-10 h-10 text-blue-300" />
-            Mouritech ServiceNow Support
+            Mouritech Support
           </h1>
           <p className="text-lg text-white/90 drop-shadow-md">
             AI-powered IT Service Management with voice, automation and smart device integration
@@ -190,14 +227,10 @@ const ITSMPage = () => {
 
         {/* Main Content Tabs */}
         <Tabs defaultValue="incidents" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 bg-white/10 backdrop-blur-sm border border-white/20">
+          <TabsList className="grid w-full grid-cols-3 bg-white/10 backdrop-blur-sm border border-white/20">
             <TabsTrigger value="incidents" className="flex items-center gap-2 text-white data-[state=active]:bg-white/20 data-[state=active]:text-white">
               <List className="w-4 h-4" />
               Incidents
-            </TabsTrigger>
-            <TabsTrigger value="create" className="flex items-center gap-2 text-white data-[state=active]:bg-white/20 data-[state=active]:text-white">
-              <Plus className="w-4 h-4" />
-              Create
             </TabsTrigger>
             <TabsTrigger value="my-work" className="flex items-center gap-2 text-white data-[state=active]:bg-white/20 data-[state=active]:text-white">
               <Users className="w-4 h-4" />
@@ -214,12 +247,6 @@ const ITSMPage = () => {
               incidents={incidents}
               onIncidentSelect={handleIncidentSelect}
             />
-          </TabsContent>
-
-          <TabsContent value="create" className="mt-6">
-            <div className="flex justify-center">
-              <CreateIncidentForm onIncidentCreated={handleIncidentCreated} />
-            </div>
           </TabsContent>
 
           <TabsContent value="my-work" className="mt-6">
