@@ -79,7 +79,7 @@ const ChatSupport = ({ onMessageSent }: ChatSupportProps) => {
       const ticketId = hasActiveTicket ? Array.from(activeTickets)[0] : Date.now().toString();
       
       return {
-        response: `I can help you install approved software. I've provided step-by-step installation instructions and can connect to your device if needed. Follow the installation guide in your email, and let me know if you encounter any issues. ${hasActiveTicket ? `I'll close ticket #${ticketId} once installation is complete.` : `I've created ticket #${ticketId} to track this installation.`}`,
+        response: `I can assist with software installation. I've provided step-by-step installation instructions and can connect to your device if needed. Follow the installation guide in your email, and let me know if you encounter any issues. ${hasActiveTicket ? `I'll close ticket #${ticketId} once installation is complete.` : `I've created ticket #${ticketId} to track this installation.`}`,
         shouldCloseTicket: false,
         ticketId: hasActiveTicket ? undefined : ticketId
       };
@@ -186,61 +186,61 @@ const ChatSupport = ({ onMessageSent }: ChatSupportProps) => {
   };
 
   return (
-    <div className="flex flex-col h-[500px] bg-white border border-gray-200 rounded-lg shadow-sm">
+    <div className="flex flex-col h-[550px] bg-slate-900/95 backdrop-blur-md border border-slate-700/50 rounded-xl shadow-2xl">
       {/* Chat Header */}
-      <div className="flex items-center p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg">
-        <Bot className="w-6 h-6 text-blue-600 mr-3" />
-        <h3 className="font-semibold text-gray-800">Mouritech Support Chat</h3>
+      <div className="flex items-center p-4 border-b border-slate-700/50 bg-slate-800/80 rounded-t-xl">
+        <Bot className="w-6 h-6 text-white mr-3" />
+        <h3 className="font-bold text-white text-lg">Mouritech Support Chat</h3>
         <div className="ml-auto">
           <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse"></div>
         </div>
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+      <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-slate-900/90">
         {messages.map((message) => (
           <div
             key={message.id}
             className={`flex ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-xs lg:max-w-md px-4 py-3 rounded-lg shadow-sm ${
+              className={`max-w-xs lg:max-w-md px-4 py-3 rounded-xl shadow-lg ${
                 message.sender === 'user'
-                  ? 'bg-blue-600 text-white ml-4'
+                  ? 'bg-blue-600/90 text-white ml-4 border border-blue-500/50'
                   : message.isTicketCreated
-                  ? 'bg-green-100 text-green-800 border border-green-300 mr-4'
+                  ? 'bg-green-800/90 text-white border border-green-500/50 mr-4'
                   : message.isTicketClosed
-                  ? 'bg-purple-100 text-purple-800 border border-purple-300 mr-4'
-                  : 'bg-white text-gray-800 border border-gray-200 mr-4'
+                  ? 'bg-purple-800/90 text-white border border-purple-500/50 mr-4'
+                  : 'bg-slate-800/90 text-white border border-slate-600/50 mr-4'
               }`}
             >
               <div className="flex items-start gap-2">
                 {message.sender === 'bot' && (
                   message.isTicketCreated ? (
-                    <AlertCircle className="w-4 h-4 mt-1 text-green-600 flex-shrink-0" />
+                    <AlertCircle className="w-4 h-4 mt-1 text-green-300 flex-shrink-0" />
                   ) : message.isTicketClosed ? (
-                    <CheckCircle className="w-4 h-4 mt-1 text-purple-600 flex-shrink-0" />
+                    <CheckCircle className="w-4 h-4 mt-1 text-purple-300 flex-shrink-0" />
                   ) : (
-                    <Bot className="w-4 h-4 mt-1 text-blue-600 flex-shrink-0" />
+                    <Bot className="w-4 h-4 mt-1 text-white flex-shrink-0" />
                   )
                 )}
                 {message.sender === 'user' && (
                   <User className="w-4 h-4 mt-1 text-white flex-shrink-0" />
                 )}
-                <p className="text-sm font-medium">{message.text}</p>
+                <p className="text-sm font-medium text-white">{message.text}</p>
               </div>
             </div>
           </div>
         ))}
         {isTyping && (
           <div className="flex justify-start">
-            <div className="bg-white text-gray-800 border border-gray-200 px-4 py-3 rounded-lg max-w-xs mr-4 shadow-sm">
+            <div className="bg-slate-800/90 text-white border border-slate-600/50 px-4 py-3 rounded-xl max-w-xs mr-4 shadow-lg">
               <div className="flex items-center gap-2">
-                <Bot className="w-4 h-4 text-blue-600" />
+                <Bot className="w-4 h-4 text-white" />
                 <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                  <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="w-2 h-2 bg-white rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                  <div className="w-2 h-2 bg-white rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
                 </div>
               </div>
             </div>
@@ -250,20 +250,20 @@ const ChatSupport = ({ onMessageSent }: ChatSupportProps) => {
       </div>
 
       {/* Input */}
-      <div className="p-4 border-t border-gray-200 bg-white rounded-b-lg">
+      <div className="p-4 border-t border-slate-700/50 bg-slate-800/80 rounded-b-xl">
         <div className="flex gap-3">
           <Textarea
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="Describe your issue and I'll create a ticket..."
-            className="flex-1 min-h-[45px] max-h-32 resize-none"
+            className="flex-1 min-h-[45px] max-h-32 bg-slate-700/50 border-slate-600/50 text-white placeholder:text-white/70 focus:ring-blue-500/50 focus:border-blue-500/50 rounded-lg font-medium"
             disabled={isTyping}
           />
           <Button
             onClick={handleSendMessage}
             disabled={!inputMessage.trim() || isTyping}
-            className="px-4 py-2"
+            className="bg-blue-600/90 hover:bg-blue-700/90 text-white border-none px-4 py-2 rounded-lg shadow-lg"
           >
             <Send className="w-4 h-4" />
           </Button>

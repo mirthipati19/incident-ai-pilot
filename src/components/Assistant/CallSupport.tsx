@@ -115,20 +115,16 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
     const lowerInput = userInput.toLowerCase();
     let response = '';
 
-    if (lowerInput.includes('incident') || lowerInput.includes('ticket') || lowerInput.includes('issue') || lowerInput.includes('problem')) {
-      response = 'I understand you need help with an issue. I\'ve automatically created an incident ticket for you. Let me help you resolve this problem step by step.';
+    if (lowerInput.includes('incident') || lowerInput.includes('ticket') || lowerInput.includes('issue')) {
+      response = 'I understand you need to create an incident ticket. Let me help you with that. Please describe the issue you\'re experiencing.';
     } else if (lowerInput.includes('password') || lowerInput.includes('reset')) {
-      response = 'I can help you reset your password. I\'ll guide you through the password reset process. First, go to the login page and click "Forgot Password". Then check your email for reset instructions.';
+      response = 'I can help you reset your password. I\'ll initiate the password reset process for your account.';
     } else if (lowerInput.includes('software') || lowerInput.includes('install')) {
-      response = 'I can help you install approved software. I\'ve created a ticket to track this request. Would you like me to connect to your device to install the required applications remotely?';
-    } else if (lowerInput.includes('network') || lowerInput.includes('internet') || lowerInput.includes('connection')) {
-      response = 'I see you\'re having network connectivity issues. Let me help you troubleshoot this. First, try restarting your network adapter. I\'ve created a ticket to track this issue.';
+      response = 'I can help you install approved software. Would you like me to connect to your device to install the required applications?';
     } else if (lowerInput.includes('status') || lowerInput.includes('check')) {
-      response = 'Let me check the status of your current tickets and system health for you. I can see your open incidents and provide updates on their progress.';
-    } else if (lowerInput.includes('hello') || lowerInput.includes('hi')) {
-      response = 'Hello! I\'m your Mouritech AI support assistant. I can help you with technical issues, create tickets automatically, and guide you through solutions. What problem can I help you solve today?';
+      response = 'Let me check the status of your current tickets and system health for you.';
     } else {
-      response = 'I understand your concern. I\'ve created a support ticket to track this issue. Let me connect you with the appropriate specialist who can provide detailed assistance for your specific problem.';
+      response = 'I understand. Let me transfer you to the appropriate support specialist who can assist you further.';
     }
 
     if ('speechSynthesis' in window && !isMuted) {
@@ -150,7 +146,7 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
     if ('speechSynthesis' in window) {
       speechSynthesis.cancel();
       const utterance = new SpeechSynthesisUtterance(
-        "Call ended. Thank you for contacting Mouritech Support. Your tickets have been created and our team will follow up. Have a great day!"
+        "Call ended. Thank you for contacting Mouritech Support. Have a great day!"
       );
       speechSynthesis.speak(utterance);
     }
@@ -159,33 +155,34 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
   return (
     <div className="flex flex-col items-center gap-6 p-6">
       <div className="relative flex justify-center items-center">
-        {/* Pulsing rings when connected */}
+        {/* Siri-like pulsing rings when connected */}
         {showRing && (
           <div className="absolute inset-0">
             <div className="absolute inset-0 rounded-full border-4 border-blue-300 animate-ping opacity-40"></div>
-            <div className="absolute inset-0 rounded-full border-4 border-blue-400 animate-ping opacity-30" style={{ animationDelay: '0.3s' }}></div>
-            <div className="absolute inset-0 rounded-full border-4 border-blue-500 animate-ping opacity-20" style={{ animationDelay: '0.6s' }}></div>
+            <div className="absolute inset-0 rounded-full border-4 border-cyan-400 animate-ping opacity-30" style={{ animationDelay: '0.3s' }}></div>
+            <div className="absolute inset-0 rounded-full border-4 border-purple-400 animate-ping opacity-20" style={{ animationDelay: '0.6s' }}></div>
           </div>
         )}
         
-        {/* Main gradient ring */}
-        <div className="relative w-32 h-32">
-          <div className={`absolute inset-0 rounded-full ${isConnected ? 'animate-pulse' : ''} overflow-hidden bg-gradient-to-br from-blue-400 to-blue-600 shadow-lg`}>
+        {/* Main gradient ring - Siri inspired */}
+        <div className="relative w-48 h-48">
+          <div className={`absolute inset-0 rounded-full ${isConnected ? 'animate-pulse' : ''} overflow-hidden`}>
+            <div className="w-full h-full bg-gradient-to-br from-blue-400 via-purple-500 to-cyan-500 opacity-90 shadow-2xl"></div>
           </div>
           
           {/* Inner circle with phone icon */}
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-20 h-20 rounded-full bg-white flex items-center justify-center shadow-md">
+            <div className="w-32 h-32 rounded-full bg-slate-900 flex items-center justify-center shadow-xl">
               {isConnected && (
                 <div className="absolute inset-0">
-                  <div className="absolute inset-0 rounded-full border-2 border-blue-400 animate-ping opacity-60"></div>
-                  <div className="absolute inset-0 rounded-full border-2 border-blue-300 animate-ping opacity-40" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="absolute inset-0 rounded-full border-2 border-cyan-400 animate-ping opacity-60"></div>
+                  <div className="absolute inset-0 rounded-full border-2 border-blue-400 animate-ping opacity-40" style={{ animationDelay: '0.2s' }}></div>
                 </div>
               )}
               {isConnected ? (
-                <PhoneCall className="w-8 h-8 text-blue-600 animate-pulse" />
+                <PhoneCall className="w-12 h-12 text-cyan-400 animate-pulse" />
               ) : (
-                <Phone className="w-8 h-8 text-blue-600" />
+                <Phone className="w-12 h-12 text-white" />
               )}
             </div>
           </div>
@@ -194,34 +191,34 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
       
       {/* Connection Status */}
       <div className="text-center">
-        <p className="text-gray-700 font-medium mb-4">{connectionStatus}</p>
+        <p className="text-white/90 font-medium mb-4">{connectionStatus}</p>
         
         {!isConnected ? (
           <button 
             onClick={handleStartCall}
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors shadow-md font-medium"
+            className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-8 py-3 rounded-xl hover:from-blue-700 hover:to-cyan-700 transition-all shadow-lg font-medium"
           >
             📞 Call Support
           </button>
         ) : (
-          <div className="flex gap-3">
+          <div className="flex gap-4">
             {/* Mute/Unmute Button */}
             <button 
               onClick={handleMuteToggle}
               className={`${
                 isMuted 
-                  ? 'bg-yellow-600 hover:bg-yellow-700' 
-                  : 'bg-green-600 hover:bg-green-700'
-              } text-white px-4 py-2 rounded-lg transition-colors shadow-md font-medium flex items-center gap-2`}
+                  ? 'bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700' 
+                  : 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800'
+              } text-white px-6 py-3 rounded-xl transition-all shadow-lg font-medium flex items-center gap-2`}
             >
               {isMuted ? (
                 <>
-                  <MicOff className="w-4 h-4" />
+                  <MicOff className="w-5 h-5" />
                   Unmute
                 </>
               ) : (
                 <>
-                  <Mic className="w-4 h-4" />
+                  <Mic className="w-5 h-5" />
                   Mute
                 </>
               )}
@@ -230,9 +227,9 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
             {/* End Call Button */}
             <button 
               onClick={handleEndCall}
-              className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-colors shadow-md font-medium flex items-center gap-2"
+              className="bg-gradient-to-r from-red-600 to-red-700 text-white px-6 py-3 rounded-xl hover:from-red-700 hover:to-red-800 transition-all shadow-lg font-medium flex items-center gap-2"
             >
-              <PhoneOff className="w-4 h-4" />
+              <PhoneOff className="w-5 h-5" />
               End Call
             </button>
           </div>
@@ -241,17 +238,17 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
       
       {/* Mute Status */}
       {isConnected && isMuted && (
-        <div className="flex items-center gap-2 px-3 py-2 bg-yellow-100 rounded-lg border border-yellow-300">
-          <MicOff className="w-4 h-4 text-yellow-600" />
-          <span className="text-yellow-700 text-sm font-medium">Microphone Muted</span>
+        <div className="flex items-center gap-2 px-4 py-2 bg-yellow-600/20 backdrop-blur-sm rounded-lg border border-yellow-500/30">
+          <MicOff className="w-4 h-4 text-yellow-300" />
+          <span className="text-yellow-200 text-sm font-medium">Microphone Muted</span>
         </div>
       )}
       
       {/* Live Transcript */}
       {transcript && isConnected && !isMuted && (
-        <div className="mt-4 p-3 bg-gray-100 rounded-lg max-w-md text-center border border-gray-300">
-          <p className="text-sm text-gray-600 font-medium">Live Transcript:</p>
-          <p className="text-gray-800 mt-2">{transcript}</p>
+        <div className="mt-4 p-4 bg-slate-800/60 backdrop-blur-sm rounded-xl max-w-md text-center border border-cyan-500/30 shadow-lg">
+          <p className="text-sm text-cyan-100 font-medium">Live Transcript:</p>
+          <p className="text-cyan-200 mt-2">{transcript}</p>
         </div>
       )}
     </div>
