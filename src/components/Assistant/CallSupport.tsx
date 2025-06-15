@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Phone, PhoneCall, PhoneOff, Mic, MicOff, AlertCircle } from 'lucide-react';
+
+import React, { useState, useEffect } from 'react';
+import { Phone, PhoneCall, PhoneOff } from 'lucide-react';
 import Vapi from '@vapi-ai/web';
 
 interface CallSupportProps {
@@ -8,106 +9,47 @@ interface CallSupportProps {
 
 const CallSupport = ({ onCallResult }: CallSupportProps) => {
   const [isConnected, setIsConnected] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [showRing, setShowRing] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState('Ready to connect');
   const [vapi, setVapi] = useState<Vapi | null>(null);
   const [callDuration, setCallDuration] = useState(0);
-  const [lastActivity, setLastActivity] = useState<Date | null>(null);
-  const [debugLogs, setDebugLogs] = useState<string[]>([]);
-  
-  // Refs for intervals
-  const durationInterval = useRef<NodeJS.Timeout | null>(null);
-  const keepAliveInterval = useRef<NodeJS.Timeout | null>(null);
-  const heartbeatInterval = useRef<NodeJS.Timeout | null>(null);
 
-  // Your specified API key and assistant ID
+  // Your API credentials
   const VAPI_API_KEY = "2474c624-2391-475a-a306-71d6c4642924";
   const ASSISTANT_ID = "8352c787-40ac-44e6-b77e-b8a903b3f2d9";
 
-  const addDebugLog = (message: string) => {
-    const timestamp = new Date().toLocaleTimeString();
-    const logMessage = `[${timestamp}] ${message}`;
-    console.log(logMessage);
-    setDebugLogs(prev => [...prev.slice(-9), logMessage]);
-  };
-
   useEffect(() => {
-    // Initialize Vapi instance with your API key
+    // Initialize Vapi instance
     const vapiInstance = new Vapi(VAPI_API_KEY);
     setVapi(vapiInstance);
-    addDebugLog('Vapi instance initialized with your credentials');
 
     // Set up event listeners
     vapiInstance.on('call-start', () => {
-      addDebugLog('Vapi call started - connection established');
+      console.log('Call started');
       setIsConnected(true);
       setConnectionStatus('Connected to Mouritech Support');
       setCallDuration(0);
-      setLastActivity(new Date());
       
       // Start call duration counter
-      durationInterval.current = setInterval(() => {
+      const durationInterval = setInterval(() => {
         setCallDuration(prev => prev + 1);
       }, 1000);
 
-      // Enhanced keep-alive mechanism - more frequent and active
-      keepAliveInterval.current = setInterval(() => {
-        if (vapiInstance) {
-          addDebugLog('Keep-alive: Sending activity signal');
-          setLastActivity(new Date());
-          
-          // Try to send a small activity signal to prevent timeout
-          try {
-            // Toggle mute state very briefly to maintain connection
-            const currentMuted = vapiInstance.isMuted;
-            // Don't actually change mute state, just access it to show activity
-            addDebugLog(`Keep-alive: Connection active, muted=${currentMuted}`);
-          } catch (error) {
-            addDebugLog(`Keep-alive error: ${error}`);
-          }
-        }
-      }, 5000); // Every 5 seconds instead of 10
-
-      // Additional heartbeat to prevent 25-second timeout
-      heartbeatInterval.current = setInterval(() => {
-        if (vapiInstance && isConnected) {
-          addDebugLog('Heartbeat: Maintaining session');
-          setLastActivity(new Date());
-          
-          // Send periodic "I'm still here" signal
-          try {
-            // Access Vapi properties to maintain connection
-            vapiInstance.isMuted; // Just accessing the property
-            addDebugLog('Heartbeat: Session maintained successfully');
-          } catch (error) {
-            addDebugLog(`Heartbeat failed: ${error}`);
-          }
-        }
-      }, 3000); // Every 3 seconds
+      // Store interval to clear it later
+      (vapiInstance as any).durationInterval = durationInterval;
     });
 
     vapiInstance.on('call-end', () => {
-      addDebugLog('Vapi call ended - cleaning up');
+      console.log('Call ended');
       setIsConnected(false);
-      setIsMuted(false);
       setTranscript('');
       setConnectionStatus('Call ended');
       setCallDuration(0);
       
-      // Clear all intervals
-      if (durationInterval.current) {
-        clearInterval(durationInterval.current);
-        durationInterval.current = null;
-      }
-      if (keepAliveInterval.current) {
-        clearInterval(keepAliveInterval.current);
-        keepAliveInterval.current = null;
-      }
-      if (heartbeatInterval.current) {
-        clearInterval(heartbeatInterval.current);
-        heartbeatInterval.current = null;
+      // Clear duration interval
+      if ((vapiInstance as any).durationInterval) {
+        clearInterval((vapiInstance as any).durationInterval);
       }
       
       setTimeout(() => {
@@ -116,58 +58,32 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
     });
 
     vapiInstance.on('message', (message) => {
-      setLastActivity(new Date());
-      
       if (message.type === 'transcript') {
-        addDebugLog(`Transcript received - ${message.role}: ${message.transcript}`);
+        console.log(`${message.role}: ${message.transcript}`);
         
         if (message.role === 'user') {
           setTranscript(message.transcript);
           onCallResult?.(message.transcript);
         }
-      } else {
-        addDebugLog(`Message received - type: ${message.type}`);
       }
     });
 
     vapiInstance.on('error', (error) => {
-      addDebugLog(`Vapi error occurred: ${error.message || error}`);
       console.error('Vapi error:', error);
       setConnectionStatus('Connection error - please try again');
       setIsConnected(false);
     });
 
-    vapiInstance.on('speech-start', () => {
-      addDebugLog('Speech started - user is speaking');
-      setLastActivity(new Date());
-    });
-
-    vapiInstance.on('speech-end', () => {
-      addDebugLog('Speech ended - user stopped speaking');
-      setLastActivity(new Date());
-    });
-
-    // Add additional event listeners to catch more activity
-    vapiInstance.on('volume-level', () => {
-      setLastActivity(new Date());
-    });
-
     return () => {
       // Cleanup on unmount
-      if (durationInterval.current) {
-        clearInterval(durationInterval.current);
-      }
-      if (keepAliveInterval.current) {
-        clearInterval(keepAliveInterval.current);
-      }
-      if (heartbeatInterval.current) {
-        clearInterval(heartbeatInterval.current);
+      if ((vapiInstance as any).durationInterval) {
+        clearInterval((vapiInstance as any).durationInterval);
       }
       if (vapiInstance) {
         vapiInstance.stop();
       }
     };
-  }, [onCallResult, isConnected]);
+  }, [onCallResult]);
 
   useEffect(() => {
     if (isConnected) {
@@ -182,43 +98,30 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
 
   const handleStartCall = async () => {
     if (!vapi) {
-      addDebugLog('ERROR: Vapi not initialized');
       console.error('Vapi not initialized');
       return;
     }
 
     try {
-      addDebugLog('Starting call - requesting microphone permissions');
       setConnectionStatus('Connecting...');
       setTranscript('');
-      setDebugLogs([]);
       
-      // Enhanced microphone permission request
+      // Request microphone permissions
       try {
-        const stream = await navigator.mediaDevices.getUserMedia({ 
-          audio: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true
-          } 
-        });
-        addDebugLog('Microphone permissions granted and configured');
-        
-        // Stop the test stream
-        stream.getTracks().forEach(track => track.stop());
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+        console.log('Microphone permissions granted');
       } catch (micError) {
-        addDebugLog(`Microphone access failed: ${micError}`);
+        console.error('Microphone access failed:', micError);
         setConnectionStatus('Microphone access required');
         return;
       }
       
-      // Start the voice conversation with your assistant ID
+      // Start the voice conversation
       await vapi.start(ASSISTANT_ID);
-      addDebugLog('Call start request sent to Vapi - enhanced keep-alive active');
+      console.log('Call start request sent');
       
     } catch (error) {
-      addDebugLog(`Failed to start call: ${error}`);
-      console.error('Failed to start Vapi call:', error);
+      console.error('Failed to start call:', error);
       setConnectionStatus('Failed to connect - please try again');
       setTimeout(() => {
         setConnectionStatus('Ready to connect');
@@ -226,36 +129,13 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
     }
   };
 
-  const handleMuteToggle = () => {
-    if (!vapi || !isConnected) return;
-
-    const newMutedState = !isMuted;
-    setIsMuted(newMutedState);
-    
-    try {
-      // Use Vapi's mute functionality
-      vapi.setMuted(newMutedState);
-      addDebugLog(`Microphone ${newMutedState ? 'muted' : 'unmuted'}`);
-      
-      if (newMutedState) {
-        setConnectionStatus('Microphone muted');
-      } else {
-        setConnectionStatus('Connected to Mouritech Support');
-      }
-    } catch (error) {
-      addDebugLog(`Failed to toggle mute: ${error}`);
-      console.error('Failed to toggle mute:', error);
-    }
-  };
-
   const handleEndCall = async () => {
     if (!vapi) return;
 
     try {
-      addDebugLog('User manually ending call');
+      console.log('Ending call');
       await vapi.stop();
       setIsConnected(false);
-      setIsMuted(false);
       setTranscript('');
       setConnectionStatus('Call ended');
       
@@ -263,7 +143,6 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
         setConnectionStatus('Ready to connect');
       }, 2000);
     } catch (error) {
-      addDebugLog(`Failed to end call: ${error}`);
       console.error('Failed to end call:', error);
     }
   };
@@ -323,13 +202,6 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
                 Live • {formatDuration(callDuration)}
               </span>
             </div>
-            {/* Enhanced connection indicator */}
-            <div className="flex items-center gap-2 px-3 py-1 bg-blue-600/20 rounded-full border border-blue-500/30">
-              <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
-              <span className="text-blue-200 text-xs font-medium">
-                Keep-alive Active
-              </span>
-            </div>
           </div>
         )}
         
@@ -342,28 +214,6 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
           </button>
         ) : (
           <div className="flex gap-4">
-            {/* Mute/Unmute Button */}
-            <button 
-              onClick={handleMuteToggle}
-              className={`${
-                isMuted 
-                  ? 'bg-gradient-to-r from-yellow-600 to-orange-600 hover:from-yellow-700 hover:to-orange-700' 
-                  : 'bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800'
-              } text-white px-6 py-3 rounded-xl transition-all shadow-lg font-medium flex items-center gap-2`}
-            >
-              {isMuted ? (
-                <>
-                  <MicOff className="w-5 h-5" />
-                  Unmute
-                </>
-              ) : (
-                <>
-                  <Mic className="w-5 h-5" />
-                  Mute
-                </>
-              )}
-            </button>
-            
             {/* End Call Button */}
             <button 
               onClick={handleEndCall}
@@ -376,44 +226,11 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
         )}
       </div>
       
-      {/* Mute Status */}
-      {isConnected && isMuted && (
-        <div className="flex items-center gap-2 px-4 py-2 bg-yellow-600/20 backdrop-blur-sm rounded-lg border border-yellow-500/30">
-          <MicOff className="w-4 h-4 text-yellow-300" />
-          <span className="text-yellow-200 text-sm font-medium">Microphone Muted</span>
-        </div>
-      )}
-      
       {/* Live Transcript */}
       {transcript && isConnected && (
         <div className="mt-4 p-4 bg-slate-800/60 backdrop-blur-sm rounded-xl max-w-md text-center border border-cyan-500/30 shadow-lg">
           <p className="text-sm text-cyan-100 font-medium">Live Transcript:</p>
           <p className="text-cyan-200 mt-2">{transcript}</p>
-        </div>
-      )}
-      
-      {/* Enhanced Debug Information */}
-      {isConnected && debugLogs.length > 0 && (
-        <div className="mt-4 p-4 bg-slate-800/60 backdrop-blur-sm rounded-xl max-w-md border border-blue-500/30 shadow-lg">
-          <div className="flex items-center gap-2 mb-2">
-            <AlertCircle className="w-4 h-4 text-blue-300" />
-            <p className="text-sm text-blue-100 font-medium">Enhanced Connection Monitor:</p>
-          </div>
-          <div className="max-h-32 overflow-y-auto space-y-1">
-            {debugLogs.slice(-5).map((log, index) => (
-              <p key={index} className="text-xs text-blue-200 font-mono">{log}</p>
-            ))}
-          </div>
-          {lastActivity && (
-            <div className="mt-2 text-xs space-y-1">
-              <p className="text-blue-300">
-                Last activity: {lastActivity.toLocaleTimeString()}
-              </p>
-              <p className="text-green-300">
-                Timeout protection: Active (3s/5s intervals)
-              </p>
-            </div>
-          )}
         </div>
       )}
     </div>
