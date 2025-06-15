@@ -1,6 +1,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Phone, PhoneCall, PhoneOff, Mic, MicOff } from 'lucide-react';
+import Vapi from '@vapi-ai/web';
 
 interface CallSupportProps {
   onCallResult?: (text: string) => void;
@@ -12,143 +13,125 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
   const [transcript, setTranscript] = useState('');
   const [showRing, setShowRing] = useState(false);
   const [connectionStatus, setConnectionStatus] = useState('Ready to connect');
-  const [recognition, setRecognition] = useState<any>(null);
+  const [vapi, setVapi] = useState<Vapi | null>(null);
+
+  useEffect(() => {
+    // Initialize Vapi instance
+    const vapiInstance = new Vapi('2474c624-2391-475a-a306-71d6c4642924');
+    setVapi(vapiInstance);
+
+    // Set up event listeners
+    vapiInstance.on('call-start', () => {
+      console.log('Vapi call started');
+      setIsConnected(true);
+      setConnectionStatus('Connected to Mouritech Support');
+    });
+
+    vapiInstance.on('call-end', () => {
+      console.log('Vapi call ended');
+      setIsConnected(false);
+      setIsMuted(false);
+      setTranscript('');
+      setConnectionStatus('Call ended');
+      
+      setTimeout(() => {
+        setConnectionStatus('Ready to connect');
+      }, 2000);
+    });
+
+    vapiInstance.on('message', (message) => {
+      if (message.type === 'transcript') {
+        console.log(`${message.role}: ${message.transcript}`);
+        
+        if (message.role === 'user') {
+          setTranscript(message.transcript);
+          onCallResult?.(message.transcript);
+        }
+      }
+    });
+
+    vapiInstance.on('error', (error) => {
+      console.error('Vapi error:', error);
+      setConnectionStatus('Connection error - please try again');
+      setIsConnected(false);
+    });
+
+    return () => {
+      // Cleanup on unmount
+      if (vapiInstance) {
+        vapiInstance.stop();
+      }
+    };
+  }, [onCallResult]);
 
   useEffect(() => {
     if (isConnected) {
       setShowRing(true);
-      setConnectionStatus('Connected to Mouritech Support');
     } else {
       const timer = setTimeout(() => {
         setShowRing(false);
-        setConnectionStatus('Ready to connect');
       }, 500);
       return () => clearTimeout(timer);
     }
   }, [isConnected]);
 
-  const handleStartCall = () => {
-    if (!('webkitSpeechRecognition' in window)) {
-      alert('Speech recognition not supported in this browser');
+  const handleStartCall = async () => {
+    if (!vapi) {
+      console.error('Vapi not initialized');
       return;
     }
 
-    setIsConnected(true);
-    setIsMuted(false);
-    setTranscript('');
-    setConnectionStatus('Connecting...');
-    
-    // Voice greeting
-    if ('speechSynthesis' in window) {
-      const utterance = new SpeechSynthesisUtterance(
-        "Hello! You're now connected to Mouritech Support. How can I assist you today?"
-      );
-      speechSynthesis.speak(utterance);
+    try {
+      setConnectionStatus('Connecting...');
+      setTranscript('');
+      
+      // Start the voice conversation with the assistant ID
+      await vapi.start('8352c787-40ac-44e6-b77e-b8a903b3f2d9');
+      
+    } catch (error) {
+      console.error('Failed to start Vapi call:', error);
+      setConnectionStatus('Failed to connect - please try again');
+      setTimeout(() => {
+        setConnectionStatus('Ready to connect');
+      }, 3000);
     }
-    
-    const recognitionInstance = new (window as any).webkitSpeechRecognition();
-    recognitionInstance.lang = 'en-US';
-    recognitionInstance.continuous = true;
-    recognitionInstance.interimResults = true;
-    
-    recognitionInstance.start();
-    setRecognition(recognitionInstance);
-
-    recognitionInstance.onresult = (event: any) => {
-      if (isMuted) return; // Don't process if muted
-      
-      const current = event.resultIndex;
-      const voiceText = event.results[current][0].transcript;
-      setTranscript(voiceText);
-      
-      if (event.results[current].isFinal) {
-        console.log("Call transcript:", voiceText);
-        onCallResult?.(voiceText);
-        
-        // Generate response based on input
-        setTimeout(() => {
-          handleAIResponse(voiceText);
-        }, 1000);
-      }
-    };
-
-    recognitionInstance.onerror = (event: any) => {
-      console.error('Speech recognition error:', event.error);
-      setConnectionStatus('Connection error - please try again');
-      setIsConnected(false);
-    };
-
-    recognitionInstance.onend = () => {
-      if (isConnected && !isMuted) {
-        recognitionInstance.start(); // Keep listening during call if not muted
-      }
-    };
-
-    setTimeout(() => {
-      setConnectionStatus('Connected to Mouritech Support');
-    }, 1500);
   };
 
   const handleMuteToggle = () => {
-    setIsMuted(!isMuted);
+    if (!vapi || !isConnected) return;
+
+    const newMutedState = !isMuted;
+    setIsMuted(newMutedState);
     
-    if (recognition) {
-      if (!isMuted) {
-        // Muting - stop recognition
-        recognition.stop();
-        if ('speechSynthesis' in window) {
-          const utterance = new SpeechSynthesisUtterance("Microphone muted");
-          speechSynthesis.speak(utterance);
-        }
+    try {
+      // Use Vapi's mute functionality
+      vapi.setMuted(newMutedState);
+      
+      if (newMutedState) {
+        setConnectionStatus('Microphone muted');
       } else {
-        // Unmuting - restart recognition
-        recognition.start();
-        if ('speechSynthesis' in window) {
-          const utterance = new SpeechSynthesisUtterance("Microphone unmuted");
-          speechSynthesis.speak(utterance);
-        }
+        setConnectionStatus('Connected to Mouritech Support');
       }
+    } catch (error) {
+      console.error('Failed to toggle mute:', error);
     }
   };
 
-  const handleAIResponse = (userInput: string) => {
-    const lowerInput = userInput.toLowerCase();
-    let response = '';
+  const handleEndCall = async () => {
+    if (!vapi) return;
 
-    if (lowerInput.includes('incident') || lowerInput.includes('ticket') || lowerInput.includes('issue')) {
-      response = 'I understand you need to create an incident ticket. Let me help you with that. Please describe the issue you\'re experiencing.';
-    } else if (lowerInput.includes('password') || lowerInput.includes('reset')) {
-      response = 'I can help you reset your password. I\'ll initiate the password reset process for your account.';
-    } else if (lowerInput.includes('software') || lowerInput.includes('install')) {
-      response = 'I can help you install approved software. Would you like me to connect to your device to install the required applications?';
-    } else if (lowerInput.includes('status') || lowerInput.includes('check')) {
-      response = 'Let me check the status of your current tickets and system health for you.';
-    } else {
-      response = 'I understand. Let me transfer you to the appropriate support specialist who can assist you further.';
-    }
-
-    if ('speechSynthesis' in window && !isMuted) {
-      const utterance = new SpeechSynthesisUtterance(response);
-      speechSynthesis.speak(utterance);
-    }
-  };
-
-  const handleEndCall = () => {
-    setIsConnected(false);
-    setIsMuted(false);
-    setTranscript('');
-    
-    if (recognition) {
-      recognition.stop();
-      setRecognition(null);
-    }
-    
-    if ('speechSynthesis' in window) {
-      speechSynthesis.cancel();
-      const utterance = new SpeechSynthesisUtterance(
-        "Call ended. Thank you for contacting Mouritech Support. Have a great day!"
-      );
-      speechSynthesis.speak(utterance);
+    try {
+      await vapi.stop();
+      setIsConnected(false);
+      setIsMuted(false);
+      setTranscript('');
+      setConnectionStatus('Call ended');
+      
+      setTimeout(() => {
+        setConnectionStatus('Ready to connect');
+      }, 2000);
+    } catch (error) {
+      console.error('Failed to end call:', error);
     }
   };
 
@@ -245,7 +228,7 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
       )}
       
       {/* Live Transcript */}
-      {transcript && isConnected && !isMuted && (
+      {transcript && isConnected && (
         <div className="mt-4 p-4 bg-slate-800/60 backdrop-blur-sm rounded-xl max-w-md text-center border border-cyan-500/30 shadow-lg">
           <p className="text-sm text-cyan-100 font-medium">Live Transcript:</p>
           <p className="text-cyan-200 mt-2">{transcript}</p>
