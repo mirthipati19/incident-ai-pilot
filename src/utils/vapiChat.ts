@@ -22,8 +22,8 @@ interface ChatResponse {
   fullData: ChatApiResponse;
 }
 
-const VAPI_API_KEY = "559255b5-9cd5-45b2-849f-178f5ef304a4";
-const ASSISTANT_ID = "5159a1df-deb8-4dad-aefc-a449bdc64d6e";
+const VAPI_API_KEY = "2474c624-2391-475a-a306-71d6c4642924";
+const ASSISTANT_ID = "8352c787-40ac-44e6-b77e-b8a903b3f2d9";
 
 export async function sendChatMessage(
   message: string,

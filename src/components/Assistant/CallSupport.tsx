@@ -22,9 +22,9 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
   const keepAliveInterval = useRef<NodeJS.Timeout | null>(null);
   const heartbeatInterval = useRef<NodeJS.Timeout | null>(null);
 
-  // Updated API key and assistant ID
-  const VAPI_API_KEY = "559255b5-9cd5-45b2-849f-178f5ef304a4";
-  const ASSISTANT_ID = "5159a1df-deb8-4dad-aefc-a449bdc64d6e";
+  // Your specified API key and assistant ID
+  const VAPI_API_KEY = "2474c624-2391-475a-a306-71d6c4642924";
+  const ASSISTANT_ID = "8352c787-40ac-44e6-b77e-b8a903b3f2d9";
 
   const addDebugLog = (message: string) => {
     const timestamp = new Date().toLocaleTimeString();
@@ -34,10 +34,10 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
   };
 
   useEffect(() => {
-    // Initialize Vapi instance with updated API key
+    // Initialize Vapi instance with your API key
     const vapiInstance = new Vapi(VAPI_API_KEY);
     setVapi(vapiInstance);
-    addDebugLog('Vapi instance initialized with updated credentials');
+    addDebugLog('Vapi instance initialized with your credentials');
 
     // Set up event listeners
     vapiInstance.on('call-start', () => {
@@ -212,7 +212,7 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
         return;
       }
       
-      // Start the voice conversation with the updated assistant ID
+      // Start the voice conversation with your assistant ID
       await vapi.start(ASSISTANT_ID);
       addDebugLog('Call start request sent to Vapi - enhanced keep-alive active');
       
