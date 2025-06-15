@@ -58,6 +58,8 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
     });
 
     vapiInstance.on('message', (message) => {
+      console.log('Message received:', message);
+      
       if (message.type === 'transcript') {
         console.log(`${message.role}: ${message.transcript}`);
         
@@ -65,6 +67,16 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
           setTranscript(message.transcript);
           onCallResult?.(message.transcript);
         }
+      }
+      
+      // Handle other message types that might indicate issues
+      if (message.type === 'function-call') {
+        console.log('Function call:', message);
+      }
+      
+      if (message.type === 'hang') {
+        console.log('Call hang detected, but keeping connection alive');
+        // Don't automatically end the call on hang
       }
     });
 
@@ -74,12 +86,21 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
       setIsConnected(false);
     });
 
+    // Add speech events to monitor call activity
+    vapiInstance.on('speech-start', () => {
+      console.log('Speech started');
+    });
+
+    vapiInstance.on('speech-end', () => {
+      console.log('Speech ended');
+    });
+
     return () => {
       // Cleanup on unmount
       if ((vapiInstance as any).durationInterval) {
         clearInterval((vapiInstance as any).durationInterval);
       }
-      if (vapiInstance) {
+      if (vapiInstance && isConnected) {
         vapiInstance.stop();
       }
     };
@@ -106,19 +127,23 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
       setConnectionStatus('Connecting...');
       setTranscript('');
       
-      // Request microphone permissions
+      // Request microphone permissions first
       try {
-        await navigator.mediaDevices.getUserMedia({ audio: true });
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
         console.log('Microphone permissions granted');
+        
+        // Stop the stream immediately after getting permission
+        stream.getTracks().forEach(track => track.stop());
       } catch (micError) {
         console.error('Microphone access failed:', micError);
         setConnectionStatus('Microphone access required');
         return;
       }
       
-      // Start the voice conversation
+      // Start the voice conversation with the assistant ID
+      console.log('Starting call with assistant:', ASSISTANT_ID);
       await vapi.start(ASSISTANT_ID);
-      console.log('Call start request sent');
+      console.log('Call start request sent successfully');
       
     } catch (error) {
       console.error('Failed to start call:', error);
@@ -133,7 +158,7 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
     if (!vapi) return;
 
     try {
-      console.log('Ending call');
+      console.log('Manually ending call');
       await vapi.stop();
       setIsConnected(false);
       setTranscript('');
