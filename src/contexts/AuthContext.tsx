@@ -35,17 +35,17 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const getSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        // Get user profile data
+        // Get user profile data with type assertion
         const { data: profile } = await supabase
-          .from('users')
+          .from('users' as any)
           .select('user_id, name')
           .eq('id', session.user.id)
           .single();
         
         setUser({ 
           ...session.user, 
-          user_id: profile?.user_id,
-          name: profile?.name 
+          user_id: profile?.user_id || undefined,
+          name: profile?.name || undefined
         });
       }
       setLoading(false);
@@ -57,15 +57,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         const { data: profile } = await supabase
-          .from('users')
+          .from('users' as any)
           .select('user_id, name')
           .eq('id', session.user.id)
           .single();
         
         setUser({ 
           ...session.user, 
-          user_id: profile?.user_id,
-          name: profile?.name 
+          user_id: profile?.user_id || undefined,
+          name: profile?.name || undefined
         });
       } else {
         setUser(null);
@@ -98,7 +98,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         while (attempts < 10) {
           const { data: existing } = await supabase
-            .from('users')
+            .from('users' as any)
             .select('user_id')
             .eq('user_id', userId)
             .single();
@@ -108,9 +108,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           attempts++;
         }
 
-        // Store user profile
-        const { error: profileError } = await supabase
-          .from('users')
+        // Store user profile with type assertion
+        const { error: profileError } = await (supabase
+          .from('users' as any) as any)
           .insert({
             id: data.user.id,
             user_id: userId,
