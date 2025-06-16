@@ -3,8 +3,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { HeadphonesIcon, Zap, Shield, Users, ArrowRight } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Index = () => {
+  const { user } = useAuth();
+
   return (
     <div 
       className="min-h-screen relative"
@@ -17,6 +20,31 @@ const Index = () => {
     >
       {/* Overlay for better text readability */}
       <div className="absolute inset-0 bg-black/30"></div>
+      
+      {/* Navigation */}
+      <nav className="relative z-10 p-4">
+        <div className="container mx-auto flex justify-between items-center">
+          <div className="text-white font-bold text-xl">Mouritech Support</div>
+          <div className="space-x-4">
+            {user ? (
+              <span className="text-white">Welcome, {user.name}! (ID: {user.user_id})</span>
+            ) : (
+              <>
+                <Link to="/signin">
+                  <Button variant="outline" className="bg-white/10 backdrop-blur-sm border-white/30 text-white hover:bg-white/20">
+                    Sign In
+                  </Button>
+                </Link>
+                <Link to="/signup">
+                  <Button className="bg-blue-600/80 hover:bg-blue-700/80 backdrop-blur-sm border border-white/20">
+                    Sign Up
+                  </Button>
+                </Link>
+              </>
+            )}
+          </div>
+        </div>
+      </nav>
       
       <div className="relative z-10 container mx-auto px-4 py-16">
         {/* Hero Section */}
@@ -33,12 +61,21 @@ const Index = () => {
             AI-powered IT Service Management with voice recognition, automated incident handling, 
             and ServiceNow-style workflow management.
           </p>
-          <Link to="/itsm">
-            <Button size="lg" className="text-lg px-8 py-4 bg-blue-600/80 hover:bg-blue-700/80 backdrop-blur-sm border border-white/20">
-              Launch Support Assistant
-              <ArrowRight className="ml-2 w-5 h-5" />
-            </Button>
-          </Link>
+          {user ? (
+            <Link to="/itsm">
+              <Button size="lg" className="text-lg px-8 py-4 bg-blue-600/80 hover:bg-blue-700/80 backdrop-blur-sm border border-white/20">
+                Launch Support Assistant
+                <ArrowRight className="ml-2 w-5 h-5" />
+              </Button>
+            </Link>
+          ) : (
+            <Link to="/signup">
+              <Button size="lg" className="text-lg px-8 py-4 bg-blue-600/80 hover:bg-blue-700/80 backdrop-blur-sm border border-white/20">
+                Get Started
+                <ArrowRight className="ml-2 w-5 h-5" />
+              </Button>
+            </Link>
+          )}
         </div>
 
         {/* Features Grid */}
@@ -109,15 +146,28 @@ const Index = () => {
           <p className="text-lg text-white/90 mb-8 drop-shadow-md">
             Experience the future of IT service management with our intelligent assistant.
           </p>
-          <Link to="/itsm">
-            <Button variant="outline" size="lg" className="mr-4 bg-white/10 backdrop-blur-sm border-white/30 text-white hover:bg-white/20">
-              View Demo
-            </Button>
-          </Link>
-          <Button size="lg" className="bg-blue-600/80 hover:bg-blue-700/80 backdrop-blur-sm border border-white/20">
-            Get Started
-            <ArrowRight className="ml-2 w-4 h-4" />
-          </Button>
+          {user ? (
+            <Link to="/itsm">
+              <Button size="lg" className="bg-blue-600/80 hover:bg-blue-700/80 backdrop-blur-sm border border-white/20">
+                Launch Assistant
+                <ArrowRight className="ml-2 w-4 h-4" />
+              </Button>
+            </Link>
+          ) : (
+            <>
+              <Link to="/signin">
+                <Button variant="outline" size="lg" className="mr-4 bg-white/10 backdrop-blur-sm border-white/30 text-white hover:bg-white/20">
+                  Sign In
+                </Button>
+              </Link>
+              <Link to="/signup">
+                <Button size="lg" className="bg-blue-600/80 hover:bg-blue-700/80 backdrop-blur-sm border border-white/20">
+                  Sign Up
+                  <ArrowRight className="ml-2 w-4 h-4" />
+                </Button>
+              </Link>
+            </>
+          )}
         </div>
       </div>
     </div>
