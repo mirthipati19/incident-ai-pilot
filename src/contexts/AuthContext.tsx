@@ -35,9 +35,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const getSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        // Get user profile data with type assertion
+        // Get user profile data
         const { data: profile } = await supabase
-          .from('users' as any)
+          .from('users')
           .select('user_id, name')
           .eq('id', session.user.id)
           .single();
@@ -57,7 +57,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
         const { data: profile } = await supabase
-          .from('users' as any)
+          .from('users')
           .select('user_id, name')
           .eq('id', session.user.id)
           .single();
@@ -98,7 +98,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         
         while (attempts < 10) {
           const { data: existing } = await supabase
-            .from('users' as any)
+            .from('users')
             .select('user_id')
             .eq('user_id', userId)
             .single();
@@ -108,9 +108,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           attempts++;
         }
 
-        // Store user profile with type assertion
-        const { error: profileError } = await (supabase
-          .from('users' as any) as any)
+        // Store user profile
+        const { error: profileError } = await supabase
+          .from('users')
           .insert({
             id: data.user.id,
             user_id: userId,
