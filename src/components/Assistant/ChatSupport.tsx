@@ -22,7 +22,7 @@ const ChatSupport = ({ onMessageSent }: ChatSupportProps) => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
-      text: 'Hello! I\'m your Mouritech support assistant. Describe any issues you\'re experiencing and I\'ll automatically create and manage tickets for you.',
+      text: 'Hello! I\'m your Mouritech support assistant. Describe any issues you\'re experiencing and I\'ll help you resolve them.',
       sender: 'bot',
       timestamp: new Date().toISOString()
     }
@@ -32,6 +32,9 @@ const ChatSupport = ({ onMessageSent }: ChatSupportProps) => {
   const [activeTickets, setActiveTickets] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  // Your webhook URL
+  const WEBHOOK_URL = "https://parost.app.n8n.cloud/webhook-test/64d38da4-3add-46d8-a8d2-88eea11f29b6";
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -40,68 +43,55 @@ const ChatSupport = ({ onMessageSent }: ChatSupportProps) => {
     scrollToBottom();
   }, [messages]);
 
-  const generateBotResponse = (userMessage: string): { response: string, shouldCloseTicket: boolean, ticketId?: string } => {
-    const lowerMessage = userMessage.toLowerCase();
-    const problemKeywords = ['problem', 'issue', 'error', 'not working', 'broken', 'help', 'trouble', 'cant', "can't", 'unable', 'need'];
-    const containsProblemKeyword = problemKeywords.some(keyword => lowerMessage.includes(keyword));
-    
-    // Check if user is confirming a solution worked
-    const confirmationKeywords = ['thanks', 'thank you', 'worked', 'fixed', 'resolved', 'good', 'perfect', 'solved', 'done'];
-    const isConfirmingFix = confirmationKeywords.some(keyword => lowerMessage.includes(keyword));
-    
-    if (isConfirmingFix && activeTickets.size > 0) {
-      const ticketId = Array.from(activeTickets)[0];
-      return {
-        response: `Excellent! I'm glad the solution worked. I've automatically closed ticket #${ticketId}. If you need any further assistance, just let me know!`,
-        shouldCloseTicket: true,
-        ticketId
-      };
-    }
-    
-    if (containsProblemKeyword && userMessage.length > 10) {
-      const ticketId = Date.now().toString();
-      return {
-        response: `I've automatically created incident ticket #${ticketId} for your issue. I'm analyzing: "${userMessage}" and will provide a solution shortly. You can track this ticket in the Incidents tab.`,
-        shouldCloseTicket: false,
-        ticketId
-      };
-    } else if (lowerMessage.includes('password') || lowerMessage.includes('reset')) {
-      const hasActiveTicket = activeTickets.size > 0;
-      const ticketId = hasActiveTicket ? Array.from(activeTickets)[0] : Date.now().toString();
+  const sendToWebhook = async (userMessage: string): Promise<string> => {
+    try {
+      console.log('Sending message to webhook:', userMessage);
       
-      return {
-        response: `I can help you reset your password. Please go to the login page and click "Forgot Password", then check your email for reset instructions. Once you've successfully reset your password, your issue should be resolved. ${hasActiveTicket ? `I'll close ticket #${ticketId} once you confirm this worked.` : `I've created ticket #${ticketId} to track this request.`}`,
-        shouldCloseTicket: false,
-        ticketId: hasActiveTicket ? undefined : ticketId
-      };
-    } else if (lowerMessage.includes('software') || lowerMessage.includes('install')) {
-      const hasActiveTicket = activeTickets.size > 0;
-      const ticketId = hasActiveTicket ? Array.from(activeTickets)[0] : Date.now().toString();
+      const response = await fetch(WEBHOOK_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: userMessage,
+          timestamp: new Date().toISOString(),
+          user_id: 'chat_user',
+          session_id: Date.now().toString()
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('Webhook response:', data);
       
-      return {
-        response: `I can assist with software installation. I've provided step-by-step installation instructions and can connect to your device if needed. Follow the installation guide in your email, and let me know if you encounter any issues. ${hasActiveTicket ? `I'll close ticket #${ticketId} once installation is complete.` : `I've created ticket #${ticketId} to track this installation.`}`,
-        shouldCloseTicket: false,
-        ticketId: hasActiveTicket ? undefined : ticketId
-      };
-    } else if (lowerMessage.includes('status') || lowerMessage.includes('check')) {
-      return {
-        response: 'I can help you check the status of your existing tickets or incidents. Do you have a ticket number you\'d like me to look up?',
-        shouldCloseTicket: false
-      };
-    } else if (lowerMessage.includes('hello') || lowerMessage.includes('hi')) {
-      return {
-        response: 'Hello! I\'m here to assist you with any IT support needs. Just describe your problem and I\'ll automatically create and manage tickets for you.',
-        shouldCloseTicket: false
-      };
-    } else {
-      return {
-        response: 'I understand. Please provide more details about your issue so I can create an appropriate support ticket and help resolve your problem.',
-        shouldCloseTicket: false
-      };
+      // Extract the response text from the webhook response
+      // Adjust this based on your n8n workflow response structure
+      return data.response || data.message || data.text || 'I received your message and I\'m processing it.';
+      
+    } catch (error) {
+      console.error('Error calling webhook:', error);
+      return 'I\'m having trouble connecting to the support system right now. Please try again in a moment.';
     }
   };
 
-  const typeMessage = (text: string, messageId: string, isTicketMessage = false, isClosureMessage = false, ticketId?: string) => {
+  const checkForTicketKeywords = (message: string): { shouldCreateTicket: boolean, ticketId?: string } => {
+    const lowerMessage = message.toLowerCase();
+    const problemKeywords = ['problem', 'issue', 'error', 'not working', 'broken', 'help', 'trouble', 'cant', "can't", 'unable', 'need'];
+    const containsProblemKeyword = problemKeywords.some(keyword => lowerMessage.includes(keyword));
+    
+    if (containsProblemKeyword && message.length > 10) {
+      const ticketId = Date.now().toString();
+      setActiveTickets(prev => new Set(prev).add(ticketId));
+      return { shouldCreateTicket: true, ticketId };
+    }
+    
+    return { shouldCreateTicket: false };
+  };
+
+  const typeMessage = (text: string, messageId: string, isTicketMessage = false, ticketId?: string) => {
     let index = 0;
     const interval = setInterval(() => {
       setMessages(prev => 
@@ -111,7 +101,6 @@ const ChatSupport = ({ onMessageSent }: ChatSupportProps) => {
                 ...msg, 
                 text: text.slice(0, index + 1), 
                 isTicketCreated: isTicketMessage,
-                isTicketClosed: isClosureMessage,
                 ticketId: ticketId
               }
             : msg
@@ -125,7 +114,7 @@ const ChatSupport = ({ onMessageSent }: ChatSupportProps) => {
     }, 30);
   };
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
     if (!inputMessage.trim()) return;
 
     const userMessage: Message = {
@@ -138,43 +127,38 @@ const ChatSupport = ({ onMessageSent }: ChatSupportProps) => {
     setMessages(prev => [...prev, userMessage]);
     onMessageSent?.(inputMessage);
 
-    // Generate bot response with ticket management logic
-    const { response: botResponseText, shouldCloseTicket, ticketId } = generateBotResponse(inputMessage);
-    const botMessageId = (Date.now() + 1).toString();
-    
-    // Handle ticket creation
-    const lowerMessage = inputMessage.toLowerCase();
-    const problemKeywords = ['problem', 'issue', 'error', 'not working', 'broken', 'help', 'trouble', 'cant', "can't", 'unable', 'need'];
-    const containsProblemKeyword = problemKeywords.some(keyword => lowerMessage.includes(keyword));
-    const isTicketMessage = containsProblemKeyword && inputMessage.length > 10;
+    // Check if we should create a ticket
+    const { shouldCreateTicket, ticketId } = checkForTicketKeywords(inputMessage);
 
-    // Update active tickets
-    if (isTicketMessage && ticketId) {
-      setActiveTickets(prev => new Set(prev).add(ticketId));
-    } else if (shouldCloseTicket && ticketId) {
-      setActiveTickets(prev => {
-        const newSet = new Set(prev);
-        newSet.delete(ticketId);
-        return newSet;
-      });
-    }
-    
+    const botMessageId = (Date.now() + 1).toString();
     const botMessage: Message = {
       id: botMessageId,
       text: '',
       sender: 'bot',
       timestamp: new Date().toISOString(),
-      isTicketCreated: isTicketMessage,
-      isTicketClosed: shouldCloseTicket,
+      isTicketCreated: shouldCreateTicket,
       ticketId: ticketId
     };
 
+    const currentInput = inputMessage;
     setInputMessage('');
     setIsTyping(true);
 
-    setTimeout(() => {
+    // Add empty bot message first
+    setTimeout(async () => {
       setMessages(prev => [...prev, botMessage]);
-      typeMessage(botResponseText, botMessageId, isTicketMessage, shouldCloseTicket, ticketId);
+      
+      // Get response from webhook
+      const webhookResponse = await sendToWebhook(currentInput);
+      
+      // Add ticket info if needed
+      let finalResponse = webhookResponse;
+      if (shouldCreateTicket && ticketId) {
+        finalResponse = `I've created ticket #${ticketId} for your issue. ${webhookResponse}`;
+      }
+      
+      // Type the response
+      typeMessage(finalResponse, botMessageId, shouldCreateTicket, ticketId);
     }, 500);
   };
 
@@ -256,7 +240,7 @@ const ChatSupport = ({ onMessageSent }: ChatSupportProps) => {
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Describe your issue and I'll create a ticket..."
+            placeholder="Describe your issue and I'll help you resolve it..."
             className="flex-1 min-h-[45px] max-h-32 bg-slate-700/50 border-slate-600/50 text-white placeholder:text-white/70 focus:ring-blue-500/50 focus:border-blue-500/50 rounded-lg font-medium"
             disabled={isTyping}
           />
