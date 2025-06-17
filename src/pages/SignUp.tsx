@@ -79,25 +79,25 @@ const SignUp = () => {
         backgroundRepeat: 'no-repeat'
       }}
     >
-      {/* Overlay for better readability */}
-      <div className="absolute inset-0 bg-black/40"></div>
+      {/* Enhanced overlay for better readability */}
+      <div className="absolute inset-0 bg-black/60"></div>
       
-      <Card className="w-full max-w-md relative z-10 bg-white/95 backdrop-blur-sm border border-white/20">
+      <Card className="w-full max-w-md relative z-10 bg-white/20 backdrop-blur-lg border border-white/30 shadow-2xl">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="p-3 bg-blue-100 rounded-full">
-              <UserPlus className="w-6 h-6 text-blue-600" />
+            <div className="p-3 bg-blue-100/30 backdrop-blur-sm rounded-full border border-white/20">
+              <UserPlus className="w-6 h-6 text-white" />
             </div>
           </div>
-          <CardTitle className="text-2xl">Create Account</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-2xl text-white">Create Account</CardTitle>
+          <CardDescription className="text-white/80">
             Join Mouritech Support and get your unique user ID
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
+              <Label htmlFor="name" className="text-white">Full Name</Label>
               <Input
                 id="name"
                 name="name"
@@ -106,11 +106,12 @@ const SignUp = () => {
                 value={formData.name}
                 onChange={handleChange}
                 placeholder="Enter your full name"
+                className="bg-white/20 backdrop-blur-sm border-white/30 text-white placeholder:text-white/60"
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="email" className="text-white">Email</Label>
               <Input
                 id="email"
                 name="email"
@@ -119,11 +120,12 @@ const SignUp = () => {
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="Enter your email"
+                className="bg-white/20 backdrop-blur-sm border-white/30 text-white placeholder:text-white/60"
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="text-white">Password</Label>
               <Input
                 id="password"
                 name="password"
@@ -133,11 +135,12 @@ const SignUp = () => {
                 value={formData.password}
                 onChange={handleChange}
                 placeholder="Enter your password (min. 6 characters)"
+                className="bg-white/20 backdrop-blur-sm border-white/30 text-white placeholder:text-white/60"
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Label htmlFor="confirmPassword" className="text-white">Confirm Password</Label>
               <Input
                 id="confirmPassword"
                 name="confirmPassword"
@@ -146,10 +149,11 @@ const SignUp = () => {
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 placeholder="Confirm your password"
+                className="bg-white/20 backdrop-blur-sm border-white/30 text-white placeholder:text-white/60"
               />
             </div>
             
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button type="submit" className="w-full bg-blue-600/80 hover:bg-blue-700/80 backdrop-blur-sm" disabled={loading}>
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -161,9 +165,9 @@ const SignUp = () => {
             </Button>
           </form>
           
-          <div className="mt-6 text-center text-sm text-gray-600">
+          <div className="mt-6 text-center text-sm text-white/80">
             Already have an account?{' '}
-            <Link to="/signin" className="text-blue-600 hover:underline">
+            <Link to="/signin" className="text-blue-300 hover:underline">
               Sign in
             </Link>
           </div>

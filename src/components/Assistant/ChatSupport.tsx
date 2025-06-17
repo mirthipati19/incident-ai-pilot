@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, Bot, User, AlertCircle, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -16,9 +17,11 @@ interface Message {
 
 interface ChatSupportProps {
   onMessageSent?: (message: string) => void;
+  onTicketCreated?: (ticketId: string, message: string) => void;
+  onTicketResolved?: (ticketId: string) => void;
 }
 
-const ChatSupport = ({ onMessageSent }: ChatSupportProps) => {
+const ChatSupport = ({ onMessageSent, onTicketCreated, onTicketResolved }: ChatSupportProps) => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: '1',
@@ -56,26 +59,48 @@ const ChatSupport = ({ onMessageSent }: ChatSupportProps) => {
         body: JSON.stringify({
           message: userMessage,
           timestamp: new Date().toISOString(),
-          user_id: user?.user_id || user?.id || 'anonymous', // Send the 6-digit user_id or fallback to UUID
+          user_id: user?.user_id || user?.id || 'anonymous',
           session_id: Date.now().toString(),
           user_email: user?.email || null,
           user_name: user?.name || null
         }),
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
-      console.log('Webhook response:', data);
+      console.log('Full webhook response:', data);
       
-      // Extract the response text from the webhook response
-      // Adjust this based on your n8n workflow response structure
-      return data.response || data.message || data.text || 'I received your message and I\'m processing it.';
+      // Handle different possible response structures from n8n
+      let botResponse = '';
+      if (typeof data === 'string') {
+        botResponse = data;
+      } else if (data.response) {
+        botResponse = data.response;
+      } else if (data.message) {
+        botResponse = data.message;
+      } else if (data.text) {
+        botResponse = data.text;
+      } else if (data.output) {
+        botResponse = data.output;
+      } else if (data.result) {
+        botResponse = data.result;
+      } else if (Array.isArray(data) && data.length > 0) {
+        botResponse = data[0].response || data[0].message || data[0].text || JSON.stringify(data[0]);
+      } else {
+        console.log('Unexpected response structure:', data);
+        botResponse = 'I received your message and I\'m processing it.';
+      }
+      
+      return botResponse || 'I received your message and I\'m processing it.';
       
     } catch (error) {
-      console.error('Error calling webhook:', error);
+      console.error('Detailed webhook error:', error);
       return 'I\'m having trouble connecting to the support system right now. Please try again in a moment.';
     }
   };
@@ -88,13 +113,28 @@ const ChatSupport = ({ onMessageSent }: ChatSupportProps) => {
     if (containsProblemKeyword && message.length > 10) {
       const ticketId = Date.now().toString();
       setActiveTickets(prev => new Set(prev).add(ticketId));
+      onTicketCreated?.(ticketId, message);
       return { shouldCreateTicket: true, ticketId };
     }
     
     return { shouldCreateTicket: false };
   };
 
-  const typeMessage = (text: string, messageId: string, isTicketMessage = false, ticketId?: string) => {
+  const checkForResolutionKeywords = (message: string): 'resolved' | 'escalated' | 'none' => {
+    const lowerMessage = message.toLowerCase();
+    const resolvedKeywords = ['thank you', 'thanks', 'resolved', 'fixed', 'solved', 'working now', 'all good', 'perfect'];
+    const escalatedKeywords = ['escalate', 'escalated', 'manager', 'supervisor', 'higher level'];
+    
+    if (resolvedKeywords.some(keyword => lowerMessage.includes(keyword))) {
+      return 'resolved';
+    }
+    if (escalatedKeywords.some(keyword => lowerMessage.includes(keyword))) {
+      return 'escalated';
+    }
+    return 'none';
+  };
+
+  const typeMessage = (text: string, messageId: string, isTicketMessage = false, ticketId?: string, isResolved = false) => {
     let index = 0;
     const interval = setInterval(() => {
       setMessages(prev => 
@@ -104,6 +144,7 @@ const ChatSupport = ({ onMessageSent }: ChatSupportProps) => {
                 ...msg, 
                 text: text.slice(0, index + 1), 
                 isTicketCreated: isTicketMessage,
+                isTicketClosed: isResolved,
                 ticketId: ticketId
               }
             : msg
@@ -130,6 +171,9 @@ const ChatSupport = ({ onMessageSent }: ChatSupportProps) => {
     setMessages(prev => [...prev, userMessage]);
     onMessageSent?.(inputMessage);
 
+    // Check for resolution keywords
+    const resolutionStatus = checkForResolutionKeywords(inputMessage);
+    
     // Check if we should create a ticket
     const { shouldCreateTicket, ticketId } = checkForTicketKeywords(inputMessage);
 
@@ -140,6 +184,7 @@ const ChatSupport = ({ onMessageSent }: ChatSupportProps) => {
       sender: 'bot',
       timestamp: new Date().toISOString(),
       isTicketCreated: shouldCreateTicket,
+      isTicketClosed: resolutionStatus === 'resolved',
       ticketId: ticketId
     };
 
@@ -154,14 +199,24 @@ const ChatSupport = ({ onMessageSent }: ChatSupportProps) => {
       // Get response from webhook
       const webhookResponse = await sendToWebhook(currentInput);
       
-      // Add ticket info if needed
+      // Handle different resolution statuses
       let finalResponse = webhookResponse;
-      if (shouldCreateTicket && ticketId) {
+      
+      if (resolutionStatus === 'resolved') {
+        finalResponse = `Great! I'm glad your issue has been resolved. ${webhookResponse} I'll mark any related tickets as resolved.`;
+        // Notify parent component about ticket resolution
+        if (activeTickets.size > 0) {
+          activeTickets.forEach(id => onTicketResolved?.(id));
+          setActiveTickets(new Set());
+        }
+      } else if (resolutionStatus === 'escalated') {
+        finalResponse = `I understand you'd like to escalate this issue. ${webhookResponse} I'll mark this ticket for escalation to our senior support team.`;
+      } else if (shouldCreateTicket && ticketId) {
         finalResponse = `I've created ticket #${ticketId} for your issue. ${webhookResponse}`;
       }
       
       // Type the response
-      typeMessage(finalResponse, botMessageId, shouldCreateTicket, ticketId);
+      typeMessage(finalResponse, botMessageId, shouldCreateTicket, ticketId, resolutionStatus === 'resolved');
     }, 500);
   };
 
