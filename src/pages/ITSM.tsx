@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PromptAnimator from '@/components/Assistant/PromptAnimator';
 import CallSupport from '@/components/Assistant/CallSupport';
@@ -8,28 +8,67 @@ import ConnectPermissionPrompt from '@/components/Assistant/ConnectPermissionPro
 import IncidentList from '@/components/Incidents/IncidentList';
 import IncidentDetails from '@/components/Incidents/IncidentDetails';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { HeadphonesIcon, List, CheckCircle, XCircle, Clock, MessageCircle, Phone, Shield, Settings, Users, AlertTriangle } from 'lucide-react';
-
-interface Incident {
-  id: string;
-  title: string;
-  description: string;
-  status: 'Open' | 'In Progress' | 'Resolved' | 'Closed';
-  priority: 'low' | 'medium' | 'high' | 'critical';
-  assignee: string;
-  category: string;
-  createdAt: string;
-  updatedAt?: string;
-}
+import { HeadphonesIcon, List, CheckCircle, XCircle, Clock, MessageCircle, Phone, Shield, AlertTriangle } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { incidentService, type Incident } from '@/services/incidentService';
+import { useToast } from '@/hooks/use-toast';
 
 const ITSMPage = () => {
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [currentPrompt, setCurrentPrompt] = useState("Welcome to Mouritech Support! How can I assist you today?");
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [showConnectPrompt, setShowConnectPrompt] = useState(false);
+  const [stats, setStats] = useState({
+    open: 0,
+    inProgress: 0,
+    resolved: 0,
+    resolvedToday: 0,
+    critical: 0
+  });
+  const [loading, setLoading] = useState(true);
+  const { user } = useAuth();
+  const { toast } = useToast();
 
-  const createIncidentFromInput = (text: string, source: 'call' | 'chat') => {
+  // Load user incidents and stats
+  useEffect(() => {
+    if (user?.id) {
+      loadIncidents();
+      loadStats();
+    }
+  }, [user?.id]);
+
+  const loadIncidents = async () => {
+    if (!user?.id) return;
+    
+    try {
+      const userIncidents = await incidentService.getUserIncidents(user.id);
+      setIncidents(userIncidents);
+    } catch (error) {
+      console.error('Failed to load incidents:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load incidents",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadStats = async () => {
+    if (!user?.id) return;
+    
+    try {
+      const userStats = await incidentService.getIncidentStats(user.id);
+      setStats(userStats);
+    } catch (error) {
+      console.error('Failed to load stats:', error);
+    }
+  };
+
+  const createIncidentFromInput = async (text: string, source: 'call' | 'chat') => {
+    if (!user?.id) return null;
+
     const lowerText = text.toLowerCase();
     
     // Determine priority and category based on keywords
@@ -52,22 +91,33 @@ const ITSMPage = () => {
       category = 'access';
     }
 
-    const newIncident: Incident = {
-      id: Date.now().toString(),
+    const newIncidentData = {
       title: `${source === 'call' ? 'Voice' : 'Chat'} Support Request - ${text.slice(0, 50)}${text.length > 50 ? '...' : ''}`,
       description: text,
-      status: 'Open',
+      status: 'Open' as const,
       priority,
       category,
-      assignee: 'auto',
-      createdAt: new Date().toISOString()
+      user_id: user.id,
+      assignee: null
     };
 
-    setIncidents(prev => [newIncident, ...prev]);
-    return newIncident;
+    try {
+      const newIncident = await incidentService.createIncident(newIncidentData);
+      setIncidents(prev => [newIncident, ...prev]);
+      loadStats(); // Refresh stats
+      return newIncident;
+    } catch (error) {
+      console.error('Failed to create incident:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create incident",
+        variant: "destructive"
+      });
+      return null;
+    }
   };
 
-  const handleCallResult = (text: string) => {
+  const handleCallResult = async (text: string) => {
     console.log('Call input received:', text);
     
     // Check if this looks like a problem description
@@ -75,8 +125,10 @@ const ITSMPage = () => {
     const containsProblemKeyword = problemKeywords.some(keyword => text.toLowerCase().includes(keyword));
     
     if (containsProblemKeyword && text.length > 10) {
-      const incident = createIncidentFromInput(text, 'call');
-      setCurrentPrompt(`I've created incident #${incident.id} for your issue. Let me help you resolve: "${text}"`);
+      const incident = await createIncidentFromInput(text, 'call');
+      if (incident) {
+        setCurrentPrompt(`I've created incident #${incident.id.slice(0, 8)} for your issue. Let me help you resolve: "${text}"`);
+      }
     } else if (text.toLowerCase().includes('install') || text.toLowerCase().includes('software')) {
       setCurrentPrompt('I can help you install software. Would you like me to connect to your device?');
       setShowConnectPrompt(true);
@@ -87,7 +139,7 @@ const ITSMPage = () => {
     }
   };
 
-  const handleChatMessage = (message: string) => {
+  const handleChatMessage = async (message: string) => {
     console.log('Chat message sent:', message);
     
     // Check if this looks like a problem description
@@ -95,8 +147,10 @@ const ITSMPage = () => {
     const containsProblemKeyword = problemKeywords.some(keyword => message.toLowerCase().includes(keyword));
     
     if (containsProblemKeyword && message.length > 10) {
-      const incident = createIncidentFromInput(message, 'chat');
-      setCurrentPrompt(`I've automatically created incident #${incident.id} for your issue. I'm working on a solution for: "${message}"`);
+      const incident = await createIncidentFromInput(message, 'chat');
+      if (incident) {
+        setCurrentPrompt(`I've automatically created incident #${incident.id.slice(0, 8)} for your issue. I'm working on a solution for: "${message}"`);
+      }
     } else {
       setCurrentPrompt(`Chat: "${message}". How else can I help you?`);
     }
@@ -106,25 +160,45 @@ const ITSMPage = () => {
     setSelectedIncident(incident);
   };
 
-  const handleStatusUpdate = (incidentId: string, newStatus: string) => {
-    setIncidents(prev => 
-      prev.map(incident => 
-        incident.id === incidentId 
-          ? { ...incident, status: newStatus as any, updatedAt: new Date().toISOString() }
-          : incident
-      )
-    );
-    setSelectedIncident(prev => 
-      prev ? { ...prev, status: newStatus as any, updatedAt: new Date().toISOString() } : null
-    );
+  const handleStatusUpdate = async (incidentId: string, newStatus: string) => {
+    try {
+      await incidentService.updateIncidentStatus(incidentId, newStatus);
+      
+      // Update local state
+      setIncidents(prev => 
+        prev.map(incident => 
+          incident.id === incidentId 
+            ? { ...incident, status: newStatus as any, updated_at: new Date().toISOString() }
+            : incident
+        )
+      );
+      setSelectedIncident(prev => 
+        prev ? { ...prev, status: newStatus as any, updated_at: new Date().toISOString() } : null
+      );
+      
+      // Refresh stats
+      loadStats();
+      
+      toast({
+        title: "Success",
+        description: "Incident status updated successfully",
+      });
+    } catch (error) {
+      console.error('Failed to update incident status:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update incident status",
+        variant: "destructive"
+      });
+    }
   };
 
-  // Enhanced statistics with ServiceNow-style metrics
-  const stats = [
-    { label: 'Open Incidents', value: incidents.filter(i => i.status === 'Open').length || 12, icon: XCircle, color: 'text-red-600' },
-    { label: 'In Progress', value: incidents.filter(i => i.status === 'In Progress').length || 8, icon: Clock, color: 'text-yellow-600' },
-    { label: 'Resolved Today', value: incidents.filter(i => i.status === 'Resolved').length || 15, icon: CheckCircle, color: 'text-green-600' },
-    { label: 'Critical Priority', value: incidents.filter(i => i.priority === 'critical').length || 3, icon: AlertTriangle, color: 'text-orange-600' }
+  // Statistics with real user data
+  const statCards = [
+    { label: 'Open Incidents', value: stats.open, icon: XCircle, color: 'text-red-600' },
+    { label: 'In Progress', value: stats.inProgress, icon: Clock, color: 'text-yellow-600' },
+    { label: 'Resolved Today', value: stats.resolvedToday, icon: CheckCircle, color: 'text-green-600' },
+    { label: 'Critical Priority', value: stats.critical, icon: AlertTriangle, color: 'text-orange-600' }
   ];
 
   return (
@@ -150,11 +224,16 @@ const ITSMPage = () => {
           <p className="text-lg text-white/90 drop-shadow-md">
             AI-powered IT Service Management with voice, automation and smart device integration
           </p>
+          {user?.name && (
+            <p className="text-md text-white/80 drop-shadow-md">
+              Welcome back, {user.name}! (ID: {user.user_id})
+            </p>
+          )}
         </div>
 
         {/* Statistics Dashboard */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {stats.map((stat) => (
+          {statCards.map((stat) => (
             <Card key={stat.label} className="bg-white/10 backdrop-blur-sm border border-white/20 hover:bg-white/15 transition-all">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
@@ -225,20 +304,12 @@ const ITSMPage = () => {
           </Card>
         </div>
 
-        {/* Main Content Tabs */}
+        {/* Main Content - Only Incidents Tab */}
         <Tabs defaultValue="incidents" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 bg-white/10 backdrop-blur-sm border border-white/20">
+          <TabsList className="grid w-full grid-cols-1 bg-white/10 backdrop-blur-sm border border-white/20">
             <TabsTrigger value="incidents" className="flex items-center gap-2 text-white data-[state=active]:bg-white/20 data-[state=active]:text-white">
               <List className="w-4 h-4" />
-              Incidents
-            </TabsTrigger>
-            <TabsTrigger value="my-work" className="flex items-center gap-2 text-white data-[state=active]:bg-white/20 data-[state=active]:text-white">
-              <Users className="w-4 h-4" />
-              My Work
-            </TabsTrigger>
-            <TabsTrigger value="admin" className="flex items-center gap-2 text-white data-[state=active]:bg-white/20 data-[state=active]:text-white">
-              <Settings className="w-4 h-4" />
-              Admin
+              My Incidents
             </TabsTrigger>
           </TabsList>
 
@@ -247,75 +318,6 @@ const ITSMPage = () => {
               incidents={incidents}
               onIncidentSelect={handleIncidentSelect}
             />
-          </TabsContent>
-
-          <TabsContent value="my-work" className="mt-6">
-            <Card className="bg-white/10 backdrop-blur-sm border border-white/20">
-              <CardHeader>
-                <CardTitle className="text-white">My Assigned Work</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="text-center p-4 bg-blue-600/20 rounded-lg border border-blue-500/30">
-                      <h4 className="text-white font-medium mb-2">Active Tickets</h4>
-                      <p className="text-2xl font-bold text-blue-300">5</p>
-                    </div>
-                    <div className="text-center p-4 bg-yellow-600/20 rounded-lg border border-yellow-500/30">
-                      <h4 className="text-white font-medium mb-2">Pending Review</h4>
-                      <p className="text-2xl font-bold text-yellow-300">2</p>
-                    </div>
-                    <div className="text-center p-4 bg-green-600/20 rounded-lg border border-green-500/30">
-                      <h4 className="text-white font-medium mb-2">Completed Today</h4>
-                      <p className="text-2xl font-bold text-green-300">8</p>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="admin" className="mt-6">
-            <Card className="bg-white/10 backdrop-blur-sm border border-white/20">
-              <CardHeader>
-                <CardTitle className="text-white">System Administration</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="space-y-4">
-                    <h4 className="text-white font-medium">System Health</h4>
-                    <div className="space-y-2">
-                      <div className="flex justify-between items-center p-3 bg-green-600/20 rounded-lg">
-                        <span className="text-white">Database</span>
-                        <Badge className="bg-green-600 text-white">Healthy</Badge>
-                      </div>
-                      <div className="flex justify-between items-center p-3 bg-green-600/20 rounded-lg">
-                        <span className="text-white">API Services</span>
-                        <Badge className="bg-green-600 text-white">Online</Badge>
-                      </div>
-                      <div className="flex justify-between items-center p-3 bg-yellow-600/20 rounded-lg">
-                        <span className="text-white">Smart Agent</span>
-                        <Badge className="bg-yellow-600 text-white">Standby</Badge>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="space-y-4">
-                    <h4 className="text-white font-medium">Quick Actions</h4>
-                    <div className="space-y-2">
-                      <button className="w-full p-3 bg-blue-600/30 hover:bg-blue-600/50 text-white rounded-lg text-left transition-colors">
-                        Bulk Import Users
-                      </button>
-                      <button className="w-full p-3 bg-purple-600/30 hover:bg-purple-600/50 text-white rounded-lg text-left transition-colors">
-                        Generate Reports
-                      </button>
-                      <button className="w-full p-3 bg-orange-600/30 hover:bg-orange-600/50 text-white rounded-lg text-left transition-colors">
-                        System Maintenance
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
           </TabsContent>
         </Tabs>
 

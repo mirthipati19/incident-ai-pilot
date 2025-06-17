@@ -50,14 +50,15 @@ const SignUp = () => {
     }
 
     setLoading(true);
+    
     const result = await signUp(formData.email, formData.password, formData.name);
     
     if (result.success) {
       toast({
-        title: "Success!",
-        description: `Account created successfully! Your User ID is: ${result.userId}`,
+        title: "Account created!",
+        description: `Welcome ${formData.name}! Your user ID is: ${result.userId}`,
       });
-      navigate('/signin');
+      navigate('/itsm');
     } else {
       toast({
         title: "Error",
@@ -69,8 +70,19 @@ const SignUp = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <Card className="w-full max-w-md">
+    <div 
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{
+        backgroundImage: `url('/lovable-uploads/50b753fc-5735-49ae-ad55-1cc4efdd1bc3.png')`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat'
+      }}
+    >
+      {/* Overlay for better readability */}
+      <div className="absolute inset-0 bg-black/40"></div>
+      
+      <Card className="w-full max-w-md relative z-10 bg-white/95 backdrop-blur-sm border border-white/20">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
             <div className="p-3 bg-blue-100 rounded-full">
@@ -79,7 +91,7 @@ const SignUp = () => {
           </div>
           <CardTitle className="text-2xl">Create Account</CardTitle>
           <CardDescription>
-            Sign up for Mouritech Support
+            Join Mouritech Support and get your unique user ID
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -117,9 +129,10 @@ const SignUp = () => {
                 name="password"
                 type="password"
                 required
+                minLength={6}
                 value={formData.password}
                 onChange={handleChange}
-                placeholder="Create a password"
+                placeholder="Enter your password (min. 6 characters)"
               />
             </div>
             
@@ -140,7 +153,7 @@ const SignUp = () => {
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating Account...
+                  Creating account...
                 </>
               ) : (
                 'Create Account'

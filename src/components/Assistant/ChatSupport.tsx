@@ -1,8 +1,8 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, Bot, User, AlertCircle, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Message {
   id: string;
@@ -31,6 +31,7 @@ const ChatSupport = ({ onMessageSent }: ChatSupportProps) => {
   const [isTyping, setIsTyping] = useState(false);
   const [activeTickets, setActiveTickets] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { user } = useAuth();
 
   // Your webhook URL
   const WEBHOOK_URL = "https://parost.app.n8n.cloud/webhook-test/64d38da4-3add-46d8-a8d2-88eea11f29b6";
@@ -55,8 +56,10 @@ const ChatSupport = ({ onMessageSent }: ChatSupportProps) => {
         body: JSON.stringify({
           message: userMessage,
           timestamp: new Date().toISOString(),
-          user_id: 'chat_user',
-          session_id: Date.now().toString()
+          user_id: user?.user_id || user?.id || 'anonymous', // Send the 6-digit user_id or fallback to UUID
+          session_id: Date.now().toString(),
+          user_email: user?.email || null,
+          user_name: user?.name || null
         }),
       });
 
