@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PromptAnimator from '@/components/Assistant/PromptAnimator';
@@ -335,8 +336,7 @@ const ITSMPage = () => {
               ...selectedIncident,
               createdAt: selectedIncident.created_at,
               updatedAt: selectedIncident.updated_at,
-              assignee: selectedIncident.assignee || 'Unassigned',
-              user_id: selectedIncident.user_id
+              assignee: selectedIncident.assignee || 'Unassigned'
             }}
             onClose={() => setSelectedIncident(null)}
             onStatusUpdate={handleStatusUpdate}

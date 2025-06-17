@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +15,7 @@ interface Incident {
   priority: 'low' | 'medium' | 'high' | 'critical';
   assignee: string;
   category: string;
+  user_id: string;
   createdAt: string;
   updatedAt?: string;
 }

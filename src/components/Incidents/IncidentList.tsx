@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -16,6 +15,7 @@ interface Incident {
   priority: 'low' | 'medium' | 'high' | 'critical';
   assignee: string;
   category: string;
+  user_id: string;
   createdAt: string;
   updatedAt?: string;
 }
@@ -35,6 +35,7 @@ const mockIncidents: Incident[] = [
     priority: 'high',
     assignee: 'John Doe',
     category: 'network',
+    user_id: 'user_123',
     createdAt: '2024-01-15T10:30:00Z'
   },
   {
@@ -45,6 +46,7 @@ const mockIncidents: Incident[] = [
     priority: 'medium',
     assignee: 'Jane Smith',
     category: 'access',
+    user_id: 'user_123',
     createdAt: '2024-01-15T09:15:00Z'
   },
   {
@@ -55,6 +57,7 @@ const mockIncidents: Incident[] = [
     priority: 'low',
     assignee: 'Mike Wilson',
     category: 'hardware',
+    user_id: 'user_123',
     createdAt: '2024-01-14T14:20:00Z'
   },
   {
@@ -65,6 +68,7 @@ const mockIncidents: Incident[] = [
     priority: 'critical',
     assignee: 'John Doe',
     category: 'security',
+    user_id: 'user_123',
     createdAt: '2024-01-15T11:45:00Z'
   }
 ];
