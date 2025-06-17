@@ -45,7 +45,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUser({ 
           ...session.user, 
           user_id: profile?.user_id || undefined,
-          name: profile?.name || undefined
+          name: profile?.name || session.user.user_metadata?.name || undefined
         });
       }
       setLoading(false);
@@ -56,17 +56,54 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
-        const { data: profile } = await supabase
-          .from('users')
-          .select('user_id, name')
-          .eq('id', session.user.id)
-          .single();
-        
-        setUser({ 
-          ...session.user, 
-          user_id: profile?.user_id || undefined,
-          name: profile?.name || undefined
-        });
+        // For social auth, we might need to create a user profile
+        if (event === 'SIGNED_IN' && session.user.app_metadata?.provider !== 'email') {
+          // Check if user profile exists
+          const { data: existingProfile } = await supabase
+            .from('users')
+            .select('user_id, name')
+            .eq('id', session.user.id)
+            .single();
+
+          if (!existingProfile) {
+            // Create profile for social auth user
+            const userId = generateUserId();
+            await supabase
+              .from('users')
+              .insert({
+                id: session.user.id,
+                user_id: userId,
+                name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || 'User',
+                email: session.user.email || '',
+                password_hash: 'social_auth'
+              });
+
+            setUser({ 
+              ...session.user, 
+              user_id: userId,
+              name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || 'User'
+            });
+          } else {
+            setUser({ 
+              ...session.user, 
+              user_id: existingProfile.user_id,
+              name: existingProfile.name
+            });
+          }
+        } else {
+          // Regular email auth or existing social auth user
+          const { data: profile } = await supabase
+            .from('users')
+            .select('user_id, name')
+            .eq('id', session.user.id)
+            .single();
+          
+          setUser({ 
+            ...session.user, 
+            user_id: profile?.user_id || undefined,
+            name: profile?.name || session.user.user_metadata?.name || undefined
+          });
+        }
       } else {
         setUser(null);
       }
@@ -85,6 +122,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/itsm`
+        }
       });
 
       if (error) {
