@@ -315,8 +315,16 @@ const ITSMPage = () => {
 
           <TabsContent value="incidents" className="mt-6">
             <IncidentList 
-              incidents={incidents}
-              onIncidentSelect={handleIncidentSelect}
+              incidents={incidents.map(incident => ({
+                ...incident,
+                createdAt: incident.created_at,
+                assignee: incident.assignee || 'Unassigned'
+              }))}
+              onIncidentSelect={(incident) => handleIncidentSelect({
+                ...incident,
+                created_at: incident.createdAt,
+                assignee: incident.assignee === 'Unassigned' ? null : incident.assignee
+              })}
             />
           </TabsContent>
         </Tabs>
@@ -324,7 +332,12 @@ const ITSMPage = () => {
         {/* Incident Details Modal */}
         {selectedIncident && (
           <IncidentDetails
-            incident={selectedIncident}
+            incident={{
+              ...selectedIncident,
+              createdAt: selectedIncident.created_at,
+              updatedAt: selectedIncident.updated_at,
+              assignee: selectedIncident.assignee || 'Unassigned'
+            }}
             onClose={() => setSelectedIncident(null)}
             onStatusUpdate={handleStatusUpdate}
           />

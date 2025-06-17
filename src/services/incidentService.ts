@@ -27,7 +27,11 @@ export const incidentService = {
       throw error;
     }
 
-    return data || [];
+    return (data || []).map(item => ({
+      ...item,
+      status: item.status as 'Open' | 'In Progress' | 'Resolved' | 'Closed',
+      priority: item.priority as 'low' | 'medium' | 'high' | 'critical'
+    }));
   },
 
   async createIncident(incident: Omit<Incident, 'id' | 'created_at' | 'updated_at'>): Promise<Incident> {
@@ -42,7 +46,11 @@ export const incidentService = {
       throw error;
     }
 
-    return data;
+    return {
+      ...data,
+      status: data.status as 'Open' | 'In Progress' | 'Resolved' | 'Closed',
+      priority: data.priority as 'low' | 'medium' | 'high' | 'critical'
+    };
   },
 
   async updateIncidentStatus(incidentId: string, status: string): Promise<void> {
