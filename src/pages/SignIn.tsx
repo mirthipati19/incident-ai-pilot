@@ -90,17 +90,17 @@ const SignIn = () => {
       }}
     >
       {/* Enhanced overlay for better readability */}
-      <div className="absolute inset-0 bg-black/70"></div>
+      <div className="absolute inset-0 bg-black/50"></div>
       
-      <Card className="w-full max-w-md relative z-10 bg-white/10 backdrop-blur-md border border-white/20 shadow-2xl">
+      <Card className="w-full max-w-md relative z-10 bg-white/20 backdrop-blur-lg border border-white/30 shadow-2xl">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="p-3 bg-white/20 backdrop-blur-sm rounded-full border border-white/30">
-              <LogIn className="w-6 h-6 text-white" />
+            <div className="p-3 bg-white/30 backdrop-blur-sm rounded-full border border-white/40">
+              <LogIn className="w-6 h-6 text-black" />
             </div>
           </div>
-          <CardTitle className="text-2xl text-white font-semibold">Welcome Back</CardTitle>
-          <CardDescription className="text-white/90 font-medium">
+          <CardTitle className="text-2xl text-black font-bold">Welcome Back</CardTitle>
+          <CardDescription className="text-gray-800 font-semibold">
             Sign in to your Mouritech Support account
           </CardDescription>
         </CardHeader>
@@ -110,7 +110,7 @@ const SignIn = () => {
             <Button
               onClick={() => handleSocialSignIn('google')}
               disabled={socialLoading !== null}
-              className="w-full bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/30 text-white font-medium"
+              className="w-full bg-white/30 hover:bg-white/40 backdrop-blur-sm border border-white/40 text-black font-semibold"
               variant="outline"
             >
               {socialLoading === 'google' ? (
@@ -124,7 +124,7 @@ const SignIn = () => {
             <Button
               onClick={() => handleSocialSignIn('azure')}
               disabled={socialLoading !== null}
-              className="w-full bg-white/20 hover:bg-white/30 backdrop-blur-sm border border-white/30 text-white font-medium"
+              className="w-full bg-white/30 hover:bg-white/40 backdrop-blur-sm border border-white/40 text-black font-semibold"
               variant="outline"
             >
               {socialLoading === 'azure' ? (
@@ -140,16 +140,16 @@ const SignIn = () => {
 
           <div className="relative mb-6">
             <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-white/30" />
+              <span className="w-full border-t border-gray-600" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-transparent px-2 text-white/80 font-medium">Or continue with email</span>
+              <span className="bg-transparent px-2 text-gray-800 font-semibold">Or continue with email</span>
             </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-white font-medium">Email</Label>
+              <Label htmlFor="email" className="text-black font-semibold">Email</Label>
               <Input
                 id="email"
                 name="email"
@@ -158,12 +158,12 @@ const SignIn = () => {
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="Enter your email"
-                className="bg-white/20 backdrop-blur-sm border-white/30 text-white placeholder:text-white/70 font-medium focus:border-white/50 focus:ring-white/20"
+                className="bg-white/30 backdrop-blur-sm border-gray-400 text-black placeholder:text-gray-700 font-medium focus:border-gray-600 focus:ring-gray-400"
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-white font-medium">Password</Label>
+              <Label htmlFor="password" className="text-black font-semibold">Password</Label>
               <Input
                 id="password"
                 name="password"
@@ -172,11 +172,11 @@ const SignIn = () => {
                 value={formData.password}
                 onChange={handleChange}
                 placeholder="Enter your password"
-                className="bg-white/20 backdrop-blur-sm border-white/30 text-white placeholder:text-white/70 font-medium focus:border-white/50 focus:ring-white/20"
+                className="bg-white/30 backdrop-blur-sm border-gray-400 text-black placeholder:text-gray-700 font-medium focus:border-gray-600 focus:ring-gray-400"
               />
             </div>
             
-            <Button type="submit" className="w-full bg-blue-600/90 hover:bg-blue-700/90 backdrop-blur-sm font-medium" disabled={loading}>
+            <Button type="submit" className="w-full bg-blue-600/90 hover:bg-blue-700/90 backdrop-blur-sm font-semibold text-white" disabled={loading}>
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -188,9 +188,9 @@ const SignIn = () => {
             </Button>
           </form>
           
-          <div className="mt-6 text-center text-sm text-white/90 font-medium">
+          <div className="mt-6 text-center text-sm text-gray-800 font-semibold">
             Don't have an account?{' '}
-            <Link to="/signup" className="text-blue-300 hover:underline font-semibold">
+            <Link to="/signup" className="text-blue-800 hover:underline font-bold">
               Sign up
             </Link>
           </div>
