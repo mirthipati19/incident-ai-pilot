@@ -6,6 +6,7 @@ import { User } from '@supabase/supabase-js';
 interface AuthUser extends User {
   user_id?: string;
   name?: string;
+  isAdmin?: boolean;
 }
 
 interface AuthContextType {
@@ -30,6 +31,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const checkAdminStatus = async (userId: string) => {
+    try {
+      const { data } = await supabase
+        .from('admin_users')
+        .select('role')
+        .eq('user_id', userId)
+        .single();
+      
+      return !!data;
+    } catch (error) {
+      return false;
+    }
+  };
+
   useEffect(() => {
     // Get initial session
     const getSession = async () => {
@@ -42,10 +57,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .eq('id', session.user.id)
           .single();
         
+        // Check admin status
+        const isAdmin = await checkAdminStatus(session.user.id);
+        
         setUser({ 
           ...session.user, 
           user_id: profile?.user_id || undefined,
-          name: profile?.name || session.user.user_metadata?.name || undefined
+          name: profile?.name || session.user.user_metadata?.name || undefined,
+          isAdmin
         });
       }
       setLoading(false);
@@ -78,16 +97,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 password_hash: 'social_auth'
               });
 
+            // Check admin status for new user
+            const isAdmin = await checkAdminStatus(session.user.id);
+
             setUser({ 
               ...session.user, 
               user_id: userId,
-              name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || 'User'
+              name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || 'User',
+              isAdmin
             });
           } else {
+            const isAdmin = await checkAdminStatus(session.user.id);
             setUser({ 
               ...session.user, 
               user_id: existingProfile.user_id,
-              name: existingProfile.name
+              name: existingProfile.name,
+              isAdmin
             });
           }
         } else {
@@ -98,10 +123,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             .eq('id', session.user.id)
             .single();
           
+          const isAdmin = await checkAdminStatus(session.user.id);
+          
           setUser({ 
             ...session.user, 
             user_id: profile?.user_id || undefined,
-            name: profile?.name || session.user.user_metadata?.name || undefined
+            name: profile?.name || session.user.user_metadata?.name || undefined,
+            isAdmin
           });
         }
       } else {

@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -7,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, LogIn } from 'lucide-react';
+import { Loader2, LogIn, Shield } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import CaptchaVerification from '@/components/CaptchaVerification';
 
@@ -31,6 +30,10 @@ const SignIn = () => {
     });
   };
 
+  const isAdminEmail = (email: string) => {
+    return email === 'mirthipatioffcial@gmail.com';
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -44,11 +47,21 @@ const SignIn = () => {
     const result = await signIn(formData.email, formData.password);
     
     if (result.success) {
+      const welcomeMessage = isAdminEmail(formData.email) 
+        ? "Welcome back, Admin!" 
+        : "Welcome back!";
+      
       toast({
-        title: "Welcome back!",
+        title: welcomeMessage,
         description: "You have been signed in successfully.",
       });
-      navigate('/itsm');
+      
+      // Redirect admin to admin dashboard, others to ITSM
+      if (isAdminEmail(formData.email)) {
+        navigate('/admin');
+      } else {
+        navigate('/itsm');
+      }
     } else {
       toast({
         title: "Error",
@@ -152,12 +165,21 @@ const SignIn = () => {
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
             <div className="p-3 bg-white/30 backdrop-blur-sm rounded-full border border-white/40">
-              <LogIn className="w-6 h-6 text-black" />
+              {isAdminEmail(formData.email) ? (
+                <Shield className="w-6 h-6 text-orange-600" />
+              ) : (
+                <LogIn className="w-6 h-6 text-black" />
+              )}
             </div>
           </div>
-          <CardTitle className="text-2xl text-black font-bold">Welcome Back</CardTitle>
+          <CardTitle className="text-2xl text-black font-bold">
+            {isAdminEmail(formData.email) ? 'Admin Login' : 'Welcome Back'}
+          </CardTitle>
           <CardDescription className="text-gray-800 font-semibold">
-            Sign in to your Mouritech Support account
+            {isAdminEmail(formData.email) 
+              ? 'Admin access to Mouritech Support' 
+              : 'Sign in to your Mouritech Support account'
+            }
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -248,6 +270,12 @@ const SignIn = () => {
                 placeholder="Enter your email"
                 className="bg-white/30 backdrop-blur-sm border-gray-400 text-black placeholder:text-gray-700 font-medium focus:border-gray-600 focus:ring-gray-400"
               />
+              {isAdminEmail(formData.email) && (
+                <p className="text-xs text-orange-600 font-semibold flex items-center gap-1">
+                  <Shield className="w-3 h-3" />
+                  Admin account detected
+                </p>
+              )}
             </div>
             
             <div className="space-y-2">
@@ -271,7 +299,7 @@ const SignIn = () => {
                   Signing in...
                 </>
               ) : (
-                'Sign In'
+                isAdminEmail(formData.email) ? 'Admin Sign In' : 'Sign In'
               )}
             </Button>
           </form>
