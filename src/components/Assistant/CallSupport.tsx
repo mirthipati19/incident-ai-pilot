@@ -6,7 +6,11 @@ import { Phone, PhoneOff, Mic, MicOff } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import VoiceAssistant from './VoiceAssistant';
 
-const CallSupport = () => {
+interface CallSupportProps {
+  onCallResult?: (text: string) => void;
+}
+
+const CallSupport = ({ onCallResult }: CallSupportProps) => {
   const [isCallActive, setIsCallActive] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [callDuration, setCallDuration] = useState(0);
@@ -68,6 +72,12 @@ const CallSupport = () => {
       title: isMuted ? "Microphone Unmuted" : "Microphone Muted",
       description: isMuted ? "You can now speak" : "Your microphone is muted",
     });
+  };
+
+  const handleVoiceResult = (text: string) => {
+    if (onCallResult) {
+      onCallResult(text);
+    }
   };
 
   if (!isCallActive && !isConnecting) {
@@ -160,7 +170,11 @@ const CallSupport = () => {
         </CardContent>
       </Card>
 
-      <VoiceAssistant isCallActive={isCallActive} isMuted={isMuted} />
+      <VoiceAssistant 
+        isCallActive={isCallActive} 
+        isMuted={isMuted} 
+        onVoiceResult={handleVoiceResult}
+      />
     </div>
   );
 };

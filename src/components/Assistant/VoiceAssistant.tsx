@@ -1,11 +1,14 @@
+
 import React, { useState, useEffect } from 'react';
 import { PhoneCall } from 'lucide-react';
 
 interface VoiceAssistantProps {
   onVoiceResult?: (text: string) => void;
+  isCallActive?: boolean;
+  isMuted?: boolean;
 }
 
-const VoiceAssistant = ({ onVoiceResult }: VoiceAssistantProps) => {
+const VoiceAssistant = ({ onVoiceResult, isCallActive, isMuted }: VoiceAssistantProps) => {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [showRing, setShowRing] = useState(false);
@@ -25,6 +28,11 @@ const VoiceAssistant = ({ onVoiceResult }: VoiceAssistantProps) => {
   const handleVoice = () => {
     if (!('webkitSpeechRecognition' in window)) {
       alert('Speech recognition not supported in this browser');
+      return;
+    }
+
+    // Don't start if call is not active or if muted
+    if (!isCallActive || isMuted) {
       return;
     }
 
@@ -106,9 +114,14 @@ const VoiceAssistant = ({ onVoiceResult }: VoiceAssistantProps) => {
         ) : (
           <button 
             onClick={handleVoice}
-            className="bg-cyan-500 text-white px-6 py-2 rounded-xl hover:bg-cyan-600 transition-colors"
+            className={`px-6 py-2 rounded-xl transition-colors ${
+              !isCallActive || isMuted 
+                ? 'bg-gray-500 text-gray-300 cursor-not-allowed' 
+                : 'bg-cyan-500 text-white hover:bg-cyan-600'
+            }`}
+            disabled={!isCallActive || isMuted}
           >
-            Call Assistant
+            {isMuted ? 'Muted' : 'Call Assistant'}
           </button>
         )}
       </div>
