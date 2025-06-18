@@ -7,17 +7,26 @@ import ChatSupport from '@/components/Assistant/ChatSupport';
 import ConnectPermissionPrompt from '@/components/Assistant/ConnectPermissionPrompt';
 import IncidentList from '@/components/Incidents/IncidentList';
 import IncidentDetails from '@/components/Incidents/IncidentDetails';
+import IncidentResolutionPopup from '@/components/IncidentResolutionPopup';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { HeadphonesIcon, List, CheckCircle, XCircle, Clock, MessageCircle, Phone, Shield, AlertTriangle } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { HeadphonesIcon, List, CheckCircle, XCircle, Clock, MessageCircle, Phone, Shield, AlertTriangle, Settings } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { incidentService, type Incident } from '@/services/incidentService';
 import { useToast } from '@/hooks/use-toast';
+import { supabase } from '@/integrations/supabase/client';
+import { Link } from 'react-router-dom';
 
 const ITSMPage = () => {
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [currentPrompt, setCurrentPrompt] = useState("Welcome to Mouritech Support! How can I assist you today?");
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [showConnectPrompt, setShowConnectPrompt] = useState(false);
+  const [resolutionPopup, setResolutionPopup] = useState<{
+    incident: Incident;
+    suggestedResolution: string;
+  } | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [stats, setStats] = useState({
     open: 0,
     inProgress: 0,
@@ -34,8 +43,25 @@ const ITSMPage = () => {
     if (user?.id) {
       loadIncidents();
       loadStats();
+      checkAdminStatus();
     }
   }, [user?.id]);
+
+  const checkAdminStatus = async () => {
+    if (!user?.id) return;
+    
+    try {
+      const { data } = await supabase
+        .from('admin_users')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+      
+      setIsAdmin(!!data);
+    } catch (error) {
+      console.log('Not an admin user');
+    }
+  };
 
   const loadIncidents = async () => {
     if (!user?.id) return;
@@ -63,6 +89,22 @@ const ITSMPage = () => {
       setStats(userStats);
     } catch (error) {
       console.error('Failed to load stats:', error);
+    }
+  };
+
+  const generateAIResolution = (description: string): string => {
+    const lowerText = description.toLowerCase();
+    
+    if (lowerText.includes('password') || lowerText.includes('login')) {
+      return "Try resetting your password using the 'Forgot Password' link. If that doesn't work, clear your browser cache and cookies, then try again. Contact IT if the issue persists.";
+    } else if (lowerText.includes('software') || lowerText.includes('install')) {
+      return "Ensure you have admin rights on your computer. Download the latest version from the official website. If installation fails, temporarily disable antivirus and try again.";
+    } else if (lowerText.includes('network') || lowerText.includes('internet')) {
+      return "Check if other devices can connect to the network. Try restarting your router and computer. If using WiFi, move closer to the router or try using an ethernet cable.";
+    } else if (lowerText.includes('slow') || lowerText.includes('performance')) {
+      return "Close unnecessary programs and browser tabs. Restart your computer. Check if your hard drive has sufficient free space (at least 15% free). Run a disk cleanup if needed.";
+    } else {
+      return "Please try restarting the application or your computer. If the issue persists, check for software updates. Document any error messages and contact support if needed.";
     }
   };
 
@@ -105,6 +147,16 @@ const ITSMPage = () => {
       const newIncident = await incidentService.createIncident(newIncidentData);
       setIncidents(prev => [newIncident, ...prev]);
       loadStats(); // Refresh stats
+      
+      // Show AI resolution popup after a short delay
+      setTimeout(() => {
+        const suggestedResolution = generateAIResolution(text);
+        setResolutionPopup({
+          incident: newIncident,
+          suggestedResolution
+        });
+      }, 2000);
+      
       return newIncident;
     } catch (error) {
       console.error('Failed to create incident:', error);
@@ -127,7 +179,7 @@ const ITSMPage = () => {
     if (containsProblemKeyword && text.length > 10) {
       const incident = await createIncidentFromInput(text, 'call');
       if (incident) {
-        setCurrentPrompt(`I've created incident #${incident.id.slice(0, 8)} for your issue. Let me help you resolve: "${text}"`);
+        setCurrentPrompt(`I've created incident #${incident.id.slice(0, 8)} for your issue. Analyzing the problem and preparing a solution...`);
       }
     } else if (text.toLowerCase().includes('install') || text.toLowerCase().includes('software')) {
       setCurrentPrompt('I can help you install software. Would you like me to connect to your device?');
@@ -149,7 +201,7 @@ const ITSMPage = () => {
     if (containsProblemKeyword && message.length > 10) {
       const incident = await createIncidentFromInput(message, 'chat');
       if (incident) {
-        setCurrentPrompt(`I've automatically created incident #${incident.id.slice(0, 8)} for your issue. I'm working on a solution for: "${message}"`);
+        setCurrentPrompt(`I've automatically created incident #${incident.id.slice(0, 8)} for your issue. Analyzing your problem and preparing an AI-powered solution...`);
       }
     } else {
       setCurrentPrompt(`Chat: "${message}". How else can I help you?`);
@@ -193,6 +245,94 @@ const ITSMPage = () => {
     }
   };
 
+  const handleResolutionAccept = async (rating: number, feedback?: string) => {
+    if (!resolutionPopup) return;
+    
+    try {
+      // Update incident to resolved
+      await incidentService.updateIncidentStatus(resolutionPopup.incident.id, 'Resolved');
+      
+      // Record AI resolution stats
+      await supabase
+        .from('ai_resolution_stats')
+        .insert({
+          incident_id: resolutionPopup.incident.id,
+          resolution_method: 'auto',
+          resolution_time_minutes: Math.floor(Math.random() * 30) + 5, // Mock time
+          user_satisfaction_score: rating,
+          ai_confidence_score: 0.85,
+          resolved_at: new Date().toISOString()
+        });
+      
+      // Update local state
+      setIncidents(prev => 
+        prev.map(incident => 
+          incident.id === resolutionPopup.incident.id
+            ? { ...incident, status: 'Resolved' as const, updated_at: new Date().toISOString() }
+            : incident
+        )
+      );
+      
+      loadStats();
+      setResolutionPopup(null);
+      
+      toast({
+        title: "Resolution Accepted",
+        description: "Great! Your incident has been resolved. Thank you for the feedback!",
+      });
+    } catch (error) {
+      console.error('Failed to record resolution:', error);
+      toast({
+        title: "Error",
+        description: "Failed to record resolution",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleResolutionEscalate = async () => {
+    if (!resolutionPopup) return;
+    
+    try {
+      // Update incident to In Progress and assign to human
+      await incidentService.updateIncidentStatus(resolutionPopup.incident.id, 'In Progress');
+      
+      // Record escalation
+      await supabase
+        .from('ai_resolution_stats')
+        .insert({
+          incident_id: resolutionPopup.incident.id,
+          resolution_method: 'escalated',
+          ai_confidence_score: 0.45,
+          resolved_at: null
+        });
+      
+      // Update local state
+      setIncidents(prev => 
+        prev.map(incident => 
+          incident.id === resolutionPopup.incident.id
+            ? { ...incident, status: 'In Progress' as const, assignee: 'Human Support Agent', updated_at: new Date().toISOString() }
+            : incident
+        )
+      );
+      
+      loadStats();
+      setResolutionPopup(null);
+      
+      toast({
+        title: "Escalated to Human Support",
+        description: "Your incident has been assigned to a human support agent who will contact you soon.",
+      });
+    } catch (error) {
+      console.error('Failed to escalate incident:', error);
+      toast({
+        title: "Error",
+        description: "Failed to escalate incident",
+        variant: "destructive"
+      });
+    }
+  };
+
   // Statistics with real user data
   const statCards = [
     { label: 'Open Incidents', value: stats.open, icon: XCircle, color: 'text-red-600' },
@@ -217,10 +357,20 @@ const ITSMPage = () => {
       <div className="relative z-10 max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="text-center space-y-4">
-          <h1 className="text-4xl font-bold text-white flex items-center justify-center gap-3 drop-shadow-lg">
+          <div className="flex items-center justify-center gap-3">
             <HeadphonesIcon className="w-10 h-10 text-blue-300" />
-            Mouritech Support
-          </h1>
+            <h1 className="text-4xl font-bold text-white drop-shadow-lg">
+              Mouritech Support
+            </h1>
+            {isAdmin && (
+              <Link to="/admin">
+                <Button variant="outline" size="sm" className="bg-white/20 text-white border-white/30 hover:bg-white/30">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Admin
+                </Button>
+              </Link>
+            )}
+          </div>
           <p className="text-lg text-white/90 drop-shadow-md">
             AI-powered IT Service Management with voice, automation and smart device integration
           </p>
@@ -340,6 +490,17 @@ const ITSMPage = () => {
             }}
             onClose={() => setSelectedIncident(null)}
             onStatusUpdate={handleStatusUpdate}
+          />
+        )}
+
+        {/* AI Resolution Popup */}
+        {resolutionPopup && (
+          <IncidentResolutionPopup
+            incident={resolutionPopup.incident}
+            suggestedResolution={resolutionPopup.suggestedResolution}
+            onResolve={handleResolutionAccept}
+            onEscalate={handleResolutionEscalate}
+            onClose={() => setResolutionPopup(null)}
           />
         )}
       </div>

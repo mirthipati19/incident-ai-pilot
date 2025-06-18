@@ -9,6 +9,104 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      admin_users: {
+        Row: {
+          created_at: string
+          id: string
+          permissions: string[] | null
+          role: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          permissions?: string[] | null
+          role?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          permissions?: string[] | null
+          role?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      ai_resolution_stats: {
+        Row: {
+          ai_confidence_score: number | null
+          created_at: string
+          id: string
+          incident_id: string | null
+          resolution_method: string
+          resolution_time_minutes: number | null
+          resolved_at: string | null
+          user_satisfaction_score: number | null
+        }
+        Insert: {
+          ai_confidence_score?: number | null
+          created_at?: string
+          id?: string
+          incident_id?: string | null
+          resolution_method: string
+          resolution_time_minutes?: number | null
+          resolved_at?: string | null
+          user_satisfaction_score?: number | null
+        }
+        Update: {
+          ai_confidence_score?: number | null
+          created_at?: string
+          id?: string
+          incident_id?: string | null
+          resolution_method?: string
+          resolution_time_minutes?: number | null
+          resolved_at?: string | null
+          user_satisfaction_score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_resolution_stats_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "incidents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      captcha_verifications: {
+        Row: {
+          attempts: number | null
+          challenge: string
+          created_at: string
+          expires_at: string
+          id: string
+          session_id: string
+          solution: string
+          verified: boolean | null
+        }
+        Insert: {
+          attempts?: number | null
+          challenge: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          session_id: string
+          solution: string
+          verified?: boolean | null
+        }
+        Update: {
+          attempts?: number | null
+          challenge?: string
+          created_at?: string
+          expires_at?: string
+          id?: string
+          session_id?: string
+          solution?: string
+          verified?: boolean | null
+        }
+        Relationships: []
+      }
       incidents: {
         Row: {
           assignee: string | null
