@@ -45,10 +45,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const isAdminEmail = (email: string) => {
-    return email === 'mirthipatioffcial@gmail.com';
-  };
-
   useEffect(() => {
     // Get initial session
     const getSession = async () => {
@@ -208,28 +204,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
-      // Check if this is the admin email with a specific password
-      if (email === 'mirthipatioffcial@gmail.com' && password === 'Qwertyuiop@0987654321') {
-        // First, check if admin user exists in auth.users
-        const { data: existingUser } = await supabase.auth.admin.getUserByEmail(email);
-        
-        if (!existingUser.user) {
-          // Create admin user if doesn't exist
-          const { data: newUser, error: createError } = await supabase.auth.admin.createUser({
-            email: email,
-            password: password,
-            email_confirm: true
-          });
-
-          if (createError) {
-            console.error('Admin user creation error:', createError);
-            return { success: false, error: 'Failed to create admin user' };
-          }
-
-          // The trigger will automatically add them to admin_users table
-        }
-      }
-
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,

@@ -1,5 +1,4 @@
-
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -7,45 +6,83 @@ import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Search, Filter, Eye, Edit, User, Calendar, AlertCircle } from 'lucide-react';
-import { useAuth } from '@/contexts/AuthContext';
-import { incidentService, Incident } from '@/services/incidentService';
+
+interface Incident {
+  id: string;
+  title: string;
+  description: string;
+  status: 'Open' | 'In Progress' | 'Resolved' | 'Closed';
+  priority: 'low' | 'medium' | 'high' | 'critical';
+  assignee: string;
+  category: string;
+  user_id: string;
+  createdAt: string;
+  updatedAt?: string;
+}
 
 interface IncidentListProps {
   incidents?: Incident[];
   onIncidentSelect?: (incident: Incident) => void;
 }
 
-const IncidentList = ({ onIncidentSelect }: IncidentListProps) => {
+// Mock data for demonstration
+const mockIncidents: Incident[] = [
+  {
+    id: '1',
+    title: 'Email server not responding',
+    description: 'Users unable to send or receive emails',
+    status: 'Open',
+    priority: 'high',
+    assignee: 'John Doe',
+    category: 'network',
+    user_id: 'user_123',
+    createdAt: '2024-01-15T10:30:00Z'
+  },
+  {
+    id: '2',
+    title: 'Password reset request',
+    description: 'User needs password reset for domain account',
+    status: 'In Progress',
+    priority: 'medium',
+    assignee: 'Jane Smith',
+    category: 'access',
+    user_id: 'user_123',
+    createdAt: '2024-01-15T09:15:00Z'
+  },
+  {
+    id: '3',
+    title: 'Printer offline in Building A',
+    description: 'Main printer in Building A conference room offline',
+    status: 'Resolved',
+    priority: 'low',
+    assignee: 'Mike Wilson',
+    category: 'hardware',
+    user_id: 'user_123',
+    createdAt: '2024-01-14T14:20:00Z'
+  },
+  {
+    id: '4',
+    title: 'Security breach detected',
+    description: 'Unusual activity detected on network',
+    status: 'Open',
+    priority: 'critical',
+    assignee: 'John Doe',
+    category: 'security',
+    user_id: 'user_123',
+    createdAt: '2024-01-15T11:45:00Z'
+  }
+];
+
+const IncidentList = ({ incidents = mockIncidents, onIncidentSelect }: IncidentListProps) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [priorityFilter, setPriorityFilter] = useState<string>('all');
-  const [incidents, setIncidents] = useState<Incident[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { user } = useAuth();
-
-  useEffect(() => {
-    const fetchIncidents = async () => {
-      if (!user?.id) return;
-      
-      try {
-        setLoading(true);
-        const userIncidents = await incidentService.getUserIncidents(user.id);
-        setIncidents(userIncidents);
-      } catch (error) {
-        console.error('Error fetching incidents:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchIncidents();
-  }, [user?.id]);
 
   const filteredIncidents = useMemo(() => {
     return incidents.filter(incident => {
       const matchesSearch = incident.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            incident.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           (incident.assignee && incident.assignee.toLowerCase().includes(searchTerm.toLowerCase()));
+                           incident.assignee.toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesStatus = statusFilter === 'all' || incident.status === statusFilter;
       const matchesPriority = priorityFilter === 'all' || incident.priority === priorityFilter;
@@ -79,22 +116,12 @@ const IncidentList = ({ onIncidentSelect }: IncidentListProps) => {
     return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
-  if (loading) {
-    return (
-      <Card className="w-full">
-        <CardContent className="p-6">
-          <div className="text-center">Loading incidents...</div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
     <Card className="w-full">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <AlertCircle className="w-5 h-5 text-blue-600" />
-          Incident Management ({incidents.length} total)
+          Incident Management
         </CardTitle>
       </CardHeader>
       <CardContent>
@@ -155,7 +182,7 @@ const IncidentList = ({ onIncidentSelect }: IncidentListProps) => {
             <TableBody>
               {filteredIncidents.map((incident) => (
                 <TableRow key={incident.id} className="cursor-pointer hover:bg-gray-50">
-                  <TableCell className="font-mono text-sm">#{incident.id.slice(0, 8)}</TableCell>
+                  <TableCell className="font-mono text-sm">#{incident.id}</TableCell>
                   <TableCell>
                     <div>
                       <div className="font-medium">{incident.title}</div>
@@ -177,13 +204,13 @@ const IncidentList = ({ onIncidentSelect }: IncidentListProps) => {
                   <TableCell>
                     <div className="flex items-center gap-2">
                       <User className="w-4 h-4 text-gray-400" />
-                      <span className="text-sm">{incident.assignee || 'Unassigned'}</span>
+                      <span className="text-sm">{incident.assignee}</span>
                     </div>
                   </TableCell>
                   <TableCell>
                     <div className="flex items-center gap-2 text-sm text-gray-500">
                       <Calendar className="w-4 h-4" />
-                      {formatDate(incident.created_at)}
+                      {formatDate(incident.createdAt)}
                     </div>
                   </TableCell>
                   <TableCell>
@@ -206,9 +233,9 @@ const IncidentList = ({ onIncidentSelect }: IncidentListProps) => {
           </Table>
         </div>
 
-        {filteredIncidents.length === 0 && !loading && (
+        {filteredIncidents.length === 0 && (
           <div className="text-center py-8 text-gray-500">
-            {incidents.length === 0 ? 'No incidents found. Create your first incident to get started.' : 'No incidents found matching your filters.'}
+            No incidents found matching your filters.
           </div>
         )}
       </CardContent>
