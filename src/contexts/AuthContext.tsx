@@ -176,6 +176,68 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
+      // Check if this is the admin login
+      if (email === 'mirthipatioffcial@gmail.com' && password === 'Qwertyuiop@0987654321') {
+        // Check if admin user exists in Supabase Auth
+        const { data: authUser, error: authError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+
+        if (authError) {
+          // If admin doesn't exist in auth, create them
+          if (authError.message.includes('Invalid login credentials') || authError.message.includes('Email not confirmed')) {
+            const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+              email,
+              password,
+              options: {
+                emailRedirectTo: `${window.location.origin}/admin`
+              }
+            });
+
+            if (signUpError) {
+              return { success: false, error: signUpError.message };
+            }
+
+            if (signUpData.user) {
+              // Create admin profile
+              const { error: profileError } = await supabase
+                .from('users')
+                .insert({
+                  id: signUpData.user.id,
+                  user_id: '000001',
+                  name: 'Admin User',
+                  email,
+                  password_hash: 'handled_by_supabase'
+                });
+
+              if (profileError) {
+                console.error('Admin profile creation error:', profileError);
+              }
+
+              // Create admin entry
+              const { error: adminError } = await supabase
+                .from('admin_users')
+                .insert({
+                  user_id: signUpData.user.id,
+                  role: 'admin',
+                  permissions: ['view_tickets', 'manage_users', 'view_stats', 'admin_dashboard']
+                });
+
+              if (adminError) {
+                console.error('Admin role creation error:', adminError);
+              }
+
+              return { success: true };
+            }
+          }
+          return { success: false, error: authError.message };
+        }
+
+        return { success: true };
+      }
+
+      // Regular user login
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
