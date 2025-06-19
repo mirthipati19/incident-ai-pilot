@@ -201,8 +201,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
+      console.log('Attempting to sign in with:', email);
+      
       // Check if this is the admin login
-      if (email === 'mirthipatioffcial@gmail.com' && password === 'Qwertyuiop@0987654321') {
+      if (email === 'Murari.mirthipati@authexa.me' && password === 'Qwertyuiop@0987654321') {
+        console.log('Admin login detected');
+        
         // Check if admin user exists in Supabase Auth
         const { data: authUser, error: authError } = await supabase.auth.signInWithPassword({
           email,
@@ -210,8 +214,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         });
 
         if (authError) {
+          console.log('Admin auth error:', authError.message);
+          
           // If admin doesn't exist in auth, create them
           if (authError.message.includes('Invalid login credentials') || authError.message.includes('Email not confirmed')) {
+            console.log('Creating admin user...');
+            
             const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
               email,
               password,
@@ -221,10 +229,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             });
 
             if (signUpError) {
+              console.error('Admin signup error:', signUpError);
               return { success: false, error: signUpError.message };
             }
 
             if (signUpData.user) {
+              console.log('Admin user created, setting up profile...');
+              
               // Create admin profile
               const { error: profileError } = await supabase
                 .from('users')
@@ -253,6 +264,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 console.error('Admin role creation error:', adminError);
               }
 
+              console.log('Admin setup complete');
               return { success: true, isAdmin: true };
             }
           }
@@ -260,7 +272,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         }
 
         // Check if user has admin role
+        console.log('Checking admin status for user:', authUser.user.id);
         const isAdmin = await checkAdminStatus(authUser.user.id);
+        console.log('Admin status:', isAdmin);
+        
         return { success: true, isAdmin };
       }
 
