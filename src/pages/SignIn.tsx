@@ -48,8 +48,8 @@ const SignIn = () => {
         description: "You have been signed in successfully.",
       });
       
-      // Redirect based on admin status
-      if (result.isAdmin) {
+      // Check if admin email and redirect accordingly
+      if (formData.email === 'Murari.mirthipati@authexa.me') {
         navigate('/admin');
       } else {
         navigate('/itsm');

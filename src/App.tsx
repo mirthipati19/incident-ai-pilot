@@ -8,8 +8,10 @@ import ITSM from '@/pages/ITSM';
 import NotFound from '@/pages/NotFound';
 import { AuthProvider } from '@/contexts/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import AdminRoute from '@/components/AdminRoute';
 import { Toaster } from '@/components/ui/toaster';
 import AdminDashboard from '@/pages/AdminDashboard';
+import AdminPortal from '@/pages/AdminPortal';
 
 function App() {
   return (
@@ -31,9 +33,17 @@ function App() {
             <Route 
               path="/admin" 
               element={
-                <ProtectedRoute>
+                <AdminRoute>
+                  <AdminPortal />
+                </AdminRoute>
+              } 
+            />
+            <Route 
+              path="/admin-dashboard" 
+              element={
+                <AdminRoute>
                   <AdminDashboard />
-                </ProtectedRoute>
+                </AdminRoute>
               } 
             />
             <Route path="*" element={<NotFound />} />
