@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -48,7 +47,13 @@ const SignIn = () => {
         title: "Welcome back!",
         description: "You have been signed in successfully.",
       });
-      navigate('/itsm');
+      
+      // Redirect based on admin status
+      if (result.isAdmin) {
+        navigate('/admin');
+      } else {
+        navigate('/itsm');
+      }
     } else {
       toast({
         title: "Error",

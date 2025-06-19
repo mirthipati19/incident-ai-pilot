@@ -6,13 +6,14 @@ import { User } from '@supabase/supabase-js';
 interface AuthUser extends User {
   user_id?: string;
   name?: string;
+  isAdmin?: boolean;
 }
 
 interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
   signUp: (email: string, password: string, name: string) => Promise<{ success: boolean; error?: string; userId?: string }>;
-  signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
+  signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string; isAdmin?: boolean }>;
   signOut: () => Promise<void>;
 }
 
@@ -30,6 +31,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const checkAdminStatus = async (userId: string) => {
+    try {
+      const { data } = await supabase
+        .from('admin_users')
+        .select('role')
+        .eq('user_id', userId)
+        .single();
+      
+      return !!data;
+    } catch (error) {
+      return false;
+    }
+  };
+
   useEffect(() => {
     // Get initial session
     const getSession = async () => {
@@ -42,10 +57,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .eq('id', session.user.id)
           .single();
         
+        // Check admin status
+        const isAdmin = await checkAdminStatus(session.user.id);
+        
         setUser({ 
           ...session.user, 
           user_id: profile?.user_id || undefined,
-          name: profile?.name || session.user.user_metadata?.name || undefined
+          name: profile?.name || session.user.user_metadata?.name || undefined,
+          isAdmin
         });
       }
       setLoading(false);
@@ -78,16 +97,20 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 password_hash: 'social_auth'
               });
 
+            const isAdmin = await checkAdminStatus(session.user.id);
             setUser({ 
               ...session.user, 
               user_id: userId,
-              name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || 'User'
+              name: session.user.user_metadata?.full_name || session.user.user_metadata?.name || 'User',
+              isAdmin
             });
           } else {
+            const isAdmin = await checkAdminStatus(session.user.id);
             setUser({ 
               ...session.user, 
               user_id: existingProfile.user_id,
-              name: existingProfile.name
+              name: existingProfile.name,
+              isAdmin
             });
           }
         } else {
@@ -98,10 +121,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             .eq('id', session.user.id)
             .single();
           
+          const isAdmin = await checkAdminStatus(session.user.id);
           setUser({ 
             ...session.user, 
             user_id: profile?.user_id || undefined,
-            name: profile?.name || session.user.user_metadata?.name || undefined
+            name: profile?.name || session.user.user_metadata?.name || undefined,
+            isAdmin
           });
         }
       } else {
@@ -228,13 +253,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 console.error('Admin role creation error:', adminError);
               }
 
-              return { success: true };
+              return { success: true, isAdmin: true };
             }
           }
           return { success: false, error: authError.message };
         }
 
-        return { success: true };
+        // Check if user has admin role
+        const isAdmin = await checkAdminStatus(authUser.user.id);
+        return { success: true, isAdmin };
       }
 
       // Regular user login
@@ -247,7 +274,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return { success: false, error: error.message };
       }
 
-      return { success: true };
+      return { success: true, isAdmin: false };
     } catch (error) {
       console.error('Sign in error:', error);
       return { success: false, error: 'An unexpected error occurred' };
