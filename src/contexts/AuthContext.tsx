@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
@@ -31,8 +30,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const checkAdminStatus = async (userId: string) => {
+  const checkAdminStatus = async (userId: string, email?: string) => {
     try {
+      // First check if this is the admin email
+      if (email === 'Murari.mirthipati@authexa.me') {
+        console.log('Admin email detected:', email);
+        return true;
+      }
+
+      // Then check database
       const { data } = await supabase
         .from('admin_users')
         .select('role')
@@ -41,6 +47,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       return !!data;
     } catch (error) {
+      // If database check fails but email matches admin, still return true
+      if (email === 'Murari.mirthipati@authexa.me') {
+        return true;
+      }
       return false;
     }
   };
@@ -58,7 +68,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           .single();
         
         // Check admin status
-        const isAdmin = await checkAdminStatus(session.user.id);
+        const isAdmin = await checkAdminStatus(session.user.id, session.user.email);
         
         setUser({ 
           ...session.user, 
@@ -74,6 +84,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth state change:', event, session?.user?.email);
+      
       if (session?.user) {
         // For social auth, we might need to create a user profile
         if (event === 'SIGNED_IN' && session.user.app_metadata?.provider !== 'email') {
@@ -97,7 +109,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
                 password_hash: 'social_auth'
               });
 
-            const isAdmin = await checkAdminStatus(session.user.id);
+            const isAdmin = await checkAdminStatus(session.user.id, session.user.email);
             setUser({ 
               ...session.user, 
               user_id: userId,
@@ -105,7 +117,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
               isAdmin
             });
           } else {
-            const isAdmin = await checkAdminStatus(session.user.id);
+            const isAdmin = await checkAdminStatus(session.user.id, session.user.email);
             setUser({ 
               ...session.user, 
               user_id: existingProfile.user_id,
@@ -121,7 +133,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             .eq('id', session.user.id)
             .single();
           
-          const isAdmin = await checkAdminStatus(session.user.id);
+          const isAdmin = await checkAdminStatus(session.user.id, session.user.email);
           setUser({ 
             ...session.user, 
             user_id: profile?.user_id || undefined,
@@ -203,83 +215,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       console.log('Attempting to sign in with:', email);
       
-      // Check if this is the admin login
-      if (email === 'Murari.mirthipati@authexa.me' && password === 'Qwertyuiop@0987654321') {
-        console.log('Admin login detected');
-        
-        // Check if admin user exists in Supabase Auth
-        const { data: authUser, error: authError } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
-
-        if (authError) {
-          console.log('Admin auth error:', authError.message);
-          
-          // If admin doesn't exist in auth, create them
-          if (authError.message.includes('Invalid login credentials') || authError.message.includes('Email not confirmed')) {
-            console.log('Creating admin user...');
-            
-            const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-              email,
-              password,
-              options: {
-                emailRedirectTo: `${window.location.origin}/admin`
-              }
-            });
-
-            if (signUpError) {
-              console.error('Admin signup error:', signUpError);
-              return { success: false, error: signUpError.message };
-            }
-
-            if (signUpData.user) {
-              console.log('Admin user created, setting up profile...');
-              
-              // Create admin profile
-              const { error: profileError } = await supabase
-                .from('users')
-                .insert({
-                  id: signUpData.user.id,
-                  user_id: '000001',
-                  name: 'Admin User',
-                  email,
-                  password_hash: 'handled_by_supabase'
-                });
-
-              if (profileError) {
-                console.error('Admin profile creation error:', profileError);
-              }
-
-              // Create admin entry
-              const { error: adminError } = await supabase
-                .from('admin_users')
-                .insert({
-                  user_id: signUpData.user.id,
-                  role: 'admin',
-                  permissions: ['view_tickets', 'manage_users', 'view_stats', 'admin_dashboard']
-                });
-
-              if (adminError) {
-                console.error('Admin role creation error:', adminError);
-              }
-
-              console.log('Admin setup complete');
-              return { success: true, isAdmin: true };
-            }
-          }
-          return { success: false, error: authError.message };
-        }
-
-        // Check if user has admin role
-        console.log('Checking admin status for user:', authUser.user.id);
-        const isAdmin = await checkAdminStatus(authUser.user.id);
-        console.log('Admin status:', isAdmin);
-        
-        return { success: true, isAdmin };
-      }
-
-      // Regular user login
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -289,7 +224,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         return { success: false, error: error.message };
       }
 
-      return { success: true, isAdmin: false };
+      // Check if this is admin email
+      const isAdmin = email === 'Murari.mirthipati@authexa.me';
+      console.log('Sign in successful, isAdmin:', isAdmin);
+
+      return { success: true, isAdmin };
     } catch (error) {
       console.error('Sign in error:', error);
       return { success: false, error: 'An unexpected error occurred' };
