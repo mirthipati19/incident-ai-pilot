@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -18,7 +17,7 @@ const SignIn = () => {
     password: ''
   });
   const [adminFormData, setAdminFormData] = useState({
-    email: 'Murari.mirthipati@authexa.me',
+    email: '',
     password: ''
   });
   const [loading, setLoading] = useState(false);
@@ -77,9 +76,14 @@ const SignIn = () => {
     setAdminLoading(true);
     
     try {
-      console.log('Admin login attempt:', adminFormData.email);
+      console.log('Admin login attempt with email:', adminFormData.email);
       
-      // First try to sign in
+      // Check if this is the correct admin credentials
+      if (adminFormData.email !== 'murari.mirthipati@authexa.me' || adminFormData.password !== 'Qwertyuiop@0987654321') {
+        throw new Error('Invalid admin credentials');
+      }
+      
+      // Try to sign in first
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: adminFormData.email,
         password: adminFormData.password,
@@ -88,10 +92,11 @@ const SignIn = () => {
       if (authError) {
         console.log('Admin auth error:', authError.message);
         
-        // If user doesn't exist, create admin account
-        if (authError.message.includes('Invalid login credentials')) {
-          console.log('Creating admin account...');
+        // If user doesn't exist or email not confirmed, create/recreate admin account
+        if (authError.message.includes('Invalid login credentials') || authError.message.includes('Email not confirmed')) {
+          console.log('Creating/recreating admin account...');
           
+          // First try to sign up (this will handle both new users and email confirmation)
           const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
             email: adminFormData.email,
             password: adminFormData.password,
@@ -100,15 +105,39 @@ const SignIn = () => {
             }
           });
 
-          if (signUpError) {
+          if (signUpError && !signUpError.message.includes('User already registered')) {
             throw new Error(signUpError.message);
           }
 
+          // If user already exists but email not confirmed, we need to handle this
+          if (signUpError?.message.includes('User already registered')) {
+            // Try to resend confirmation
+            const { error: resendError } = await supabase.auth.resend({
+              type: 'signup',
+              email: adminFormData.email,
+              options: {
+                emailRedirectTo: `${window.location.origin}/admin`
+              }
+            });
+
+            if (resendError) {
+              console.log('Resend error:', resendError.message);
+            }
+
+            toast({
+              title: "Email Confirmation Required",
+              description: "Please check your email and click the confirmation link to activate your admin account.",
+              variant: "default"
+            });
+            setAdminLoading(false);
+            return;
+          }
+
           if (signUpData.user) {
-            // Create admin profile
+            // Create admin profile if user was created
             const { error: profileError } = await supabase
               .from('users')
-              .insert({
+              .upsert({
                 id: signUpData.user.id,
                 user_id: '000001',
                 name: 'Admin User',
@@ -116,42 +145,50 @@ const SignIn = () => {
                 password_hash: 'handled_by_supabase'
               });
 
-            if (profileError && !profileError.message.includes('duplicate key')) {
+            if (profileError) {
               console.error('Profile creation error:', profileError);
             }
 
             // Create admin role
             const { error: adminError } = await supabase
               .from('admin_users')
-              .insert({
+              .upsert({
                 user_id: signUpData.user.id,
                 role: 'admin',
                 permissions: ['view_tickets', 'manage_users', 'view_stats', 'admin_dashboard']
               });
 
-            if (adminError && !adminError.message.includes('duplicate key')) {
+            if (adminError) {
               console.error('Admin role creation error:', adminError);
             }
+
+            toast({
+              title: "Admin Account Created",
+              description: "Please check your email and click the confirmation link to activate your admin account.",
+              variant: "default"
+            });
+            setAdminLoading(false);
+            return;
           }
         } else {
           throw new Error(authError.message);
         }
+      } else {
+        // Successfully signed in
+        toast({
+          title: "Admin Access Granted",
+          description: "Welcome to the admin portal!",
+        });
+        
+        console.log('Navigating to admin portal...');
+        navigate('/admin', { replace: true });
       }
-
-      toast({
-        title: "Admin Access Granted",
-        description: "Welcome to the admin portal!",
-      });
-      
-      // Force navigation to admin portal
-      console.log('Navigating to admin portal...');
-      navigate('/admin', { replace: true });
       
     } catch (error: any) {
       console.error('Admin login error:', error);
       toast({
         title: "Admin Login Failed",
-        description: error.message || "Failed to sign in as admin",
+        description: error.message || "Invalid admin credentials or email not confirmed",
         variant: "destructive"
       });
     } finally {
@@ -394,7 +431,7 @@ const SignIn = () => {
                   <span className="text-red-800 font-semibold">Admin Access Only</span>
                 </div>
                 <p className="text-red-700 text-sm mt-1">
-                  This section is restricted to authorized administrators only.
+                  Use super password: Qwertyuiop@0987654321 with admin email: murari.mirthipati@authexa.me
                 </p>
               </div>
               
@@ -410,12 +447,11 @@ const SignIn = () => {
                     onChange={handleAdminChange}
                     placeholder="Enter admin email"
                     className="bg-white/30 backdrop-blur-sm border-gray-400 text-black placeholder:text-gray-700 font-medium focus:border-gray-600 focus:ring-gray-400"
-                    readOnly
                   />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="admin-password" className="text-black font-semibold">Admin Password</Label>
+                  <Label htmlFor="admin-password" className="text-black font-semibold">Super Password</Label>
                   <Input
                     id="admin-password"
                     name="password"
@@ -423,7 +459,7 @@ const SignIn = () => {
                     required
                     value={adminFormData.password}
                     onChange={handleAdminChange}
-                    placeholder="Enter admin password"
+                    placeholder="Enter super password"
                     className="bg-white/30 backdrop-blur-sm border-gray-400 text-black placeholder:text-gray-700 font-medium focus:border-gray-600 focus:ring-gray-400"
                   />
                 </div>

@@ -1,3 +1,4 @@
+
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
@@ -33,7 +34,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const checkAdminStatus = async (userId: string, email?: string) => {
     try {
       // First check if this is the admin email
-      if (email === 'Murari.mirthipati@authexa.me') {
+      if (email === 'murari.mirthipati@authexa.me') {
         console.log('Admin email detected:', email);
         return true;
       }
@@ -48,7 +49,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       return !!data;
     } catch (error) {
       // If database check fails but email matches admin, still return true
-      if (email === 'Murari.mirthipati@authexa.me') {
+      if (email === 'murari.mirthipati@authexa.me') {
         return true;
       }
       return false;
@@ -225,7 +226,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       // Check if this is admin email
-      const isAdmin = email === 'Murari.mirthipati@authexa.me';
+      const isAdmin = email === 'murari.mirthipati@authexa.me';
       console.log('Sign in successful, isAdmin:', isAdmin);
 
       return { success: true, isAdmin };
