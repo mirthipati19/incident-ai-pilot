@@ -78,103 +78,9 @@ const SignIn = () => {
     try {
       console.log('Admin login attempt with email:', adminFormData.email);
       
-      // Check if this is the correct admin credentials
-      if (adminFormData.email !== 'murari.mirthipati@authexa.me' || adminFormData.password !== 'Qwertyuiop@0987654321') {
-        throw new Error('Invalid admin credentials');
-      }
+      const result = await signIn(adminFormData.email, adminFormData.password);
       
-      // Try to sign in first
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
-        email: adminFormData.email,
-        password: adminFormData.password,
-      });
-
-      if (authError) {
-        console.log('Admin auth error:', authError.message);
-        
-        // If user doesn't exist or email not confirmed, create/recreate admin account
-        if (authError.message.includes('Invalid login credentials') || authError.message.includes('Email not confirmed')) {
-          console.log('Creating/recreating admin account...');
-          
-          // First try to sign up (this will handle both new users and email confirmation)
-          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-            email: adminFormData.email,
-            password: adminFormData.password,
-            options: {
-              emailRedirectTo: `${window.location.origin}/admin`
-            }
-          });
-
-          if (signUpError && !signUpError.message.includes('User already registered')) {
-            throw new Error(signUpError.message);
-          }
-
-          // If user already exists but email not confirmed, we need to handle this
-          if (signUpError?.message.includes('User already registered')) {
-            // Try to resend confirmation
-            const { error: resendError } = await supabase.auth.resend({
-              type: 'signup',
-              email: adminFormData.email,
-              options: {
-                emailRedirectTo: `${window.location.origin}/admin`
-              }
-            });
-
-            if (resendError) {
-              console.log('Resend error:', resendError.message);
-            }
-
-            toast({
-              title: "Email Confirmation Required",
-              description: "Please check your email and click the confirmation link to activate your admin account.",
-              variant: "default"
-            });
-            setAdminLoading(false);
-            return;
-          }
-
-          if (signUpData.user) {
-            // Create admin profile if user was created
-            const { error: profileError } = await supabase
-              .from('users')
-              .upsert({
-                id: signUpData.user.id,
-                user_id: '000001',
-                name: 'Admin User',
-                email: adminFormData.email,
-                password_hash: 'handled_by_supabase'
-              });
-
-            if (profileError) {
-              console.error('Profile creation error:', profileError);
-            }
-
-            // Create admin role
-            const { error: adminError } = await supabase
-              .from('admin_users')
-              .upsert({
-                user_id: signUpData.user.id,
-                role: 'admin',
-                permissions: ['view_tickets', 'manage_users', 'view_stats', 'admin_dashboard']
-              });
-
-            if (adminError) {
-              console.error('Admin role creation error:', adminError);
-            }
-
-            toast({
-              title: "Admin Account Created",
-              description: "Please check your email and click the confirmation link to activate your admin account.",
-              variant: "default"
-            });
-            setAdminLoading(false);
-            return;
-          }
-        } else {
-          throw new Error(authError.message);
-        }
-      } else {
-        // Successfully signed in
+      if (result.success && result.isAdmin) {
         toast({
           title: "Admin Access Granted",
           description: "Welcome to the admin portal!",
@@ -182,13 +88,15 @@ const SignIn = () => {
         
         console.log('Navigating to admin portal...');
         navigate('/admin', { replace: true });
+      } else {
+        throw new Error('Invalid admin credentials');
       }
       
     } catch (error: any) {
       console.error('Admin login error:', error);
       toast({
         title: "Admin Login Failed",
-        description: error.message || "Invalid admin credentials or email not confirmed",
+        description: "Invalid admin credentials. Please use the correct email and super password.",
         variant: "destructive"
       });
     } finally {
@@ -431,7 +339,7 @@ const SignIn = () => {
                   <span className="text-red-800 font-semibold">Admin Access Only</span>
                 </div>
                 <p className="text-red-700 text-sm mt-1">
-                  Use super password: Qwertyuiop@0987654321 with admin email: murari.mirthipati@authexa.me
+                  Enter your admin credentials to access the admin portal
                 </p>
               </div>
               

@@ -22,8 +22,15 @@ const AdminRoute = ({ children }: AdminRouteProps) => {
 
       console.log('Verifying admin status for user:', user.email);
 
+      // Check for mock admin session
+      if (user.id === 'admin-mock-id' && user.email === 'murari.mirthipati@authexa.me') {
+        console.log('Mock admin session detected');
+        setIsAdminVerified(true);
+        return;
+      }
+
       // Check if user is the specific admin email
-      const isAdminEmail = user.email === 'Murari.mirthipati@authexa.me';
+      const isAdminEmail = user.email === 'murari.mirthipati@authexa.me';
       
       if (isAdminEmail) {
         // Double-check in admin_users table

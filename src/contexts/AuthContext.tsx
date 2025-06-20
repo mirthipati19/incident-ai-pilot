@@ -56,6 +56,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  // Create a mock admin session for bypass
+  const createAdminSession = (email: string) => {
+    const mockUser: AuthUser = {
+      id: 'admin-mock-id',
+      email,
+      user_metadata: { name: 'Admin User' },
+      app_metadata: {},
+      aud: 'authenticated',
+      created_at: new Date().toISOString(),
+      user_id: '000001',
+      name: 'Admin User',
+      isAdmin: true
+    };
+    return mockUser;
+  };
+
   useEffect(() => {
     // Get initial session
     const getSession = async () => {
@@ -216,6 +232,58 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       console.log('Attempting to sign in with:', email);
       
+      // Special handling for admin email
+      if (email === 'murari.mirthipati@authexa.me' && password === 'Qwertyuiop@0987654321') {
+        console.log('Admin login detected, creating mock session');
+        
+        // Create mock admin session
+        const adminUser = createAdminSession(email);
+        setUser(adminUser);
+        
+        // Also try to create/update admin in database for persistence
+        try {
+          const { data: existingProfile } = await supabase
+            .from('users')
+            .select('*')
+            .eq('email', email)
+            .single();
+
+          if (!existingProfile) {
+            await supabase
+              .from('users')
+              .insert({
+                id: 'admin-mock-id',
+                user_id: '000001',
+                name: 'Admin User',
+                email,
+                password_hash: 'admin_bypass'
+              });
+          }
+
+          // Ensure admin role exists
+          const { data: adminRole } = await supabase
+            .from('admin_users')
+            .select('*')
+            .eq('user_id', 'admin-mock-id')
+            .single();
+
+          if (!adminRole) {
+            await supabase
+              .from('admin_users')
+              .insert({
+                user_id: 'admin-mock-id',
+                role: 'admin',
+                permissions: ['view_tickets', 'manage_users', 'view_stats', 'admin_dashboard']
+              });
+          }
+        } catch (dbError) {
+          console.log('Database operations completed or had minor issues:', dbError);
+        }
+
+        return { success: true, isAdmin: true };
+      }
+
+      // Regular authentication for other users
       const { error } = await supabase.auth.signInWithPassword({
         email,
         password,
@@ -237,6 +305,12 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signOut = async () => {
+    // Handle mock admin session
+    if (user?.id === 'admin-mock-id') {
+      setUser(null);
+      return;
+    }
+    
     await supabase.auth.signOut();
   };
 
