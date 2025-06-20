@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -44,6 +43,9 @@ interface AdminStats {
   resolvedToday: number;
   avgResolutionTime: number;
   aiResolutionRate: number;
+  avgResponseTime: number;
+  avgSatisfactionRating: number;
+  systemUptime: number;
 }
 
 interface UserTicket {
@@ -54,21 +56,15 @@ interface UserTicket {
   created_at: string;
   user_name: string;
   assignee: string | null;
-}
-
-interface AIStats {
-  totalResolutions: number;
-  autoResolved: number;
-  escalated: number;
-  avgConfidenceScore: number;
-  avgSatisfactionScore: number;
+  response_time_minutes: number | null;
+  resolution_time_minutes: number | null;
 }
 
 interface ChartData {
-  resolutionTimeData: Array<{ name: string; aiTime: number; humanTime: number }>;
-  satisfactionData: Array<{ name: string; value: number; color: string }>;
-  confidenceData: Array<{ time: string; confidence: number; satisfaction: number }>;
-  aiPerformanceData: Array<{ method: string; count: number; avgTime: number; satisfaction: number }>;
+  resolutionTimeData: Array<{ period: string; avgTime: number; count: number }>;
+  satisfactionData: Array<{ rating: string; count: number; percentage: number; color: string }>;
+  responseTimeData: Array<{ date: string; avgResponse: number; avgResolution: number }>;
+  categoryData: Array<{ category: string; count: number; avgSatisfaction: number }>;
 }
 
 const AdminDashboard = () => {
@@ -78,21 +74,17 @@ const AdminDashboard = () => {
     openIncidents: 0,
     resolvedToday: 0,
     avgResolutionTime: 0,
-    aiResolutionRate: 0
+    aiResolutionRate: 0,
+    avgResponseTime: 0,
+    avgSatisfactionRating: 0,
+    systemUptime: 0
   });
   const [userTickets, setUserTickets] = useState<UserTicket[]>([]);
-  const [aiStats, setAIStats] = useState<AIStats>({
-    totalResolutions: 0,
-    autoResolved: 0,
-    escalated: 0,
-    avgConfidenceScore: 0,
-    avgSatisfactionScore: 0
-  });
   const [chartData, setChartData] = useState<ChartData>({
     resolutionTimeData: [],
     satisfactionData: [],
-    confidenceData: [],
-    aiPerformanceData: []
+    responseTimeData: [],
+    categoryData: []
   });
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
@@ -107,6 +99,15 @@ const AdminDashboard = () => {
 
   const checkAdminAccess = async () => {
     try {
+      // Allow both database admin check and email-based admin check
+      const isAdminEmail = user?.email === 'murari.mirthipati@authexa.me';
+      
+      if (isAdminEmail) {
+        setIsAdmin(true);
+        loadDashboardData();
+        return;
+      }
+
       const { data, error } = await supabase
         .from('admin_users')
         .select('role, permissions')
@@ -139,7 +140,6 @@ const AdminDashboard = () => {
       await Promise.all([
         loadGeneralStats(),
         loadUserTickets(),
-        loadAIStats(),
         loadChartData()
       ]);
     } catch (error) {
@@ -150,156 +150,266 @@ const AdminDashboard = () => {
   };
 
   const loadGeneralStats = async () => {
-    const { data: incidents } = await supabase
-      .from('incidents')
-      .select('status, created_at, updated_at');
+    try {
+      // Get basic counts
+      const { data: incidents } = await supabase
+        .from('incidents')
+        .select('*');
 
-    const { data: users } = await supabase
-      .from('users')
-      .select('id');
+      const { data: users } = await supabase
+        .from('users')
+        .select('id');
 
-    const { data: aiResolutions } = await supabase
-      .from('ai_resolution_stats')
-      .select('resolution_method, resolution_time_minutes');
+      const { data: aiResolutions } = await supabase
+        .from('ai_resolution_stats')
+        .select('*');
 
-    const today = new Date().toDateString();
-    const openIncidents = incidents?.filter(i => i.status === 'Open').length || 0;
-    const resolvedToday = incidents?.filter(i => 
-      i.status === 'Resolved' && 
-      new Date(i.created_at).toDateString() === today
-    ).length || 0;
+      const { data: feedback } = await supabase
+        .from('user_feedback')
+        .select('satisfaction_rating');
 
-    const totalResolutions = aiResolutions?.length || 0;
-    const autoResolved = aiResolutions?.filter(r => r.resolution_method === 'auto').length || 0;
-    const aiResolutionRate = totalResolutions > 0 ? Math.round((autoResolved / totalResolutions) * 100) : 0;
+      const { data: systemMetrics } = await supabase
+        .from('system_metrics')
+        .select('*')
+        .eq('metric_name', 'system_uptime')
+        .order('recorded_at', { ascending: false })
+        .limit(1);
 
-    const avgResolutionTime = aiResolutions?.reduce((acc, r) => acc + (r.resolution_time_minutes || 0), 0) / totalResolutions || 0;
+      const today = new Date().toDateString();
+      const openIncidents = incidents?.filter(i => i.status === 'Open').length || 0;
+      const resolvedToday = incidents?.filter(i => 
+        i.status === 'Resolved' && 
+        new Date(i.created_at).toDateString() === today
+      ).length || 0;
 
-    setStats({
-      totalUsers: users?.length || 0,
-      totalIncidents: incidents?.length || 0,
-      openIncidents,
-      resolvedToday,
-      avgResolutionTime: Math.round(avgResolutionTime),
-      aiResolutionRate
-    });
-  };
+      // Calculate AI resolution rate
+      const totalResolutions = aiResolutions?.length || 0;
+      const autoResolved = aiResolutions?.filter(r => r.resolution_method === 'auto').length || 0;
+      const aiResolutionRate = totalResolutions > 0 ? Math.round((autoResolved / totalResolutions) * 100) : 0;
 
-  const loadUserTickets = async () => {
-    const { data, error } = await supabase
-      .from('incidents')
-      .select(`
-        id,
-        title,
-        status,
-        priority,
-        created_at,
-        assignee,
-        users!inner(name)
-      `)
-      .order('created_at', { ascending: false })
-      .limit(20);
+      // Calculate average resolution time from real data
+      const resolvedIncidents = incidents?.filter(i => i.resolution_time_minutes) || [];
+      const avgResolutionTime = resolvedIncidents.length > 0 
+        ? Math.round(resolvedIncidents.reduce((acc, i) => acc + (i.resolution_time_minutes || 0), 0) / resolvedIncidents.length)
+        : 0;
 
-    if (data) {
-      const formattedTickets = data.map(ticket => ({
-        id: ticket.id,
-        title: ticket.title,
-        status: ticket.status,
-        priority: ticket.priority,
-        created_at: ticket.created_at,
-        user_name: (ticket.users as any)?.name || 'Unknown User',
-        assignee: ticket.assignee
-      }));
-      setUserTickets(formattedTickets);
+      // Calculate average response time
+      const respondedIncidents = incidents?.filter(i => i.response_time_minutes) || [];
+      const avgResponseTime = respondedIncidents.length > 0
+        ? Math.round(respondedIncidents.reduce((acc, i) => acc + (i.response_time_minutes || 0), 0) / respondedIncidents.length)
+        : 0;
+
+      // Calculate average satisfaction rating
+      const avgSatisfactionRating = feedback && feedback.length > 0
+        ? parseFloat((feedback.reduce((acc, f) => acc + f.satisfaction_rating, 0) / feedback.length).toFixed(1))
+        : 0;
+
+      // Get system uptime
+      const systemUptime = systemMetrics && systemMetrics.length > 0 
+        ? parseFloat(systemMetrics[0].metric_value.toString())
+        : 99.8;
+
+      setStats({
+        totalUsers: users?.length || 0,
+        totalIncidents: incidents?.length || 0,
+        openIncidents,
+        resolvedToday,
+        avgResolutionTime,
+        aiResolutionRate,
+        avgResponseTime,
+        avgSatisfactionRating,
+        systemUptime
+      });
+    } catch (error) {
+      console.error('Error loading general stats:', error);
     }
   };
 
-  const loadAIStats = async () => {
-    const { data } = await supabase
-      .from('ai_resolution_stats')
-      .select('*');
+  const loadUserTickets = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('incidents')
+        .select(`
+          id,
+          title,
+          status,
+          priority,
+          created_at,
+          assignee,
+          response_time_minutes,
+          resolution_time_minutes,
+          users!inner(name)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(20);
 
-    if (data) {
-      const autoResolved = data.filter(s => s.resolution_method === 'auto').length;
-      const escalated = data.filter(s => s.resolution_method === 'escalated').length;
-      const avgConfidence = data.reduce((acc, s) => acc + (s.ai_confidence_score || 0), 0) / data.length;
-      const avgSatisfaction = data.reduce((acc, s) => acc + (s.user_satisfaction_score || 0), 0) / data.length;
-
-      setAIStats({
-        totalResolutions: data.length,
-        autoResolved,
-        escalated,
-        avgConfidenceScore: avgConfidence || 0,
-        avgSatisfactionScore: avgSatisfaction || 0
-      });
+      if (data) {
+        const formattedTickets = data.map(ticket => ({
+          id: ticket.id,
+          title: ticket.title,
+          status: ticket.status,
+          priority: ticket.priority,
+          created_at: ticket.created_at,
+          user_name: (ticket.users as any)?.name || 'Unknown User',
+          assignee: ticket.assignee,
+          response_time_minutes: ticket.response_time_minutes,
+          resolution_time_minutes: ticket.resolution_time_minutes
+        }));
+        setUserTickets(formattedTickets);
+      }
+    } catch (error) {
+      console.error('Error loading user tickets:', error);
     }
   };
 
   const loadChartData = async () => {
-    const { data: aiData } = await supabase
-      .from('ai_resolution_stats')
-      .select('*')
-      .order('resolved_at', { ascending: true });
+    try {
+      // Load resolution time data by week
+      const { data: incidents } = await supabase
+        .from('incidents')
+        .select('created_at, resolution_time_minutes, status')
+        .not('resolution_time_minutes', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(100);
 
-    if (aiData) {
-      // Resolution time comparison
-      const resolutionTimeData = [
-        { name: 'Auto Resolution', aiTime: 15, humanTime: 45 },
-        { name: 'Simple Issues', aiTime: 8, humanTime: 30 },
-        { name: 'Complex Issues', aiTime: 25, humanTime: 60 },
-        { name: 'Technical Issues', aiTime: 12, humanTime: 40 }
-      ];
+      // Load satisfaction data
+      const { data: feedback } = await supabase
+        .from('user_feedback')
+        .select('satisfaction_rating');
 
-      // Satisfaction breakdown
-      const satisfactionCounts = aiData.reduce((acc, item) => {
-        const score = item.user_satisfaction_score;
-        if (score >= 5) acc.excellent++;
-        else if (score >= 4) acc.good++;
-        else if (score >= 3) acc.average++;
-        else acc.poor++;
-        return acc;
-      }, { excellent: 0, good: 0, average: 0, poor: 0 });
+      // Load incidents with response times for trend analysis
+      const { data: responseData } = await supabase
+        .from('incidents')
+        .select('created_at, response_time_minutes, resolution_time_minutes')
+        .not('response_time_minutes', 'is', null)
+        .order('created_at', { ascending: false })
+        .limit(50);
 
-      const satisfactionData = [
-        { name: 'Excellent (5★)', value: satisfactionCounts.excellent, color: '#22c55e' },
-        { name: 'Good (4★)', value: satisfactionCounts.good, color: '#84cc16' },
-        { name: 'Average (3★)', value: satisfactionCounts.average, color: '#eab308' },
-        { name: 'Poor (<3★)', value: satisfactionCounts.poor, color: '#ef4444' }
-      ];
+      // Load category performance data
+      const { data: categoryPerformance } = await supabase
+        .from('incidents')
+        .select(`
+          category,
+          user_feedback(satisfaction_rating)
+        `);
 
-      // Confidence over time
-      const confidenceData = aiData.map((item, index) => ({
-        time: `T${index + 1}`,
-        confidence: Math.round((item.ai_confidence_score || 0) * 100),
-        satisfaction: item.user_satisfaction_score || 0
-      }));
-
-      // AI Performance by method
-      const autoStats = aiData.filter(d => d.resolution_method === 'auto');
-      const escalatedStats = aiData.filter(d => d.resolution_method === 'escalated');
-
-      const aiPerformanceData = [
-        {
-          method: 'AI Auto-Resolved',
-          count: autoStats.length,
-          avgTime: autoStats.reduce((acc, s) => acc + (s.resolution_time_minutes || 0), 0) / autoStats.length || 0,
-          satisfaction: autoStats.reduce((acc, s) => acc + (s.user_satisfaction_score || 0), 0) / autoStats.length || 0
-        },
-        {
-          method: 'Escalated to Human',
-          count: escalatedStats.length,
-          avgTime: escalatedStats.reduce((acc, s) => acc + (s.resolution_time_minutes || 0), 0) / escalatedStats.length || 0,
-          satisfaction: escalatedStats.reduce((acc, s) => acc + (s.user_satisfaction_score || 0), 0) / escalatedStats.length || 0
-        }
-      ];
+      // Process resolution time data
+      const resolutionTimeData = processResolutionTimeData(incidents || []);
+      
+      // Process satisfaction data
+      const satisfactionData = processSatisfactionData(feedback || []);
+      
+      // Process response time trends
+      const responseTimeData = processResponseTimeData(responseData || []);
+      
+      // Process category data
+      const categoryData = processCategoryData(categoryPerformance || []);
 
       setChartData({
         resolutionTimeData,
         satisfactionData,
-        confidenceData,
-        aiPerformanceData
+        responseTimeData,
+        categoryData
       });
+    } catch (error) {
+      console.error('Error loading chart data:', error);
     }
+  };
+
+  const processResolutionTimeData = (incidents: any[]) => {
+    const weeklyData: { [key: string]: { total: number; count: number } } = {};
+    
+    incidents.forEach(incident => {
+      const week = getWeekKey(new Date(incident.created_at));
+      if (!weeklyData[week]) {
+        weeklyData[week] = { total: 0, count: 0 };
+      }
+      weeklyData[week].total += incident.resolution_time_minutes || 0;
+      weeklyData[week].count += 1;
+    });
+
+    return Object.entries(weeklyData)
+      .map(([period, data]) => ({
+        period,
+        avgTime: Math.round(data.total / data.count),
+        count: data.count
+      }))
+      .slice(0, 8)
+      .reverse();
+  };
+
+  const processSatisfactionData = (feedback: any[]) => {
+    const ratings = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+    
+    feedback.forEach(f => {
+      ratings[f.satisfaction_rating as keyof typeof ratings]++;
+    });
+
+    const total = feedback.length || 1;
+    const colors = ['#ef4444', '#f97316', '#eab308', '#84cc16', '#22c55e'];
+    const labels = ['1★ Poor', '2★ Fair', '3★ Good', '4★ Very Good', '5★ Excellent'];
+
+    return Object.entries(ratings).map(([rating, count], index) => ({
+      rating: labels[index],
+      count,
+      percentage: Math.round((count / total) * 100),
+      color: colors[index]
+    }));
+  };
+
+  const processResponseTimeData = (incidents: any[]) => {
+    const dailyData: { [key: string]: { responseTotal: number; resolutionTotal: number; count: number } } = {};
+    
+    incidents.forEach(incident => {
+      const date = new Date(incident.created_at).toLocaleDateString();
+      if (!dailyData[date]) {
+        dailyData[date] = { responseTotal: 0, resolutionTotal: 0, count: 0 };
+      }
+      dailyData[date].responseTotal += incident.response_time_minutes || 0;
+      dailyData[date].resolutionTotal += incident.resolution_time_minutes || 0;
+      dailyData[date].count += 1;
+    });
+
+    return Object.entries(dailyData)
+      .map(([date, data]) => ({
+        date: date.slice(0, 5), // MM/DD format
+        avgResponse: Math.round(data.responseTotal / data.count),
+        avgResolution: Math.round(data.resolutionTotal / data.count)
+      }))
+      .slice(-10);
+  };
+
+  const processCategoryData = (incidents: any[]) => {
+    const categoryStats: { [key: string]: { count: number; satisfactionTotal: number; satisfactionCount: number } } = {};
+    
+    incidents.forEach(incident => {
+      const category = incident.category || 'other';
+      if (!categoryStats[category]) {
+        categoryStats[category] = { count: 0, satisfactionTotal: 0, satisfactionCount: 0 };
+      }
+      categoryStats[category].count += 1;
+      
+      if (incident.user_feedback && incident.user_feedback.length > 0) {
+        incident.user_feedback.forEach((fb: any) => {
+          categoryStats[category].satisfactionTotal += fb.satisfaction_rating;
+          categoryStats[category].satisfactionCount += 1;
+        });
+      }
+    });
+
+    return Object.entries(categoryStats).map(([category, stats]) => ({
+      category: category.charAt(0).toUpperCase() + category.slice(1),
+      count: stats.count,
+      avgSatisfaction: stats.satisfactionCount > 0 
+        ? parseFloat((stats.satisfactionTotal / stats.satisfactionCount).toFixed(1))
+        : 0
+    }));
+  };
+
+  const getWeekKey = (date: Date) => {
+    const startOfWeek = new Date(date);
+    startOfWeek.setDate(date.getDate() - date.getDay());
+    return startOfWeek.toLocaleDateString();
   };
 
   const getPriorityColor = (priority: string) => {
@@ -359,204 +469,129 @@ const AdminDashboard = () => {
         </div>
 
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4">
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Users</p>
-                  <p className="text-3xl font-bold text-gray-900">{stats.totalUsers}</p>
+                  <p className="text-xs font-medium text-gray-600">Total Users</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.totalUsers}</p>
                 </div>
-                <Users className="w-8 h-8 text-blue-600" />
+                <Users className="w-6 h-6 text-blue-600" />
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Incidents</p>
-                  <p className="text-3xl font-bold text-gray-900">{stats.totalIncidents}</p>
+                  <p className="text-xs font-medium text-gray-600">Total Incidents</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.totalIncidents}</p>
                 </div>
-                <Ticket className="w-8 h-8 text-purple-600" />
+                <Ticket className="w-6 h-6 text-purple-600" />
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Open Incidents</p>
-                  <p className="text-3xl font-bold text-gray-900">{stats.openIncidents}</p>
+                  <p className="text-xs font-medium text-gray-600">Open Tickets</p>
+                  <p className="text-2xl font-bold text-gray-900">{stats.openIncidents}</p>
                 </div>
-                <AlertTriangle className="w-8 h-8 text-orange-600" />
+                <AlertTriangle className="w-6 h-6 text-orange-600" />
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">AI Resolution Rate</p>
-                  <p className="text-3xl font-bold text-green-600">{stats.aiResolutionRate}%</p>
+                  <p className="text-xs font-medium text-gray-600">Resolved Today</p>
+                  <p className="text-2xl font-bold text-green-600">{stats.resolvedToday}</p>
                 </div>
-                <Bot className="w-8 h-8 text-green-600" />
+                <CheckCircle className="w-6 h-6 text-green-600" />
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Avg Resolution Time</p>
-                  <p className="text-3xl font-bold text-blue-600">{stats.avgResolutionTime}min</p>
+                  <p className="text-xs font-medium text-gray-600">Avg Response</p>
+                  <p className="text-2xl font-bold text-blue-600">{stats.avgResponseTime}min</p>
                 </div>
-                <Clock className="w-8 h-8 text-blue-600" />
+                <Clock className="w-6 h-6 text-blue-600" />
               </div>
             </CardContent>
           </Card>
 
           <Card>
-            <CardContent className="p-6">
+            <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Resolved Today</p>
-                  <p className="text-3xl font-bold text-emerald-600">{stats.resolvedToday}</p>
+                  <p className="text-xs font-medium text-gray-600">Avg Resolution</p>
+                  <p className="text-2xl font-bold text-indigo-600">{stats.avgResolutionTime}min</p>
                 </div>
-                <CheckCircle className="w-8 h-8 text-emerald-600" />
+                <Target className="w-6 h-6 text-indigo-600" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-gray-600">Satisfaction</p>
+                  <p className="text-2xl font-bold text-yellow-600">{stats.avgSatisfactionRating}/5</p>
+                </div>
+                <UserCheck className="w-6 h-6 text-yellow-600" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-gray-600">System Uptime</p>
+                  <p className="text-2xl font-bold text-emerald-600">{stats.systemUptime}%</p>
+                </div>
+                <Zap className="w-6 h-6 text-emerald-600" />
               </div>
             </CardContent>
           </Card>
         </div>
 
-        <Tabs defaultValue="ai-performance" className="w-full">
+        <Tabs defaultValue="performance" className="w-full">
           <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="ai-performance">AI Performance</TabsTrigger>
-            <TabsTrigger value="resolution-analytics">Resolution Analytics</TabsTrigger>
-            <TabsTrigger value="tickets">User Tickets</TabsTrigger>
-            <TabsTrigger value="satisfaction">Satisfaction Metrics</TabsTrigger>
+            <TabsTrigger value="performance">Performance Metrics</TabsTrigger>
+            <TabsTrigger value="satisfaction">User Satisfaction</TabsTrigger>
+            <TabsTrigger value="tickets">Recent Tickets</TabsTrigger>
+            <TabsTrigger value="categories">Category Analysis</TabsTrigger>
           </TabsList>
 
-          <TabsContent value="ai-performance" className="mt-6">
+          <TabsContent value="performance" className="mt-6">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <BarChart3 className="w-5 h-5" />
-                    AI vs Human Resolution Time
+                    Resolution Time Trends
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={300}>
                     <BarChart data={chartData.resolutionTimeData}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
+                      <XAxis dataKey="period" />
                       <YAxis label={{ value: 'Minutes', angle: -90, position: 'insideLeft' }} />
                       <Tooltip />
-                      <Bar dataKey="aiTime" fill="#22c55e" name="AI Resolution" />
-                      <Bar dataKey="humanTime" fill="#64748b" name="Human Resolution" />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Target className="w-5 h-5" />
-                    AI Confidence Over Time
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={chartData.confidenceData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="time" />
-                      <YAxis />
-                      <Tooltip />
-                      <Line 
-                        type="monotone" 
-                        dataKey="confidence" 
-                        stroke="#3b82f6" 
-                        strokeWidth={3}
-                        name="Confidence %"
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Bot className="w-5 h-5" />
-                    AI Resolution Statistics
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between items-center p-4 bg-green-50 rounded-lg">
-                    <span className="text-sm font-medium">Total AI Resolutions</span>
-                    <span className="text-2xl font-bold text-green-600">{aiStats.totalResolutions}</span>
-                  </div>
-                  <div className="flex justify-between items-center p-4 bg-blue-50 rounded-lg">
-                    <span className="text-sm font-medium">Auto-Resolved</span>
-                    <span className="text-2xl font-bold text-blue-600">{aiStats.autoResolved}</span>
-                  </div>
-                  <div className="flex justify-between items-center p-4 bg-orange-50 rounded-lg">
-                    <span className="text-sm font-medium">Escalated to Human</span>
-                    <span className="text-2xl font-bold text-orange-600">{aiStats.escalated}</span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Zap className="w-5 h-5" />
-                    Quality Metrics
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between items-center p-4 bg-purple-50 rounded-lg">
-                    <span className="text-sm font-medium">Avg AI Confidence</span>
-                    <span className="text-2xl font-bold text-purple-600">{(aiStats.avgConfidenceScore * 100).toFixed(1)}%</span>
-                  </div>
-                  <div className="flex justify-between items-center p-4 bg-yellow-50 rounded-lg">
-                    <span className="text-sm font-medium">User Satisfaction</span>
-                    <span className="text-2xl font-bold text-yellow-600">{aiStats.avgSatisfactionScore.toFixed(1)}/5</span>
-                  </div>
-                  <div className="flex justify-between items-center p-4 bg-emerald-50 rounded-lg">
-                    <span className="text-sm font-medium">Success Rate</span>
-                    <span className="text-2xl font-bold text-emerald-600">{stats.aiResolutionRate}%</span>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="resolution-analytics" className="mt-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <BarChart3 className="w-5 h-5" />
-                    Resolution Method Performance
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={chartData.aiPerformanceData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="method" />
-                      <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="count" fill="#8884d8" name="Count" />
+                      <Bar dataKey="avgTime" fill="#3b82f6" name="Avg Resolution Time" />
                     </BarChart>
                   </ResponsiveContainer>
                 </CardContent>
@@ -566,25 +601,31 @@ const AdminDashboard = () => {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <TrendingUp className="w-5 h-5" />
-                    Efficiency Trends
+                    Response vs Resolution Time
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
                   <ResponsiveContainer width="100%" height={300}>
-                    <AreaChart data={chartData.confidenceData}>
+                    <LineChart data={chartData.responseTimeData}>
                       <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="time" />
-                      <YAxis />
+                      <XAxis dataKey="date" />
+                      <YAxis label={{ value: 'Minutes', angle: -90, position: 'insideLeft' }} />
                       <Tooltip />
-                      <Area 
+                      <Line 
                         type="monotone" 
-                        dataKey="confidence" 
-                        stroke="#8884d8" 
-                        fill="#8884d8" 
-                        fillOpacity={0.3}
-                        name="Confidence %"
+                        dataKey="avgResponse" 
+                        stroke="#22c55e" 
+                        strokeWidth={3}
+                        name="Avg Response Time"
                       />
-                    </AreaChart>
+                      <Line 
+                        type="monotone" 
+                        dataKey="avgResolution" 
+                        stroke="#3b82f6" 
+                        strokeWidth={3}
+                        name="Avg Resolution Time"
+                      />
+                    </LineChart>
                   </ResponsiveContainer>
                 </CardContent>
               </Card>
@@ -609,8 +650,8 @@ const AdminDashboard = () => {
                         cy="50%"
                         outerRadius={80}
                         fill="#8884d8"
-                        dataKey="value"
-                        label={({ name, value }) => `${name}: ${value}`}
+                        dataKey="count"
+                        label={({ rating, percentage }) => `${rating}: ${percentage}%`}
                       >
                         {chartData.satisfactionData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
@@ -625,34 +666,47 @@ const AdminDashboard = () => {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <TrendingUp className="w-5 h-5" />
-                    Satisfaction vs Confidence
+                    <Target className="w-5 h-5" />
+                    Satisfaction Summary
                   </CardTitle>
                 </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={chartData.confidenceData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="time" />
-                      <YAxis />
-                      <Tooltip />
-                      <Line 
-                        type="monotone" 
-                        dataKey="confidence" 
-                        stroke="#3b82f6" 
-                        name="AI Confidence"
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="satisfaction" 
-                        stroke="#22c55e" 
-                        name="User Satisfaction"
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
+                <CardContent className="space-y-4">
+                  {chartData.satisfactionData.map((item, index) => (
+                    <div key={index} className="flex justify-between items-center p-3 rounded-lg" style={{ backgroundColor: `${item.color}20` }}>
+                      <span className="font-medium">{item.rating}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm text-gray-600">{item.count} responses</span>
+                        <span className="font-bold" style={{ color: item.color }}>{item.percentage}%</span>
+                      </div>
+                    </div>
+                  ))}
                 </CardContent>
               </Card>
             </div>
+          </TabsContent>
+
+          <TabsContent value="categories" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <BarChart3 className="w-5 h-5" />
+                  Category Performance Analysis
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={400}>
+                  <BarChart data={chartData.categoryData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="category" />
+                    <YAxis yAxisId="left" label={{ value: 'Count', angle: -90, position: 'insideLeft' }} />
+                    <YAxis yAxisId="right" orientation="right" label={{ value: 'Satisfaction', angle: 90, position: 'insideRight' }} />
+                    <Tooltip />
+                    <Bar yAxisId="left" dataKey="count" fill="#3b82f6" name="Incident Count" />
+                    <Bar yAxisId="right" dataKey="avgSatisfaction" fill="#22c55e" name="Avg Satisfaction" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="tickets" className="mt-6">
@@ -671,11 +725,19 @@ const AdminDashboard = () => {
                         <h4 className="font-medium">{ticket.title}</h4>
                         <p className="text-sm text-gray-600">User: {ticket.user_name}</p>
                         <p className="text-sm text-gray-500">
-                          {new Date(ticket.created_at).toLocaleDateString()}
+                          Created: {new Date(ticket.created_at).toLocaleDateString()}
                         </p>
                         {ticket.assignee && (
                           <p className="text-sm text-blue-600">Assignee: {ticket.assignee}</p>
                         )}
+                        <div className="flex gap-4 mt-2 text-xs text-gray-500">
+                          {ticket.response_time_minutes && (
+                            <span>Response: {ticket.response_time_minutes}min</span>
+                          )}
+                          {ticket.resolution_time_minutes && (
+                            <span>Resolution: {ticket.resolution_time_minutes}min</span>
+                          )}
+                        </div>
                       </div>
                       <div className="flex items-center gap-2">
                         <Badge className={getPriorityColor(ticket.priority)}>

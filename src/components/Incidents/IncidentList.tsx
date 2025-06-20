@@ -1,102 +1,64 @@
-import React, { useState, useMemo } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, Filter, Eye, Edit, User, Calendar, AlertCircle } from 'lucide-react';
-
-interface Incident {
-  id: string;
-  title: string;
-  description: string;
-  status: 'Open' | 'In Progress' | 'Resolved' | 'Closed';
-  priority: 'low' | 'medium' | 'high' | 'critical';
-  assignee: string;
-  category: string;
-  user_id: string;
-  createdAt: string;
-  updatedAt?: string;
-}
+import { Clock, Calendar, User, CheckCircle } from 'lucide-react';
+import { incidentService, Incident } from '@/services/incidentService';
+import UserFeedbackDialog from '@/components/UserFeedbackDialog';
 
 interface IncidentListProps {
-  incidents?: Incident[];
-  onIncidentSelect?: (incident: Incident) => void;
+  userId: string;
+  refreshTrigger?: number;
 }
 
-// Mock data for demonstration
-const mockIncidents: Incident[] = [
-  {
-    id: '1',
-    title: 'Email server not responding',
-    description: 'Users unable to send or receive emails',
-    status: 'Open',
-    priority: 'high',
-    assignee: 'John Doe',
-    category: 'network',
-    user_id: 'user_123',
-    createdAt: '2024-01-15T10:30:00Z'
-  },
-  {
-    id: '2',
-    title: 'Password reset request',
-    description: 'User needs password reset for domain account',
-    status: 'In Progress',
-    priority: 'medium',
-    assignee: 'Jane Smith',
-    category: 'access',
-    user_id: 'user_123',
-    createdAt: '2024-01-15T09:15:00Z'
-  },
-  {
-    id: '3',
-    title: 'Printer offline in Building A',
-    description: 'Main printer in Building A conference room offline',
-    status: 'Resolved',
-    priority: 'low',
-    assignee: 'Mike Wilson',
-    category: 'hardware',
-    user_id: 'user_123',
-    createdAt: '2024-01-14T14:20:00Z'
-  },
-  {
-    id: '4',
-    title: 'Security breach detected',
-    description: 'Unusual activity detected on network',
-    status: 'Open',
-    priority: 'critical',
-    assignee: 'John Doe',
-    category: 'security',
-    user_id: 'user_123',
-    createdAt: '2024-01-15T11:45:00Z'
-  }
-];
+const IncidentList = ({ userId, refreshTrigger }: IncidentListProps) => {
+  const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState<Set<string>>(new Set());
 
-const IncidentList = ({ incidents = mockIncidents, onIncidentSelect }: IncidentListProps) => {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [priorityFilter, setPriorityFilter] = useState<string>('all');
+  useEffect(() => {
+    loadIncidents();
+  }, [userId, refreshTrigger]);
 
-  const filteredIncidents = useMemo(() => {
-    return incidents.filter(incident => {
-      const matchesSearch = incident.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           incident.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           incident.assignee.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesStatus = statusFilter === 'all' || incident.status === statusFilter;
-      const matchesPriority = priorityFilter === 'all' || incident.priority === priorityFilter;
-      
-      return matchesSearch && matchesStatus && matchesPriority;
-    });
-  }, [incidents, searchTerm, statusFilter, priorityFilter]);
+  const loadIncidents = async () => {
+    try {
+      setLoading(true);
+      const data = await incidentService.getUserIncidents(userId);
+      setIncidents(data);
+
+      // Check which resolved incidents already have feedback
+      const resolvedIncidents = data.filter(inc => inc.status === 'Resolved' || inc.status === 'Closed');
+      const feedbackChecks = await Promise.all(
+        resolvedIncidents.map(async (incident) => {
+          const hasFeedback = await incidentService.checkExistingFeedback(incident.id, userId);
+          return { incidentId: incident.id, hasFeedback };
+        })
+      );
+
+      const submittedSet = new Set(
+        feedbackChecks
+          .filter(check => check.hasFeedback)
+          .map(check => check.incidentId)
+      );
+      setFeedbackSubmitted(submittedSet);
+    } catch (error) {
+      console.error('Error loading incidents:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFeedbackSubmitted = (incidentId: string) => {
+    setFeedbackSubmitted(prev => new Set(prev.add(incidentId)));
+  };
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'low': return 'bg-green-100 text-green-800';
-      case 'medium': return 'bg-yellow-100 text-yellow-800';
-      case 'high': return 'bg-orange-100 text-orange-800';
       case 'critical': return 'bg-red-100 text-red-800';
+      case 'high': return 'bg-orange-100 text-orange-800';
+      case 'medium': return 'bg-yellow-100 text-yellow-800';
+      case 'low': return 'bg-green-100 text-green-800';
       default: return 'bg-gray-100 text-gray-800';
     }
   };
@@ -111,135 +73,108 @@ const IncidentList = ({ incidents = mockIncidents, onIncidentSelect }: IncidentL
     }
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const formatDuration = (minutes: number | null) => {
+    if (!minutes) return 'N/A';
+    if (minutes < 60) return `${Math.round(minutes)}min`;
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = Math.round(minutes % 60);
+    return `${hours}h ${remainingMinutes}min`;
   };
 
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
+
+  if (incidents.length === 0) {
+    return (
+      <Card>
+        <CardContent className="text-center py-8">
+          <p className="text-gray-500">No incidents found. Create your first incident to get started.</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
-    <Card className="w-full">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <AlertCircle className="w-5 h-5 text-blue-600" />
-          Incident Management
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        {/* Filters */}
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <Input
-              placeholder="Search incidents..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-          
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full md:w-40">
-              <Filter className="w-4 h-4 mr-2" />
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Status</SelectItem>
-              <SelectItem value="Open">Open</SelectItem>
-              <SelectItem value="In Progress">In Progress</SelectItem>
-              <SelectItem value="Resolved">Resolved</SelectItem>
-              <SelectItem value="Closed">Closed</SelectItem>
-            </SelectContent>
-          </Select>
+    <div className="space-y-4">
+      {incidents.map((incident) => (
+        <Card key={incident.id} className="hover:shadow-md transition-shadow">
+          <CardHeader>
+            <div className="flex items-start justify-between">
+              <div className="space-y-1">
+                <CardTitle className="text-lg">{incident.title}</CardTitle>
+                <p className="text-sm text-gray-600 line-clamp-2">{incident.description}</p>
+              </div>
+              <div className="flex gap-2">
+                <Badge className={getPriorityColor(incident.priority)}>
+                  {incident.priority}
+                </Badge>
+                <Badge className={getStatusColor(incident.status)}>
+                  {incident.status}
+                </Badge>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              <div className="flex items-center gap-4 text-sm text-gray-600">
+                <div className="flex items-center gap-1">
+                  <Calendar className="w-4 h-4" />
+                  <span>Created: {new Date(incident.created_at).toLocaleDateString()}</span>
+                </div>
+                {incident.assignee && (
+                  <div className="flex items-center gap-1">
+                    <User className="w-4 h-4" />
+                    <span>Assignee: {incident.assignee}</span>
+                  </div>
+                )}
+              </div>
 
-          <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-            <SelectTrigger className="w-full md:w-40">
-              <SelectValue placeholder="Priority" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Priority</SelectItem>
-              <SelectItem value="low">Low</SelectItem>
-              <SelectItem value="medium">Medium</SelectItem>
-              <SelectItem value="high">High</SelectItem>
-              <SelectItem value="critical">Critical</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
+              {/* Performance metrics */}
+              {(incident.response_time_minutes || incident.resolution_time_minutes) && (
+                <div className="flex items-center gap-4 text-sm">
+                  {incident.response_time_minutes && (
+                    <div className="flex items-center gap-1 text-blue-600">
+                      <Clock className="w-4 h-4" />
+                      <span>Response: {formatDuration(incident.response_time_minutes)}</span>
+                    </div>
+                  )}
+                  {incident.resolution_time_minutes && (
+                    <div className="flex items-center gap-1 text-green-600">
+                      <CheckCircle className="w-4 h-4" />
+                      <span>Resolution: {formatDuration(incident.resolution_time_minutes)}</span>
+                    </div>
+                  )}
+                </div>
+              )}
 
-        {/* Incidents Table */}
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>ID</TableHead>
-                <TableHead>Title</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Priority</TableHead>
-                <TableHead>Assignee</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredIncidents.map((incident) => (
-                <TableRow key={incident.id} className="cursor-pointer hover:bg-gray-50">
-                  <TableCell className="font-mono text-sm">#{incident.id}</TableCell>
-                  <TableCell>
-                    <div>
-                      <div className="font-medium">{incident.title}</div>
-                      <div className="text-sm text-gray-500 truncate max-w-xs">
-                        {incident.description}
-                      </div>
+              {/* Feedback section for resolved incidents */}
+              {(incident.status === 'Resolved' || incident.status === 'Closed') && (
+                <div className="pt-2 border-t">
+                  {feedbackSubmitted.has(incident.id) ? (
+                    <div className="flex items-center gap-2 text-sm text-green-600">
+                      <CheckCircle className="w-4 h-4" />
+                      <span>Feedback submitted - Thank you!</span>
                     </div>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={getStatusColor(incident.status)}>
-                      {incident.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <Badge className={getPriorityColor(incident.priority)}>
-                      {incident.priority.charAt(0).toUpperCase() + incident.priority.slice(1)}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      <User className="w-4 h-4 text-gray-400" />
-                      <span className="text-sm">{incident.assignee}</span>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2 text-sm text-gray-500">
-                      <Calendar className="w-4 h-4" />
-                      {formatDate(incident.createdAt)}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => onIncidentSelect?.(incident)}
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      <Button variant="outline" size="sm">
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-
-        {filteredIncidents.length === 0 && (
-          <div className="text-center py-8 text-gray-500">
-            No incidents found matching your filters.
-          </div>
-        )}
-      </CardContent>
-    </Card>
+                  ) : (
+                    <UserFeedbackDialog
+                      incidentId={incident.id}
+                      incidentTitle={incident.title}
+                      userId={userId}
+                      onFeedbackSubmitted={() => handleFeedbackSubmitted(incident.id)}
+                    />
+                  )}
+                </div>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
   );
 };
 

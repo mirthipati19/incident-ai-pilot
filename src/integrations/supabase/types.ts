@@ -36,32 +36,38 @@ export type Database = {
       ai_resolution_stats: {
         Row: {
           ai_confidence_score: number | null
+          category: string | null
           created_at: string
           id: string
           incident_id: string | null
           resolution_method: string
           resolution_time_minutes: number | null
           resolved_at: string | null
+          response_time_minutes: number | null
           user_satisfaction_score: number | null
         }
         Insert: {
           ai_confidence_score?: number | null
+          category?: string | null
           created_at?: string
           id?: string
           incident_id?: string | null
           resolution_method: string
           resolution_time_minutes?: number | null
           resolved_at?: string | null
+          response_time_minutes?: number | null
           user_satisfaction_score?: number | null
         }
         Update: {
           ai_confidence_score?: number | null
+          category?: string | null
           created_at?: string
           id?: string
           incident_id?: string | null
           resolution_method?: string
           resolution_time_minutes?: number | null
           resolved_at?: string | null
+          response_time_minutes?: number | null
           user_satisfaction_score?: number | null
         }
         Relationships: [
@@ -113,8 +119,12 @@ export type Database = {
           category: string
           created_at: string
           description: string
+          first_response_at: string | null
           id: string
           priority: string
+          resolution_time_minutes: number | null
+          resolved_at: string | null
+          response_time_minutes: number | null
           status: string
           title: string
           updated_at: string
@@ -125,8 +135,12 @@ export type Database = {
           category?: string
           created_at?: string
           description: string
+          first_response_at?: string | null
           id?: string
           priority?: string
+          resolution_time_minutes?: number | null
+          resolved_at?: string | null
+          response_time_minutes?: number | null
           status?: string
           title: string
           updated_at?: string
@@ -137,8 +151,12 @@ export type Database = {
           category?: string
           created_at?: string
           description?: string
+          first_response_at?: string | null
           id?: string
           priority?: string
+          resolution_time_minutes?: number | null
+          resolved_at?: string | null
+          response_time_minutes?: number | null
           status?: string
           title?: string
           updated_at?: string
@@ -150,6 +168,68 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      system_metrics: {
+        Row: {
+          id: string
+          metadata: Json | null
+          metric_name: string
+          metric_unit: string
+          metric_value: number
+          recorded_at: string
+        }
+        Insert: {
+          id?: string
+          metadata?: Json | null
+          metric_name: string
+          metric_unit?: string
+          metric_value: number
+          recorded_at?: string
+        }
+        Update: {
+          id?: string
+          metadata?: Json | null
+          metric_name?: string
+          metric_unit?: string
+          metric_value?: number
+          recorded_at?: string
+        }
+        Relationships: []
+      }
+      user_feedback: {
+        Row: {
+          created_at: string
+          feedback_text: string | null
+          id: string
+          incident_id: string
+          satisfaction_rating: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          feedback_text?: string | null
+          id?: string
+          incident_id: string
+          satisfaction_rating: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          feedback_text?: string | null
+          id?: string
+          incident_id?: string
+          satisfaction_rating?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_feedback_incident_id_fkey"
+            columns: ["incident_id"]
+            isOneToOne: false
+            referencedRelation: "incidents"
             referencedColumns: ["id"]
           },
         ]
