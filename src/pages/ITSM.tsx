@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PromptAnimator from '@/components/Assistant/PromptAnimator';
@@ -35,6 +34,7 @@ const ITSMPage = () => {
     critical: 0
   });
   const [loading, setLoading] = useState(true);
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -147,6 +147,7 @@ const ITSMPage = () => {
       const newIncident = await incidentService.createIncident(newIncidentData);
       setIncidents(prev => [newIncident, ...prev]);
       loadStats(); // Refresh stats
+      setRefreshTrigger(prev => prev + 1); // Trigger refresh for IncidentList
       
       // Show AI resolution popup after a short delay
       setTimeout(() => {
@@ -228,8 +229,9 @@ const ITSMPage = () => {
         prev ? { ...prev, status: newStatus as any, updated_at: new Date().toISOString() } : null
       );
       
-      // Refresh stats
+      // Refresh stats and trigger refresh for IncidentList
       loadStats();
+      setRefreshTrigger(prev => prev + 1);
       
       toast({
         title: "Success",
@@ -274,6 +276,7 @@ const ITSMPage = () => {
       );
       
       loadStats();
+      setRefreshTrigger(prev => prev + 1);
       setResolutionPopup(null);
       
       toast({
@@ -317,6 +320,7 @@ const ITSMPage = () => {
       );
       
       loadStats();
+      setRefreshTrigger(prev => prev + 1);
       setResolutionPopup(null);
       
       toast({
@@ -465,16 +469,8 @@ const ITSMPage = () => {
 
           <TabsContent value="incidents" className="mt-6">
             <IncidentList 
-              incidents={incidents.map(incident => ({
-                ...incident,
-                createdAt: incident.created_at,
-                assignee: incident.assignee || 'Unassigned'
-              }))}
-              onIncidentSelect={(incident) => handleIncidentSelect({
-                ...incident,
-                created_at: incident.createdAt,
-                assignee: incident.assignee === 'Unassigned' ? null : incident.assignee
-              })}
+              userId={user?.id || ''}
+              refreshTrigger={refreshTrigger}
             />
           </TabsContent>
         </Tabs>
