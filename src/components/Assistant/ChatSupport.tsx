@@ -37,7 +37,7 @@ const ChatSupport = ({ onMessageSent, onTicketCreated, onTicketResolved }: ChatS
   const { user } = useAuth();
 
   // Your webhook URL
-  const WEBHOOK_URL = "https://parost.app.n8n.cloud/webhook-test/64d38da4-3add-46d8-a8d2-88eea11f29b6";
+  const WEBHOOK_URL = "http://localhost:5678/webhook-test/64d38da4-3add-46d8-a8d2-88eea11f29b6";
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
