@@ -220,6 +220,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       if (email === 'murari.mirthipati@authexa.me' && password === 'Qwertyuiop@0987654321') {
         console.log('Admin login with special password detected');
         
+        let adminUserId: string | undefined;
+        
         // Try to authenticate with Supabase first
         const { data, error } = await supabase.auth.signInWithPassword({
           email,
@@ -239,6 +241,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             return { success: false, error: 'Failed to create admin account' };
           }
 
+          adminUserId = signUpData?.user?.id;
+
           // Sign in again after creating the user
           const { error: signInError } = await supabase.auth.signInWithPassword({
             email,
@@ -249,6 +253,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             console.error('Failed to sign in admin after creation:', signInError);
             return { success: false, error: 'Failed to sign in admin account' };
           }
+        } else {
+          adminUserId = data?.user?.id;
         }
 
         // Ensure admin profile exists
@@ -263,7 +269,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             await supabase
               .from('users')
               .insert({
-                id: data?.user?.id || signUpData?.user?.id,
+                id: adminUserId,
                 user_id: '000001',
                 name: 'Admin User',
                 email,
@@ -275,14 +281,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const { data: adminRole } = await supabase
             .from('admin_users')
             .select('*')
-            .eq('user_id', data?.user?.id || signUpData?.user?.id)
+            .eq('user_id', adminUserId)
             .single();
 
           if (!adminRole) {
             await supabase
               .from('admin_users')
               .insert({
-                user_id: data?.user?.id || signUpData?.user?.id,
+                user_id: adminUserId,
                 role: 'admin',
                 permissions: ['view_tickets', 'manage_users', 'view_stats', 'admin_dashboard']
               });
