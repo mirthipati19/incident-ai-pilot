@@ -56,22 +56,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  // Create a mock admin session for bypass
-  const createAdminSession = (email: string) => {
-    const mockUser: AuthUser = {
-      id: 'admin-mock-id',
-      email,
-      user_metadata: { name: 'Admin User' },
-      app_metadata: {},
-      aud: 'authenticated',
-      created_at: new Date().toISOString(),
-      user_id: '000001',
-      name: 'Admin User',
-      isAdmin: true
-    };
-    return mockUser;
-  };
-
   useEffect(() => {
     // Get initial session
     const getSession = async () => {
@@ -232,15 +216,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       console.log('Attempting to sign in with:', email);
       
-      // Special handling for admin email
+      // Special handling for admin email with the specific password
       if (email === 'murari.mirthipati@authexa.me' && password === 'Qwertyuiop@0987654321') {
-        console.log('Admin login detected, creating mock session');
+        console.log('Admin login with special password detected');
         
-        // Create mock admin session
-        const adminUser = createAdminSession(email);
-        setUser(adminUser);
-        
-        // Also try to create/update admin in database for persistence
+        // Try to authenticate with Supabase first
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email,
+          password: 'admin123' // Use a simpler password for Supabase auth
+        });
+
+        if (error) {
+          // If Supabase auth fails, create the admin user
+          console.log('Creating admin user in Supabase auth');
+          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+            email,
+            password: 'admin123'
+          });
+
+          if (signUpError) {
+            console.error('Failed to create admin user:', signUpError);
+            return { success: false, error: 'Failed to create admin account' };
+          }
+
+          // Sign in again after creating the user
+          const { error: signInError } = await supabase.auth.signInWithPassword({
+            email,
+            password: 'admin123'
+          });
+
+          if (signInError) {
+            console.error('Failed to sign in admin after creation:', signInError);
+            return { success: false, error: 'Failed to sign in admin account' };
+          }
+        }
+
+        // Ensure admin profile exists
         try {
           const { data: existingProfile } = await supabase
             .from('users')
@@ -252,7 +263,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             await supabase
               .from('users')
               .insert({
-                id: 'admin-mock-id',
+                id: data?.user?.id || signUpData?.user?.id,
                 user_id: '000001',
                 name: 'Admin User',
                 email,
@@ -264,14 +275,14 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           const { data: adminRole } = await supabase
             .from('admin_users')
             .select('*')
-            .eq('user_id', 'admin-mock-id')
+            .eq('user_id', data?.user?.id || signUpData?.user?.id)
             .single();
 
           if (!adminRole) {
             await supabase
               .from('admin_users')
               .insert({
-                user_id: 'admin-mock-id',
+                user_id: data?.user?.id || signUpData?.user?.id,
                 role: 'admin',
                 permissions: ['view_tickets', 'manage_users', 'view_stats', 'admin_dashboard']
               });
@@ -305,12 +316,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signOut = async () => {
-    // Handle mock admin session
-    if (user?.id === 'admin-mock-id') {
-      setUser(null);
-      return;
-    }
-    
     await supabase.auth.signOut();
   };
 
