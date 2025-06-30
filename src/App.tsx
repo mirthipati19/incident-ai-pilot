@@ -6,7 +6,7 @@ import SignIn from '@/pages/SignIn';
 import SignUp from '@/pages/SignUp';
 import ITSM from '@/pages/ITSM';
 import NotFound from '@/pages/NotFound';
-import { AuthProvider } from '@/contexts/AuthContext';
+import { ImprovedAuthProvider } from '@/contexts/ImprovedAuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminRoute from '@/components/AdminRoute';
@@ -18,7 +18,7 @@ function App() {
   return (
     <ThemeProvider>
       <Router>
-        <AuthProvider>
+        <ImprovedAuthProvider>
           <div className="App">
             <Routes>
               <Route path="/" element={<Index />} />
@@ -52,7 +52,7 @@ function App() {
             </Routes>
             <Toaster />
           </div>
-        </AuthProvider>
+        </ImprovedAuthProvider>
       </Router>
     </ThemeProvider>
   );
