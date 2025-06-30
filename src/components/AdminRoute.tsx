@@ -26,7 +26,10 @@ const AdminRoute = ({ children }: AdminRouteProps) => {
       const isAdminEmail = user.email === 'murari.mirthipati@authexa.me';
       
       if (isAdminEmail) {
-        // Double-check in admin_users table
+        console.log('Admin email verified:', user.email);
+        setIsAdminVerified(true);
+      } else {
+        // Double-check in admin_users table for other potential admins
         try {
           const { data: adminData, error } = await supabase
             .from('admin_users')
@@ -36,16 +39,17 @@ const AdminRoute = ({ children }: AdminRouteProps) => {
 
           console.log('Admin database check result:', adminData, error);
 
-          // Admin is verified if they have the right email (with or without DB entry)
-          setIsAdminVerified(true);
-          console.log('Admin status verified:', true);
+          if (adminData && adminData.role === 'admin') {
+            setIsAdminVerified(true);
+            console.log('Admin status verified via database:', true);
+          } else {
+            console.log('User is not admin:', user.email);
+            setIsAdminVerified(false);
+          }
         } catch (error) {
           console.error('Admin verification failed:', error);
-          setIsAdminVerified(true); // Still allow if email matches
+          setIsAdminVerified(false);
         }
-      } else {
-        console.log('User email does not match admin email:', user.email);
-        setIsAdminVerified(false);
       }
     };
 

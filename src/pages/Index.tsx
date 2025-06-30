@@ -12,26 +12,27 @@ const Index = () => {
     <div 
       className="min-h-screen relative"
       style={{
-        backgroundImage: `url('/lovable-uploads/50b753fc-5735-49ae-ad55-1cc4efdd1bc3.png')`,
-        backgroundSize: 'cover',
+        backgroundImage: `url('/lovable-uploads/18aee1b3-d01e-4a44-a199-ef10d89b5466.png')`,
+        backgroundSize: '80%',
         backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat'
+        backgroundRepeat: 'no-repeat',
+        backgroundColor: '#f8fafc'
       }}
     >
       {/* Overlay for better text readability */}
-      <div className="absolute inset-0 bg-black/30"></div>
+      <div className="absolute inset-0 bg-black/20"></div>
       
       {/* Navigation */}
       <nav className="relative z-10 p-4">
         <div className="container mx-auto flex justify-between items-center">
-          <div className="text-white font-bold text-xl">Mouritech Support</div>
+          <div className="text-gray-800 font-bold text-xl">Authexa Support</div>
           <div className="space-x-4">
             {user ? (
-              <span className="text-white">Welcome, {user.name}! (ID: {user.user_id})</span>
+              <span className="text-gray-800">Welcome, {user.name}! (ID: {user.user_id})</span>
             ) : (
               <>
                 <Link to="/signin">
-                  <Button variant="outline" className="bg-white/10 backdrop-blur-sm border-white/30 text-white hover:bg-white/20">
+                  <Button variant="outline" className="bg-white/10 backdrop-blur-sm border-gray-300 text-gray-800 hover:bg-white/20">
                     Sign In
                   </Button>
                 </Link>
@@ -54,10 +55,10 @@ const Index = () => {
               <HeadphonesIcon className="w-12 h-12 text-white" />
             </div>
           </div>
-          <h1 className="text-5xl font-bold text-white mb-6 drop-shadow-lg">
-            Welcome to Mouritech Support
+          <h1 className="text-5xl font-bold text-gray-800 mb-6 drop-shadow-lg">
+            Welcome to Authexa Support
           </h1>
-          <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto drop-shadow-md">
+          <p className="text-xl text-gray-700 mb-8 max-w-2xl mx-auto drop-shadow-md">
             AI-powered IT Service Management with voice recognition, automated incident handling, 
             and ServiceNow-style workflow management.
           </p>
@@ -80,37 +81,37 @@ const Index = () => {
 
         {/* Features Grid */}
         <div className="grid md:grid-cols-3 gap-8 mb-16">
-          <Card className="bg-white/10 backdrop-blur-sm border border-white/20 hover:bg-white/15 transition-all hover:shadow-xl">
+          <Card className="bg-white/20 backdrop-blur-sm border border-gray-200 hover:bg-white/30 transition-all hover:shadow-xl">
             <CardHeader>
-              <div className="w-12 h-12 bg-blue-100/20 backdrop-blur-sm rounded-lg flex items-center justify-center mb-4 border border-white/30">
-                <Zap className="w-6 h-6 text-blue-300" />
+              <div className="w-12 h-12 bg-blue-100/20 backdrop-blur-sm rounded-lg flex items-center justify-center mb-4 border border-gray-300">
+                <Zap className="w-6 h-6 text-blue-600" />
               </div>
-              <CardTitle className="text-white">Voice-Activated Support</CardTitle>
-              <CardDescription className="text-white/80">
+              <CardTitle className="text-gray-800">Voice-Activated Support</CardTitle>
+              <CardDescription className="text-gray-600">
                 Speak naturally to create incidents, check status, and get instant assistance with our Siri-style voice interface.
               </CardDescription>
             </CardHeader>
           </Card>
 
-          <Card className="bg-white/10 backdrop-blur-sm border border-white/20 hover:bg-white/15 transition-all hover:shadow-xl">
+          <Card className="bg-white/20 backdrop-blur-sm border border-gray-200 hover:bg-white/30 transition-all hover:shadow-xl">
             <CardHeader>
-              <div className="w-12 h-12 bg-green-100/20 backdrop-blur-sm rounded-lg flex items-center justify-center mb-4 border border-white/30">
-                <Shield className="w-6 h-6 text-green-300" />
+              <div className="w-12 h-12 bg-green-100/20 backdrop-blur-sm rounded-lg flex items-center justify-center mb-4 border border-gray-300">
+                <Shield className="w-6 h-6 text-green-600" />
               </div>
-              <CardTitle className="text-white">Smart Automation</CardTitle>
-              <CardDescription className="text-white/80">
+              <CardTitle className="text-gray-800">Smart Automation</CardTitle>
+              <CardDescription className="text-gray-600">
                 Intelligent routing, auto-assignment, and priority classification based on AI analysis of incident content.
               </CardDescription>
             </CardHeader>
           </Card>
 
-          <Card className="bg-white/10 backdrop-blur-sm border border-white/20 hover:bg-white/15 transition-all hover:shadow-xl">
+          <Card className="bg-white/20 backdrop-blur-sm border border-gray-200 hover:bg-white/30 transition-all hover:shadow-xl">
             <CardHeader>
-              <div className="w-12 h-12 bg-purple-100/20 backdrop-blur-sm rounded-lg flex items-center justify-center mb-4 border border-white/30">
-                <Users className="w-6 h-6 text-purple-300" />
+              <div className="w-12 h-12 bg-purple-100/20 backdrop-blur-sm rounded-lg flex items-center justify-center mb-4 border border-gray-300">
+                <Users className="w-6 h-6 text-purple-600" />
               </div>
-              <CardTitle className="text-white">ServiceNow Experience</CardTitle>
-              <CardDescription className="text-white/80">
+              <CardTitle className="text-gray-800">ServiceNow Experience</CardTitle>
+              <CardDescription className="text-gray-600">
                 Familiar interface with modern design, comprehensive incident tracking, and powerful filtering capabilities.
               </CardDescription>
             </CardHeader>
@@ -118,32 +119,32 @@ const Index = () => {
         </div>
 
         {/* Quick Stats */}
-        <div className="bg-white/10 backdrop-blur-sm border border-white/20 rounded-2xl shadow-lg p-8">
-          <h2 className="text-2xl font-bold text-center mb-8 text-white">Platform Capabilities</h2>
+        <div className="bg-white/20 backdrop-blur-sm border border-gray-200 rounded-2xl shadow-lg p-8">
+          <h2 className="text-2xl font-bold text-center mb-8 text-gray-800">Platform Capabilities</h2>
           <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
             <div className="text-center">
-              <div className="text-3xl font-bold text-blue-300 mb-2">24/7</div>
-              <div className="text-white/80">AI Availability</div>
+              <div className="text-3xl font-bold text-blue-600 mb-2">24/7</div>
+              <div className="text-gray-600">AI Availability</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-green-300 mb-2">90%</div>
-              <div className="text-white/80">Auto-Resolution</div>
+              <div className="text-3xl font-bold text-green-600 mb-2">90%</div>
+              <div className="text-gray-600">Auto-Resolution</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-purple-300 mb-2">60s</div>
-              <div className="text-white/80">Avg Response</div>
+              <div className="text-3xl font-bold text-purple-600 mb-2">60s</div>
+              <div className="text-gray-600">Avg Response</div>
             </div>
             <div className="text-center">
-              <div className="text-3xl font-bold text-orange-300 mb-2">99.9%</div>
-              <div className="text-white/80">Uptime SLA</div>
+              <div className="text-3xl font-bold text-orange-600 mb-2">99.9%</div>
+              <div className="text-gray-600">Uptime SLA</div>
             </div>
           </div>
         </div>
 
         {/* Getting Started */}
         <div className="text-center mt-16">
-          <h2 className="text-3xl font-bold mb-4 text-white drop-shadow-lg">Ready to Transform Your Support?</h2>
-          <p className="text-lg text-white/90 mb-8 drop-shadow-md">
+          <h2 className="text-3xl font-bold mb-4 text-gray-800 drop-shadow-lg">Ready to Transform Your Support?</h2>
+          <p className="text-lg text-gray-700 mb-8 drop-shadow-md">
             Experience the future of IT service management with our intelligent assistant.
           </p>
           {user ? (
@@ -156,7 +157,7 @@ const Index = () => {
           ) : (
             <>
               <Link to="/signin">
-                <Button variant="outline" size="lg" className="mr-4 bg-white/10 backdrop-blur-sm border-white/30 text-white hover:bg-white/20">
+                <Button variant="outline" size="lg" className="mr-4 bg-white/20 backdrop-blur-sm border-gray-300 text-gray-800 hover:bg-white/30">
                   Sign In
                 </Button>
               </Link>
