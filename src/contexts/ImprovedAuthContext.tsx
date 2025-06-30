@@ -132,8 +132,11 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/itsm`,
-          captchaToken
+          emailRedirectTo: `${window.location.origin}/signin`,
+          captchaToken,
+          data: {
+            name: name
+          }
         }
       };
 
