@@ -7,6 +7,43 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
 import { Mic, MicOff, Download, MessageSquare, Send, Loader2 } from 'lucide-react';
 
+// Extend window object for speech recognition
+declare global {
+  interface Window {
+    webkitSpeechRecognition: any;
+    SpeechRecognition: any;
+  }
+}
+
+interface SpeechRecognitionEvent {
+  resultIndex: number;
+  results: {
+    length: number;
+    [index: number]: {
+      isFinal: boolean;
+      [index: number]: {
+        transcript: string;
+      };
+    };
+  };
+}
+
+interface SpeechRecognitionErrorEvent {
+  error: string;
+}
+
+interface SpeechRecognitionInstance {
+  continuous: boolean;
+  interimResults: boolean;
+  lang: string;
+  start(): void;
+  stop(): void;
+  onstart: () => void;
+  onresult: (event: SpeechRecognitionEvent) => void;
+  onerror: (event: SpeechRecognitionErrorEvent) => void;
+  onend: () => void;
+}
+
 const VoiceControlledInstaller = () => {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
@@ -16,7 +53,7 @@ const VoiceControlledInstaller = () => {
   const [chatMessages, setChatMessages] = useState([
     { id: 1, text: "Hi! I can help you generate Windows batch files for software installation. Just tell me what software you need!", isBot: true }
   ]);
-  const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
 
   const softwareLibrary = {
     'vs code': 'winget install Microsoft.VisualStudioCode',
@@ -44,7 +81,7 @@ const VoiceControlledInstaller = () => {
   const startListening = () => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
       const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
-      const recognition = new SpeechRecognition();
+      const recognition = new SpeechRecognition() as SpeechRecognitionInstance;
       
       recognition.continuous = true;
       recognition.interimResults = true;
@@ -52,6 +89,7 @@ const VoiceControlledInstaller = () => {
 
       recognition.onstart = () => {
         setIsListening(true);
+        console.log('🎤 Speech recognition started');
       };
 
       recognition.onresult = (event) => {
@@ -62,17 +100,19 @@ const VoiceControlledInstaller = () => {
           }
         }
         if (finalTranscript) {
+          console.log('🗣️ Speech recognized:', finalTranscript);
           setTranscript(finalTranscript.trim());
           setChatInput(finalTranscript.trim());
         }
       };
 
       recognition.onerror = (event) => {
-        console.error('Speech recognition error:', event.error);
+        console.error('🚨 Speech recognition error:', event.error);
         setIsListening(false);
       };
 
       recognition.onend = () => {
+        console.log('🔇 Speech recognition ended');
         setIsListening(false);
       };
 
@@ -92,10 +132,12 @@ const VoiceControlledInstaller = () => {
 
   const generateBatchScript = (input: string) => {
     const lowerInput = input.toLowerCase();
+    console.log('🔍 Generating batch script for:', input);
     
     // Check software library first
     for (const [software, command] of Object.entries(softwareLibrary)) {
       if (lowerInput.includes(software)) {
+        console.log('✅ Found match in library:', software);
         return generateBatchFile(command, software);
       }
     }
@@ -103,6 +145,7 @@ const VoiceControlledInstaller = () => {
     // Fallback for unknown software
     const softwareName = extractSoftwareName(input);
     const estimatedCommand = `winget install ${softwareName}`;
+    console.log('⚠️ No exact match found, generating estimated command:', estimatedCommand);
     return generateBatchFile(estimatedCommand, softwareName, true);
   };
 
@@ -158,6 +201,7 @@ pause`;
     const inputText = chatInput || transcript;
     if (!inputText.trim()) return;
 
+    console.log('🚀 Generating script for input:', inputText);
     setIsGenerating(true);
     
     // Add user message to chat
@@ -179,11 +223,13 @@ pause`;
     setChatInput('');
     setTranscript('');
     setIsGenerating(false);
+    console.log('✅ Script generation completed');
   };
 
   const downloadBatchFile = () => {
     if (!generatedScript) return;
 
+    console.log('📥 Starting download of batch file');
     const blob = new Blob([generatedScript], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -193,6 +239,7 @@ pause`;
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+    console.log('✅ Batch file downloaded successfully');
   };
 
   const handleChatSubmit = (e: React.FormEvent) => {
@@ -365,13 +412,5 @@ pause`;
     </div>
   );
 };
-
-// Extend window object for speech recognition
-declare global {
-  interface Window {
-    webkitSpeechRecognition: any;
-    SpeechRecognition: any;
-  }
-}
 
 export default VoiceControlledInstaller;
