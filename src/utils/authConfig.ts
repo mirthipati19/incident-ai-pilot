@@ -1,7 +1,7 @@
 
 export const authConfig = {
-  // Development mode detection
-  isDevelopment: import.meta.env.DEV,
+  // Development mode detection - DISABLED for production
+  isDevelopment: false,
   
   // Admin configuration
   adminEmail: 'murari.mirthipati@authexa.me',
@@ -12,47 +12,43 @@ export const authConfig = {
   mfaSettings: {
     tokenLength: 6,
     expirationMinutes: 10,
-    bypassInDev: import.meta.env.DEV,
+    bypassInDev: false, // Always require MFA
   },
   
   // Captcha configuration  
   captchaSettings: {
-    bypassInDev: import.meta.env.DEV,
-    required: !import.meta.env.DEV,
+    bypassInDev: false, // Always require captcha
+    required: true, // Always require captcha
   },
   
   // Session configuration
   sessionSettings: {
-    timeoutMinutes: import.meta.env.DEV ? 120 : 30, // Longer timeout in dev
+    timeoutMinutes: 30, // Standard 30 minute timeout
     refreshInterval: 5 * 60 * 1000, // 5 minutes
   },
   
   // Logging configuration
   logging: {
-    verbose: import.meta.env.DEV,
-    logMFACodes: import.meta.env.DEV,
-    logAuthEvents: import.meta.env.DEV,
+    verbose: false, // Disable verbose logging
+    logMFACodes: false, // Never log MFA codes
+    logAuthEvents: true, // Keep auth event logging
   }
 };
 
 export const getAuthMode = () => {
-  return authConfig.isDevelopment ? 'DEVELOPMENT' : 'PRODUCTION';
+  return 'PRODUCTION';
 };
 
 export const shouldBypassCaptcha = () => {
-  return authConfig.captchaSettings.bypassInDev && authConfig.isDevelopment;
+  return false; // Never bypass captcha
 };
 
 export const shouldBypassMFA = (email?: string) => {
-  // Always bypass MFA for admin in development
-  if (authConfig.isDevelopment && email === authConfig.adminEmail) {
-    return true;
-  }
-  return false;
+  return false; // Never bypass MFA
 };
 
 export const logAuthEvent = (event: string, data?: any) => {
   if (authConfig.logging.logAuthEvents) {
-    console.log(`🔐 [${getAuthMode()}] ${event}:`, data);
+    console.log(`🔐 [PRODUCTION] ${event}:`, data);
   }
 };

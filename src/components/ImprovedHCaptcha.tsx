@@ -36,7 +36,7 @@ const ImprovedHCaptcha = ({ onVerify, onError, onExpire }: ImprovedHCaptchaProps
   }, []);
 
   const handleCaptchaVerify = (token: string) => {
-    console.log('✅ Captcha verified');
+    console.log('✅ Captcha verified successfully');
     setCaptchaError(null);
     onVerify(token);
   };
@@ -108,4 +108,4 @@ const ImprovedHCaptcha = ({ onVerify, onError, onExpire }: ImprovedHCaptchaProps
   );
 };
 
-export default ImprovedHCaptcha;
+export default ImProvedHCaptcha;

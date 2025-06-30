@@ -1,7 +1,6 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { sendMFACode, verifyMFACode } from './mfaService';
-import { authConfig, logAuthEvent, shouldBypassMFA, shouldBypassCaptcha } from '@/utils/authConfig';
+import { authConfig, logAuthEvent } from '@/utils/authConfig';
 
 export interface AuthResult {
   success: boolean;
@@ -103,7 +102,12 @@ export const adminDirectLogin = async (email: string, password: string, captchaT
   try {
     logAuthEvent('Attempting admin direct login', { email });
     
-    // For development or hardcoded admin, allow direct login
+    // Require captcha token for admin login
+    if (!captchaToken) {
+      return { success: false, error: 'Security verification required' };
+    }
+    
+    // For hardcoded admin, allow direct login
     if (email === authConfig.adminEmail && password === authConfig.adminPassword) {
       logAuthEvent('Admin credentials detected, processing login');
       
@@ -114,16 +118,12 @@ export const adminDirectLogin = async (email: string, password: string, captchaT
         return { success: false, error: 'Admin setup failed' };
       }
       
-      // Sign in with Supabase - include captcha token if provided and required
+      // Sign in with Supabase - always include captcha token
       const signInOptions: any = {
         email,
         password,
+        options: { captchaToken }
       };
-
-      // Only include captcha token if not bypassed and provided
-      if (captchaToken && !shouldBypassCaptcha()) {
-        signInOptions.options = { captchaToken };
-      }
 
       const { data: session, error } = await supabase.auth.signInWithPassword(signInOptions);
       
@@ -156,16 +156,17 @@ export const regularUserLogin = async (email: string, password: string, captchaT
   try {
     logAuthEvent('Regular user login with MFA', { email });
     
+    // Require captcha token for all logins
+    if (!captchaToken) {
+      return { success: false, error: 'Security verification required' };
+    }
+    
     // First, validate credentials by attempting to sign in
     const signInOptions: any = {
       email,
       password,
+      options: { captchaToken }
     };
-
-    // Only include captcha token if not bypassed and provided
-    if (captchaToken && !shouldBypassCaptcha()) {
-      signInOptions.options = { captchaToken };
-    }
 
     const { data: testAuth, error: testError } = await supabase.auth.signInWithPassword(signInOptions);
     
@@ -177,18 +178,7 @@ export const regularUserLogin = async (email: string, password: string, captchaT
     // Immediately sign out to prevent session creation
     await supabase.auth.signOut();
     
-    // Check if should bypass MFA
-    if (shouldBypassMFA(email)) {
-      logAuthEvent('Bypassing MFA for development/admin user');
-      // Re-sign in if MFA is bypassed
-      const { data: finalAuth, error: finalError } = await supabase.auth.signInWithPassword(signInOptions);
-      if (finalError || !finalAuth.user) {
-        return { success: false, error: finalError?.message || 'Login failed' };
-      }
-      return { success: true, requiresMFA: false };
-    }
-    
-    // Send MFA code
+    // Always send MFA code for regular users
     logAuthEvent('Sending MFA code');
     const mfaResult = await sendMFACode(email);
     
@@ -209,23 +199,24 @@ export const completeMFALogin = async (email: string, password: string, mfaCode:
   try {
     logAuthEvent('Completing MFA login', { email });
     
-    // Verify MFA code using updated service with bypass
+    // Require captcha token
+    if (!captchaToken) {
+      return { success: false, error: 'Security verification required' };
+    }
+    
+    // Verify MFA code using updated service
     const verifyResult = await verifyMFACode(email, mfaCode);
     
     if (!verifyResult.success) {
       return { success: false, error: verifyResult.error || 'Invalid MFA code' };
     }
     
-    // Complete login
+    // Complete login with captcha token
     const signInOptions: any = {
       email,
       password,
+      options: { captchaToken }
     };
-
-    // Only include captcha token if not bypassed and provided
-    if (captchaToken && !shouldBypassCaptcha()) {
-      signInOptions.options = { captchaToken };
-    }
 
     const { data, error } = await supabase.auth.signInWithPassword(signInOptions);
 

@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 
 export const sendMFACode = async (email: string): Promise<{ success: boolean; error?: string }> => {
@@ -9,7 +8,7 @@ export const sendMFACode = async (email: string): Promise<{ success: boolean; er
     const token = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    console.log('🔑 Generated MFA token:', token);
+    console.log('🔑 Generated MFA token for production use');
     console.log('⏰ Token expires at:', expiresAt);
 
     // Delete any existing tokens for this email
@@ -40,30 +39,23 @@ export const sendMFACode = async (email: string): Promise<{ success: boolean; er
 
     console.log('✅ MFA token stored successfully in database');
     
-    // Send email via edge function in production, log in development
-    if (import.meta.env.DEV) {
-      console.log(`📬 [Dev Mode] MFA OTP for ${email}: ${token}`);
-      console.log('💡 In production, this would be sent via email service');
-      return { success: true };
-    } else {
-      // Call edge function to send email
-      const { data, error: emailError } = await supabase.functions.invoke('send-mfa-email', {
-        body: { email, code: token }
-      });
+    // Always send email via edge function
+    const { data, error: emailError } = await supabase.functions.invoke('send-mfa-email', {
+      body: { email, code: token }
+    });
 
-      if (emailError) {
-        console.error('❌ Failed to send MFA email:', emailError);
-        return { success: false, error: 'Failed to send MFA code via email' };
-      }
-
-      if (!data?.success) {
-        console.error('❌ Email service returned error:', data?.error);
-        return { success: false, error: data?.error || 'Failed to send MFA code' };
-      }
-
-      console.log('✅ MFA email sent successfully');
-      return { success: true };
+    if (emailError) {
+      console.error('❌ Failed to send MFA email:', emailError);
+      return { success: false, error: 'Failed to send MFA code via email' };
     }
+
+    if (!data?.success) {
+      console.error('❌ Email service returned error:', data?.error);
+      return { success: false, error: data?.error || 'Failed to send MFA code' };
+    }
+
+    console.log('✅ MFA email sent successfully');
+    return { success: true };
   } catch (error) {
     console.error('💥 MFA send error:', error);
     return { success: false, error: 'Failed to send MFA code' };

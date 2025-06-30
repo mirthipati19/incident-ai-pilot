@@ -1,9 +1,8 @@
-
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
 import { adminDirectLogin, regularUserLogin, completeMFALogin, createAdminUserIfNeeded } from '@/services/authService';
-import { authConfig, logAuthEvent, shouldBypassCaptcha } from '@/utils/authConfig';
+import { authConfig, logAuthEvent } from '@/utils/authConfig';
 
 interface AuthUser extends User {
   user_id?: string;
@@ -36,15 +35,7 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    logAuthEvent('Initializing improved auth context');
-    
-    // Show development mode indicator
-    if (authConfig.isDevelopment) {
-      console.log('🔧 DEVELOPMENT MODE ACTIVE');
-      console.log('  - Captcha bypass:', shouldBypassCaptcha());
-      console.log('  - Extended session timeout:', authConfig.sessionSettings.timeoutMinutes, 'minutes');
-      console.log('  - Verbose logging enabled');
-    }
+    logAuthEvent('Initializing production auth context');
     
     // Initialize admin user on startup
     createAdminUserIfNeeded();
@@ -132,18 +123,19 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       logAuthEvent('Sign up attempt', { email });
       
+      // Require captcha token
+      if (!captchaToken) {
+        return { success: false, error: 'Security verification required' };
+      }
+      
       const signUpOptions: any = {
         email,
         password,
         options: {
-          emailRedirectTo: `${window.location.origin}/itsm`
+          emailRedirectTo: `${window.location.origin}/itsm`,
+          captchaToken
         }
       };
-
-      // Only include captcha token if not bypassed in development
-      if (captchaToken && !shouldBypassCaptcha()) {
-        signUpOptions.options.captchaToken = captchaToken;
-      }
 
       const { data, error } = await supabase.auth.signUp(signUpOptions);
 
@@ -237,7 +229,7 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
       signIn,
       signOut,
       verifyMFA,
-      isDevelopmentMode: authConfig.isDevelopment,
+      isDevelopmentMode: false, // Always false now
     }}>
       {children}
     </ImprovedAuthContext.Provider>
