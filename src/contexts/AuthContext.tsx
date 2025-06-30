@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
@@ -38,20 +37,64 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const checkAdminStatus = async (userId: string, email?: string) => {
     try {
+      console.log('🔍 Checking admin status for user:', { userId, email });
+      
+      // First check for hardcoded admin email
       if (email === 'murari.mirthipati@authexa.me') {
-        console.log('Admin email detected:', email);
+        console.log('✅ Admin email detected:', email);
+        
+        // Ensure admin record exists in database
+        const { data: existingAdmin, error: checkError } = await supabase
+          .from('admin_users')
+          .select('*')
+          .eq('user_id', userId)
+          .single();
+
+        if (checkError && checkError.code === 'PGRST116') {
+          // Admin record doesn't exist, create it
+          console.log('📝 Creating admin record for:', email);
+          const { error: insertError } = await supabase
+            .from('admin_users')
+            .insert({
+              user_id: userId,
+              email: email,
+              role: 'admin',
+              created_at: new Date().toISOString()
+            });
+
+          if (insertError) {
+            console.error('❌ Failed to create admin record:', insertError);
+          } else {
+            console.log('✅ Admin record created successfully');
+          }
+        } else if (existingAdmin) {
+          console.log('✅ Admin record already exists:', existingAdmin);
+        }
+
         return true;
       }
 
-      const { data } = await supabase
+      // Check admin_users table for other potential admins
+      const { data: adminData, error } = await supabase
         .from('admin_users')
         .select('role')
         .eq('user_id', userId)
         .single();
-      
-      return !!data;
+
+      console.log('🔍 Database admin check result:', { adminData, error });
+
+      if (adminData && adminData.role === 'admin') {
+        console.log('✅ Admin status confirmed via database');
+        return true;
+      }
+
+      console.log('❌ User is not admin');
+      return false;
     } catch (error) {
+      console.error('💥 Admin status check error:', error);
+      // For hardcoded admin email, return true even if database check fails
       if (email === 'murari.mirthipati@authexa.me') {
+        console.log('⚠️ Defaulting to admin for hardcoded email despite error');
         return true;
       }
       return false;
@@ -180,20 +223,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const sendMFA = async (email: string) => {
+    console.log('🔐 Sending MFA for:', email);
     const result = await sendMFACode(email);
-    console.log('MFA send result:', result);
+    console.log('📧 MFA send result:', result);
     return result;
   };
 
   const verifyMFA = async (email: string, code: string) => {
+    console.log('🔓 Verifying MFA for:', email, 'with code:', code);
     const result = await verifyMFACode(email, code);
-    console.log('MFA verify result:', result);
+    console.log('✅ MFA verify result:', result);
     return result;
   };
 
   const completeMFALogin = async (email: string, password: string) => {
     try {
-      console.log('Completing MFA login for:', email);
+      console.log('🔐 Completing MFA login for:', email);
       
       const { data, error } = await supabase.auth.signInWithPassword({
         email,
@@ -201,24 +246,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       });
 
       if (error) {
-        console.error('Supabase auth error:', error);
+        console.error('❌ Supabase auth error:', error);
         return { success: false, error: error.message };
       }
 
       if (!data.user) {
+        console.error('❌ No user data received');
         return { success: false, error: 'No user data received' };
       }
 
-      console.log('Auth successful, user:', data.user.email);
+      console.log('✅ Auth successful, user:', data.user.email);
       
-      // Check if user is admin
-      const isAdmin = email === 'murari.mirthipati@authexa.me' || await checkAdminStatus(data.user.id, email);
+      // Check admin status with enhanced logging
+      const isAdmin = await checkAdminStatus(data.user.id, email);
       
-      console.log('Admin status:', isAdmin);
+      console.log('👑 Final admin status:', isAdmin);
       
       return { success: true, isAdmin };
     } catch (error) {
-      console.error('Complete MFA login error:', error);
+      console.error('💥 Complete MFA login error:', error);
       return { success: false, error: 'An unexpected error occurred' };
     }
   };

@@ -1,306 +1,357 @@
 
-import React, { useState, useRef } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { Mic, MicOff, Download, Loader2 } from 'lucide-react';
-import { useToast } from '@/hooks/use-toast';
+import { Mic, MicOff, Download, MessageSquare, Send, Loader2 } from 'lucide-react';
 
 const VoiceControlledInstaller = () => {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
+  const [chatInput, setChatInput] = useState('');
   const [generatedScript, setGeneratedScript] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
-  const recognitionRef = useRef<any>(null);
-  const { toast } = useToast();
+  const [chatMessages, setChatMessages] = useState([
+    { id: 1, text: "Hi! I can help you generate Windows batch files for software installation. Just tell me what software you need!", isBot: true }
+  ]);
+  const recognitionRef = useRef<SpeechRecognition | null>(null);
 
-  const softwareDictionary: { [key: string]: string } = {
-    "vs code": "Microsoft.VisualStudioCode",
-    "visual studio code": "Microsoft.VisualStudioCode",
-    "chrome": "Google.Chrome",
-    "google chrome": "Google.Chrome",
-    "firefox": "Mozilla.Firefox",
-    "node.js": "OpenJS.NodeJS",
-    "nodejs": "OpenJS.NodeJS",
-    "python": "Python.Python.3.11",
-    "git": "Git.Git",
-    "notepad++": "Notepad++.Notepad++",
-    "7zip": "7zip.7zip",
-    "discord": "Discord.Discord",
-    "spotify": "Spotify.Spotify",
-    "vlc": "VideoLAN.VLC"
+  const softwareLibrary = {
+    'vs code': 'winget install Microsoft.VisualStudioCode',
+    'visual studio code': 'winget install Microsoft.VisualStudioCode',
+    'chrome': 'winget install Google.Chrome',
+    'google chrome': 'winget install Google.Chrome',
+    'firefox': 'winget install Mozilla.Firefox',
+    'node.js': 'winget install OpenJS.NodeJS',
+    'nodejs': 'winget install OpenJS.NodeJS',
+    'python': 'winget install Python.Python.3',
+    'git': 'winget install Git.Git',
+    'discord': 'winget install Discord.Discord',
+    'spotify': 'winget install Spotify.Spotify',
+    'vlc': 'winget install VideoLAN.VLC',
+    'notepad++': 'winget install Notepad++.Notepad++',
+    'sublime text': 'winget install SublimeHQ.SublimeText.4',
+    'atom': 'winget install GitHub.Atom',
+    'zoom': 'winget install Zoom.Zoom',
+    'teams': 'winget install Microsoft.Teams',
+    'slack': 'winget install SlackTechnologies.Slack',
+    'docker': 'winget install Docker.DockerDesktop',
+    'postman': 'winget install Postman.Postman'
   };
 
-  const generateBatScript = (wingetId: string, softwareName: string) => {
+  const startListening = () => {
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+      const SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
+      const recognition = new SpeechRecognition();
+      
+      recognition.continuous = true;
+      recognition.interimResults = true;
+      recognition.lang = 'en-US';
+
+      recognition.onstart = () => {
+        setIsListening(true);
+      };
+
+      recognition.onresult = (event) => {
+        let finalTranscript = '';
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          if (event.results[i].isFinal) {
+            finalTranscript += event.results[i][0].transcript;
+          }
+        }
+        if (finalTranscript) {
+          setTranscript(finalTranscript.trim());
+          setChatInput(finalTranscript.trim());
+        }
+      };
+
+      recognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        setIsListening(false);
+      };
+
+      recognition.onend = () => {
+        setIsListening(false);
+      };
+
+      recognition.start();
+      recognitionRef.current = recognition;
+    } else {
+      alert('Speech recognition is not supported in your browser. Please use Chrome or Edge.');
+    }
+  };
+
+  const stopListening = () => {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+    setIsListening(false);
+  };
+
+  const generateBatchScript = (input: string) => {
+    const lowerInput = input.toLowerCase();
+    
+    // Check software library first
+    for (const [software, command] of Object.entries(softwareLibrary)) {
+      if (lowerInput.includes(software)) {
+        return generateBatchFile(command, software);
+      }
+    }
+
+    // Fallback for unknown software
+    const softwareName = extractSoftwareName(input);
+    const estimatedCommand = `winget install ${softwareName}`;
+    return generateBatchFile(estimatedCommand, softwareName, true);
+  };
+
+  const extractSoftwareName = (input: string) => {
+    const words = input.toLowerCase().replace(/install|download|get/g, '').trim().split(' ');
+    return words.filter(word => word.length > 2).join('.');
+  };
+
+  const generateBatchFile = (wingetCommand: string, softwareName: string, isEstimated = false) => {
     return `@echo off
 echo Installing ${softwareName}...
+echo.
 
 REM Check if winget is available
 winget --version >nul 2>&1
 IF ERRORLEVEL 1 (
-    echo winget not found. Please install the App Installer from Microsoft Store.
+    echo ERROR: winget not found. Please install Windows Package Manager first.
+    echo Visit: https://github.com/microsoft/winget-cli/releases
     pause
-    exit /b
+    exit /b 1
 )
 
-REM Validate Winget Package ID
-winget search "${wingetId}" | findstr /C:"${wingetId}" >nul
+echo Winget is available. Proceeding with installation...
+echo.
+
+${isEstimated ? `REM Note: This is an estimated command. Verify the package ID before running.
+echo Verifying package exists...
+winget search "${softwareName}" | findstr /C:"${softwareName}" >nul
 IF ERRORLEVEL 1 (
-    echo Installation is likely to fail because "${wingetId}" is not a valid Winget ID.
+    echo WARNING: Package "${softwareName}" may not be available in winget.
+    echo Please verify the correct package ID manually.
     pause
-    exit /b
 )
+echo.` : ''}
 
-REM Install the software
 echo Installing ${softwareName}...
-start /wait winget install ${wingetId} -e --source winget --silent
+start /wait ${wingetCommand} -e --source winget --silent
 
 IF ERRORLEVEL 0 (
-    echo ${softwareName} installed successfully!
+    echo.
+    echo SUCCESS: ${softwareName} has been installed successfully!
 ) ELSE (
-    echo Installation failed. Please try again manually.
+    echo.
+    echo ERROR: Installation failed. Please check the package name and try again.
+    echo You can search for the correct package with: winget search ${softwareName}
 )
 
+echo.
 pause`;
   };
 
-  const generateAIScript = async (userInput: string) => {
-    // This would typically call an AI service like Gemini
-    // For now, we'll create a generic script based on the input
-    const softwareName = userInput.toLowerCase().replace(/install |download |get /gi, '').trim();
-    
-    return `@echo off
-echo Attempting to install: ${softwareName}
-
-REM Check if winget is available
-winget --version >nul 2>&1
-IF ERRORLEVEL 1 (
-    echo winget not found. Please install the App Installer from Microsoft Store.
-    pause
-    exit /b
-)
-
-REM Search for the software
-echo Searching for ${softwareName}...
-winget search "${softwareName}" --accept-source-agreements
-
-echo.
-echo Please review the search results above and run:
-echo winget install [Package.ID] -e --source winget --silent
-echo.
-echo Replace [Package.ID] with the exact ID from the search results.
-
-pause`;
-  };
-
-  const handleVoiceInput = () => {
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      toast({
-        title: "Speech Recognition Not Supported",
-        description: "Your browser doesn't support speech recognition. Please use text input instead.",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    if (isListening) {
-      recognitionRef.current?.stop();
-      setIsListening(false);
-      return;
-    }
-
-    const SpeechRecognition = (window as any).webkitSpeechRecognition || (window as any).SpeechRecognition;
-    const recognition = new SpeechRecognition();
-    
-    recognition.continuous = false;
-    recognition.interimResults = true;
-    recognition.lang = 'en-US';
-
-    recognition.onstart = () => {
-      setIsListening(true);
-      toast({
-        title: "Listening...",
-        description: "Speak your software installation request"
-      });
-    };
-
-    recognition.onresult = (event: any) => {
-      const current = event.resultIndex;
-      const transcript = event.results[current][0].transcript;
-      setTranscript(transcript);
-    };
-
-    recognition.onend = () => {
-      setIsListening(false);
-    };
-
-    recognition.onerror = (event: any) => {
-      setIsListening(false);
-      toast({
-        title: "Speech Recognition Error",
-        description: event.error,
-        variant: "destructive"
-      });
-    };
-
-    recognitionRef.current = recognition;
-    recognition.start();
-  };
-
-  const handleGenerateScript = async () => {
-    if (!transcript.trim()) {
-      toast({
-        title: "No Input",
-        description: "Please provide software name via voice or text input",
-        variant: "destructive"
-      });
-      return;
-    }
+  const handleGenerate = async () => {
+    const inputText = chatInput || transcript;
+    if (!inputText.trim()) return;
 
     setIsGenerating(true);
+    
+    // Add user message to chat
+    const userMessage = { id: Date.now(), text: inputText, isBot: false };
+    setChatMessages(prev => [...prev, userMessage]);
 
-    try {
-      const lowerInput = transcript.toLowerCase();
-      let script = '';
+    // Generate batch script
+    const script = generateBatchScript(inputText);
+    setGeneratedScript(script);
 
-      // Check local dictionary first
-      const dictionaryMatch = Object.keys(softwareDictionary).find(key => 
-        lowerInput.includes(key)
-      );
+    // Add bot response to chat
+    const botMessage = { 
+      id: Date.now() + 1, 
+      text: `I've generated a Windows batch file for "${inputText}". You can download it below and run it as administrator.`, 
+      isBot: true 
+    };
+    setChatMessages(prev => [...prev, botMessage]);
 
-      if (dictionaryMatch) {
-        const wingetId = softwareDictionary[dictionaryMatch];
-        script = generateBatScript(wingetId, dictionaryMatch);
-      } else {
-        // Use AI generation for unknown software
-        script = await generateAIScript(transcript);
-      }
-
-      setGeneratedScript(script);
-      toast({
-        title: "Script Generated",
-        description: "Batch script has been generated successfully"
-      });
-    } catch (error) {
-      toast({
-        title: "Generation Failed",
-        description: "Failed to generate installation script",
-        variant: "destructive"
-      });
-    } finally {
-      setIsGenerating(false);
-    }
+    setChatInput('');
+    setTranscript('');
+    setIsGenerating(false);
   };
 
-  const handleDownloadScript = () => {
+  const downloadBatchFile = () => {
     if (!generatedScript) return;
 
     const blob = new Blob([generatedScript], { type: 'text/plain' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'install_software.bat';
+    a.download = 'software-installer.bat';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
 
-    toast({
-      title: "Script Downloaded",
-      description: "Run the .bat file as administrator to install the software"
-    });
+  const handleChatSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleGenerate();
   };
 
   return (
-    <div className="w-full max-w-4xl mx-auto p-6 space-y-6">
-      <Card className="bg-slate-800/50 backdrop-blur-sm border-slate-700/50">
-        <CardHeader className="text-center">
-          <CardTitle className="text-2xl text-white font-bold">Voice-Controlled Software Installer</CardTitle>
-          <CardDescription className="text-slate-300">
+    <div className="max-w-4xl mx-auto">
+      <Card className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50">
+        <CardHeader>
+          <CardTitle className="text-2xl text-white text-center">
+            Voice-Controlled Software Installer
+          </CardTitle>
+          <p className="text-slate-300 text-center">
             Generate Windows batch files for software installation using voice or text input
-          </CardDescription>
+          </p>
         </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Voice Input Controls */}
-          <div className="flex flex-col items-center space-y-4">
+        <CardContent>
+          <Tabs defaultValue="voice" className="w-full">
+            <TabsList className="grid w-full grid-cols-3 bg-slate-700/50">
+              <TabsTrigger value="voice" className="data-[state=active]:bg-slate-600/50">
+                <Mic className="w-4 h-4 mr-2" />
+                Voice Input
+              </TabsTrigger>
+              <TabsTrigger value="chat" className="data-[state=active]:bg-slate-600/50">
+                <MessageSquare className="w-4 h-4 mr-2" />
+                Chat Support
+              </TabsTrigger>
+              <TabsTrigger value="text" className="data-[state=active]:bg-slate-600/50">
+                Text Input
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="voice" className="space-y-4">
+              <div className="text-center space-y-4">
+                <Button
+                  onClick={isListening ? stopListening : startListening}
+                  className={`w-32 h-32 rounded-full text-white font-bold ${
+                    isListening
+                      ? 'bg-red-600 hover:bg-red-700 animate-pulse'
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
+                >
+                  {isListening ? (
+                    <>
+                      <MicOff className="w-8 h-8 mb-2" />
+                      Stop
+                    </>
+                  ) : (
+                    <>
+                      <Mic className="w-8 h-8 mb-2" />
+                      Speak
+                    </>
+                  )}
+                </Button>
+                <p className="text-slate-300">
+                  {isListening ? 'Listening... Speak your software installation request' : 'Click to start voice input'}
+                </p>
+                {transcript && (
+                  <div className="bg-slate-700/50 p-4 rounded-lg">
+                    <p className="text-white">You said: "{transcript}"</p>
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+
+            <TabsContent value="chat" className="space-y-4">
+              <div className="bg-slate-700/50 rounded-lg p-4 h-64 overflow-y-auto">
+                {chatMessages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={`mb-4 ${message.isBot ? 'text-left' : 'text-right'}`}
+                  >
+                    <div
+                      className={`inline-block max-w-[80%] p-3 rounded-lg ${
+                        message.isBot
+                          ? 'bg-blue-600/20 text-blue-100'
+                          : 'bg-slate-600/50 text-white'
+                      }`}
+                    >
+                      {message.text}
+                    </div>
+                  </div>
+                ))}
+                {isGenerating && (
+                  <div className="text-left mb-4">
+                    <div className="inline-block bg-blue-600/20 text-blue-100 p-3 rounded-lg">
+                      <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
+                      Generating your batch file...
+                    </div>
+                  </div>
+                )}
+              </div>
+              <form onSubmit={handleChatSubmit} className="flex space-x-2">
+                <Input
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  placeholder="Ask me to install any software..."
+                  className="bg-slate-700/50 border-slate-600/50 text-white"
+                  disabled={isGenerating}
+                />
+                <Button type="submit" disabled={!chatInput.trim() || isGenerating}>
+                  <Send className="w-4 h-4" />
+                </Button>
+              </form>
+            </TabsContent>
+
+            <TabsContent value="text" className="space-y-4">
+              <div>
+                <label className="block text-white mb-2">Software Installation Request</label>
+                <Textarea
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  placeholder="Type your software installation request (e.g., 'Install Visual Studio Code', 'Download Chrome and Firefox')"
+                  className="bg-slate-700/50 border-slate-600/50 text-white min-h-[100px]"
+                />
+              </div>
+            </TabsContent>
+          </Tabs>
+
+          <div className="mt-6 text-center">
             <Button
-              onClick={handleVoiceInput}
-              className={`w-40 h-40 rounded-full ${
-                isListening 
-                  ? 'bg-red-600 hover:bg-red-700 animate-pulse' 
-                  : 'bg-blue-600 hover:bg-blue-700'
-              } text-white font-semibold text-lg`}
+              onClick={handleGenerate}
+              disabled={!chatInput.trim() && !transcript.trim() || isGenerating}
+              className="bg-green-600 hover:bg-green-700 text-white px-8 py-2"
             >
-              {isListening ? (
+              {isGenerating ? (
                 <>
-                  <MicOff className="w-8 h-8 mr-2" />
-                  Stop
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Generating...
                 </>
               ) : (
-                <>
-                  <Mic className="w-8 h-8 mr-2" />
-                  Speak
-                </>
+                'Generate Installation Script'
               )}
             </Button>
-            <p className="text-slate-400 text-sm text-center">
-              Click to {isListening ? 'stop listening' : 'start voice input'}
-            </p>
           </div>
 
-          {/* Text Input Alternative */}
-          <div className="space-y-2">
-            <Label htmlFor="transcript" className="text-white font-medium">
-              Software Installation Request
-            </Label>
-            <Input
-              id="transcript"
-              value={transcript}
-              onChange={(e) => setTranscript(e.target.value)}
-              placeholder="e.g., 'Install Visual Studio Code' or 'Download Chrome'"
-              className="bg-slate-700/50 border-slate-600/50 text-white placeholder:text-slate-400"
-            />
-          </div>
-
-          {/* Generate Script Button */}
-          <Button
-            onClick={handleGenerateScript}
-            disabled={isGenerating || !transcript.trim()}
-            className="w-full bg-green-600 hover:bg-green-700 text-white font-medium"
-          >
-            {isGenerating ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Generating Script...
-              </>
-            ) : (
-              'Generate Installation Script'
-            )}
-          </Button>
-
-          {/* Generated Script Display */}
           {generatedScript && (
-            <div className="space-y-4">
-              <Label className="text-white font-medium">Generated Batch Script:</Label>
-              <Textarea
-                value={generatedScript}
-                readOnly
-                className="h-64 bg-slate-900/50 border-slate-600/50 text-green-400 font-mono text-sm"
-              />
-              <Button
-                onClick={handleDownloadScript}
-                className="w-full bg-purple-600 hover:bg-purple-700 text-white font-medium"
-              >
-                <Download className="w-4 h-4 mr-2" />
-                Download .bat File
-              </Button>
+            <div className="mt-6 space-y-4">
+              <div className="bg-slate-700/50 p-4 rounded-lg">
+                <h3 className="text-white font-semibold mb-2">Generated Batch Script:</h3>
+                <pre className="text-sm text-slate-300 overflow-x-auto whitespace-pre-wrap">
+                  {generatedScript}
+                </pre>
+              </div>
+              <div className="text-center">
+                <Button
+                  onClick={downloadBatchFile}
+                  className="bg-purple-600 hover:bg-purple-700 text-white"
+                >
+                  <Download className="w-4 h-4 mr-2" />
+                  Download .bat File
+                </Button>
+              </div>
             </div>
           )}
 
-          {/* Instructions */}
-          <div className="bg-slate-900/30 p-4 rounded-lg border border-slate-700/30">
+          <div className="mt-6 bg-slate-700/50 p-4 rounded-lg">
             <h4 className="text-white font-semibold mb-2">Instructions:</h4>
             <ul className="text-slate-300 text-sm space-y-1">
               <li>• Use voice input or type your software installation request</li>
@@ -314,5 +365,13 @@ pause`;
     </div>
   );
 };
+
+// Extend window object for speech recognition
+declare global {
+  interface Window {
+    webkitSpeechRecognition: any;
+    SpeechRecognition: any;
+  }
+}
 
 export default VoiceControlledInstaller;

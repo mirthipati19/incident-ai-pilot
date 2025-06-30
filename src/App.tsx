@@ -7,6 +7,7 @@ import SignUp from '@/pages/SignUp';
 import ITSM from '@/pages/ITSM';
 import NotFound from '@/pages/NotFound';
 import { AuthProvider } from '@/contexts/AuthContext';
+import { ThemeProvider } from '@/contexts/ThemeContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminRoute from '@/components/AdminRoute';
 import { Toaster } from '@/components/ui/toaster';
@@ -15,43 +16,45 @@ import AdminPortal from '@/pages/AdminPortal';
 
 function App() {
   return (
-    <Router>
-      <AuthProvider>
-        <div className="App">
-          <Routes>
-            <Route path="/" element={<Index />} />
-            <Route path="/signin" element={<SignIn />} />
-            <Route path="/signup" element={<SignUp />} />
-            <Route 
-              path="/itsm" 
-              element={
-                <ProtectedRoute>
-                  <ITSM />
-                </ProtectedRoute>
-              } 
-            />
-            <Route 
-              path="/admin" 
-              element={
-                <AdminRoute>
-                  <AdminPortal />
-                </AdminRoute>
-              } 
-            />
-            <Route 
-              path="/admin-dashboard" 
-              element={
-                <AdminRoute>
-                  <AdminDashboard />
-                </AdminRoute>
-              } 
-            />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-          <Toaster />
-        </div>
-      </AuthProvider>
-    </Router>
+    <ThemeProvider>
+      <Router>
+        <AuthProvider>
+          <div className="App">
+            <Routes>
+              <Route path="/" element={<Index />} />
+              <Route path="/signin" element={<SignIn />} />
+              <Route path="/signup" element={<SignUp />} />
+              <Route 
+                path="/itsm" 
+                element={
+                  <ProtectedRoute>
+                    <ITSM />
+                  </ProtectedRoute>
+                } 
+              />
+              <Route 
+                path="/admin" 
+                element={
+                  <AdminRoute>
+                    <AdminPortal />
+                  </AdminRoute>
+                } 
+              />
+              <Route 
+                path="/admin-dashboard" 
+                element={
+                  <AdminRoute>
+                    <AdminDashboard />
+                  </AdminRoute>
+                } 
+              />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+            <Toaster />
+          </div>
+        </AuthProvider>
+      </Router>
+    </ThemeProvider>
   );
 }
 
