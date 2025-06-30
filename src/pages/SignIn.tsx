@@ -1,571 +1,342 @@
-
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuth } from '@/contexts/AuthContext';
-import { useToast } from '@/hooks/use-toast';
-import { Loader2, LogIn, Shield, Home, Mail } from 'lucide-react';
+import { Loader2, Shield, User } from 'lucide-react';
+import { useImprovedAuth } from '@/contexts/ImprovedAuthContext';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import HCaptcha from '@hcaptcha/react-hcaptcha';
 import { supabase } from '@/integrations/supabase/client';
-import HCaptchaComponent from '@/components/HCaptchaComponent';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useSessionTimeout } from '@/hooks/useSessionTimeout';
+
+interface FormData {
+  email?: string;
+  password?: string;
+}
 
 const SignIn = () => {
-  const [formData, setFormData] = useState({
-    email: '',
-    password: ''
-  });
-  const [adminFormData, setAdminFormData] = useState({
-    email: 'murari.mirthipati@authexa.me',
-    password: 'Qwertyuiop@0987654321'
-  });
-  const [loading, setLoading] = useState(false);
-  const [adminLoading, setAdminLoading] = useState(false);
-  const [socialLoading, setSocialLoading] = useState<string | null>(null);
-  const [showCaptcha, setShowCaptcha] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const navigate = useNavigate();
+  const { signIn, verifyMFA } = useImprovedAuth();
+  const [formData, setFormData] = useState<FormData>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showMFA, setShowMFA] = useState(false);
   const [mfaCode, setMfaCode] = useState('');
-  const [mfaEmail, setMfaEmail] = useState('');
-  const [mfaPassword, setMfaPassword] = useState('');
-  const { signIn, verifyMFA, completeMFALogin } = useAuth();
-  const { toast } = useToast();
-  const navigate = useNavigate();
+  const [signInMode, setSignInMode] = useState("user");
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [showCaptcha, setShowCaptcha] = useState(true);
+  const [organizationLogo, setOrganizationLogo] = useState<string | null>(null);
+  const [emailDomain, setEmailDomain] = useState<string>('');
 
-  useSessionTimeout(2); // 2 minutes timeout
-
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+  const fetchOrganizationLogo = async (email: string) => {
+    if (!email.includes('@')) return;
+    
+    const domain = email.split('@')[1];
+    if (domain === emailDomain) return; // Don't refetch for same domain
+    
+    setEmailDomain(domain);
+    
+    try {
+      const { data, error } = await supabase
+        .from('organizations')
+        .select('logo_url')
+        .eq('domain', domain)
+        .maybeSingle();
+      
+      if (!error && data?.logo_url) {
+        setOrganizationLogo(data.logo_url);
+        console.log('🏢 Organization logo found:', data.logo_url);
+      } else {
+        setOrganizationLogo(null);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching organization logo:', error);
+      setOrganizationLogo(null);
+    }
   };
 
-  const handleAdminChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setAdminFormData({
-      ...adminFormData,
-      [e.target.name]: e.target.value
-    });
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const email = e.target.value;
+    setFormData(prev => ({ ...prev, email }));
+    
+    // Fetch organization logo when email contains @
+    if (email.includes('@') && email.split('@')[1].length > 0) {
+      fetchOrganizationLogo(email);
+    } else {
+      setOrganizationLogo(null);
+      setEmailDomain('');
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!captchaToken) {
-      setShowCaptcha(true);
-      return;
-    }
-    
-    setLoading(true);
-    
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          captchaToken: captchaToken || undefined,
-        },
-      });
+    if (!formData.email || !formData.password) return;
 
-      if (error) {
-        toast({
-          title: "Error",
-          description: error.message || "Failed to sign in",
-          variant: "destructive"
-        });
-        // Reset captcha on error
-        setCaptchaToken(null);
-        setShowCaptcha(true);
-      } else if (data.session) {
-        // Check if user requires MFA (this would be handled by your auth system)
-        // For now, assume successful login
-        toast({
-          title: "Welcome back!",
-          description: "You have been signed in successfully.",
-        });
-        navigate('/itsm');
+    setIsSubmitting(true);
+    try {
+      if (showMFA) {
+        // Verify MFA code
+        const result = await verifyMFA(formData.email, mfaCode, formData.password, captchaToken);
+        if (result.success) {
+          navigate('/itsm');
+        } else {
+          alert(`MFA Verification Failed: ${result.error}`);
+        }
       } else {
-        toast({
-          title: "Unexpected Error",
-          description: "Login response invalid.",
-          variant: "destructive"
-        });
+        // Initial sign-in attempt
+        const result = await signIn(formData.email, formData.password, false, captchaToken);
+        if (result.requiresMFA) {
+          setShowMFA(true);
+          setShowCaptcha(false);
+          alert('MFA code sent to your email. Please verify.');
+        } else if (result.success) {
+          navigate('/itsm');
+        } else {
+          alert(`Sign In Failed: ${result.error}`);
+        }
       }
-    } catch (error: any) {
-      toast({
-        title: "Error",
-        description: "An unexpected error occurred",
-        variant: "destructive"
-      });
-      // Reset captcha on error
-      setCaptchaToken(null);
-      setShowCaptcha(true);
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   const handleAdminSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setAdminLoading(true);
-    
+    if (!formData.email || !formData.password) return;
+
+    setIsSubmitting(true);
     try {
-      // Admin login uses the custom signIn function which handles MFA bypass
-      const result = await signIn(adminFormData.email, adminFormData.password);
-      
-      if (result.success && result.requiresMFA) {
-        setMfaEmail(adminFormData.email);
-        setMfaPassword(adminFormData.password);
-        setShowMFA(true);
-        toast({
-          title: "Admin MFA Required",
-          description: "Please check your email for the verification code.",
-        });
+      const result = await signIn(formData.email, formData.password, true, captchaToken);
+      if (result.success && result.isAdmin) {
+        navigate('/admin');
       } else {
-        throw new Error('MFA setup failed');
+        alert(`Admin Sign In Failed: ${result.error}`);
       }
-    } catch (error: any) {
-      console.error('Admin login error:', error);
-      toast({
-        title: "Admin Login Failed",
-        description: "Please check your credentials and try again.",
-        variant: "destructive"
-      });
     } finally {
-      setAdminLoading(false);
+      setIsSubmitting(false);
     }
   };
 
-  const handleMFAVerification = async () => {
-    if (!mfaCode.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter the MFA code",
-        variant: "destructive"
-      });
-      return;
-    }
-
-    setLoading(true);
-    
-    try {
-      const verifyResult = await verifyMFA(mfaEmail, mfaCode);
-      
-      if (verifyResult.success) {
-        const loginResult = await completeMFALogin(mfaEmail, mfaPassword);
-        
-        if (loginResult.success) {
-          toast({
-            title: loginResult.isAdmin ? "Admin Access Granted" : "Welcome back!",
-            description: "MFA verification successful.",
-          });
-          
-          if (loginResult.isAdmin) {
-            navigate('/admin', { replace: true });
-          } else {
-            navigate('/itsm');
-          }
-        } else {
-          toast({
-            title: "Login Failed",
-            description: loginResult.error || "Failed to complete login",
-            variant: "destructive"
-          });
-        }
-      } else {
-        toast({
-          title: "MFA Verification Failed",
-          description: verifyResult.error || "Invalid MFA code",
-          variant: "destructive"
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "MFA verification failed",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
+  const handleCaptchaVerified = (token: string | null) => {
+    if (token) {
+      setCaptchaToken(token);
+      setShowCaptcha(false);
+      console.log('✅ Captcha verified:', token);
+    } else {
+      setCaptchaToken(null);
+      alert('Captcha verification failed. Please try again.');
     }
   };
-
-  const handleSocialSignIn = async (provider: 'google' | 'azure') => {
-    setSocialLoading(provider);
-    
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider: provider,
-        options: {
-          redirectTo: `${window.location.origin}/itsm`
-        }
-      });
-
-      if (error) {
-        toast({
-          title: "Error",
-          description: error.message,
-          variant: "destructive"
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to sign in with social provider",
-        variant: "destructive"
-      });
-    } finally {
-      setSocialLoading(null);
-    }
-  };
-
-  const handleCaptchaVerified = (token: string) => {
-    setCaptchaToken(token);
-    setShowCaptcha(false);
-    toast({
-      title: "Verified",
-      description: "Security verification completed successfully.",
-    });
-  };
-
-  const handleCaptchaError = (error: string) => {
-    setCaptchaToken(null);
-    toast({
-      title: "Verification Error",
-      description: error,
-      variant: "destructive"
-    });
-  };
-
-  if (showCaptcha) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800">
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900/90 via-slate-800/95 to-slate-900/90"></div>
-        <div className="relative z-10">
-          <Card className="w-full max-w-md bg-slate-800/80 backdrop-blur-xl border border-slate-700/50 shadow-2xl">
-            <CardHeader className="text-center">
-              <CardTitle className="text-2xl text-white font-bold">Security Verification</CardTitle>
-              <CardDescription className="text-slate-300">
-                Please complete the security verification to continue
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <HCaptchaComponent 
-                onVerify={handleCaptchaVerified}
-                onError={handleCaptchaError}
-              />
-              <div className="text-center mt-4">
-                <Button 
-                  variant="ghost" 
-                  onClick={() => setShowCaptcha(false)}
-                  className="text-slate-300 hover:bg-slate-700/50"
-                >
-                  Back to Sign In
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
-  if (showMFA) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800">
-        <div className="absolute inset-0 bg-gradient-to-br from-slate-900/90 via-slate-800/95 to-slate-900/90"></div>
-        
-        <Card className="w-full max-w-md relative z-10 bg-slate-800/80 backdrop-blur-xl border border-slate-700/50 shadow-2xl">
-          <CardHeader className="text-center">
-            <div className="flex justify-center mb-4">
-              <div className="p-3 bg-blue-600/20 backdrop-blur-sm rounded-full border border-blue-500/30">
-                <Mail className="w-6 h-6 text-blue-400" />
-              </div>
-            </div>
-            <CardTitle className="text-2xl text-white font-bold">Multi-Factor Authentication</CardTitle>
-            <CardDescription className="text-slate-300 font-medium">
-              Enter the verification code sent to your email
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="mfaCode" className="text-white font-medium">Verification Code</Label>
-              <Input
-                id="mfaCode"
-                type="text"
-                value={mfaCode}
-                onChange={(e) => setMfaCode(e.target.value)}
-                placeholder="Enter 6-digit code"
-                className="bg-slate-700/50 backdrop-blur-sm border-slate-600/50 text-white placeholder:text-slate-400 font-medium focus:border-blue-500 focus:ring-blue-500/20"
-                maxLength={6}
-              />
-            </div>
-            
-            <Button 
-              onClick={handleMFAVerification} 
-              className="w-full bg-blue-600/80 hover:bg-blue-700/80 backdrop-blur-sm font-medium text-white border border-blue-500/30" 
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Verifying...
-                </>
-              ) : (
-                'Verify Code'
-              )}
-            </Button>
-            
-            <div className="text-center">
-              <Button 
-                variant="ghost" 
-                onClick={() => {
-                  setShowMFA(false);
-                  setMfaCode('');
-                  setMfaEmail('');
-                  setMfaPassword('');
-                  setCaptchaToken(null);
-                }}
-                className="text-slate-300 hover:bg-slate-700/50"
-              >
-                Back to Sign In
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800">
-      <div className="absolute inset-0 bg-gradient-to-br from-slate-900/90 via-slate-800/95 to-slate-900/90"></div>
-      
-      {/* Home Button */}
-      <div className="absolute top-4 left-4 z-20">
-        <Link to="/">
-          <Button variant="outline" className="bg-slate-800/50 backdrop-blur-sm border-slate-700/50 text-white hover:bg-slate-700/50">
-            <Home className="w-4 h-4 mr-2" />
-            Home
-          </Button>
-        </Link>
-      </div>
-      
-      <Card className="w-full max-w-md relative z-10 bg-slate-800/80 backdrop-blur-xl border border-slate-700/50 shadow-2xl">
-        <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <div className="p-3 bg-blue-600/20 backdrop-blur-sm rounded-full border border-blue-500/30">
-              <LogIn className="w-6 h-6 text-blue-400" />
-            </div>
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800 p-4">
+      <Card className="w-full max-w-md bg-slate-800/80 backdrop-blur-xl border border-slate-700/50 shadow-2xl">
+        <CardHeader className="text-center space-y-4 pb-8">
+          <div className="flex justify-center">
+            {organizationLogo ? (
+              <div className="relative">
+                <img 
+                  src={organizationLogo} 
+                  alt="Organization Logo" 
+                  className="w-16 h-16 rounded-full object-cover border-2 border-blue-500/30"
+                />
+                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-slate-800 flex items-center justify-center">
+                  <Shield className="w-3 h-3 text-white" />
+                </div>
+              </div>
+            ) : (
+              <div className="p-3 bg-gradient-to-br from-blue-600/20 to-purple-600/20 backdrop-blur-sm rounded-full border border-blue-500/30">
+                <Shield className="w-10 h-10 text-blue-400" />
+              </div>
+            )}
           </div>
-          <CardTitle className="text-2xl text-white font-bold">Welcome Back</CardTitle>
-          <CardDescription className="text-slate-300 font-medium">
-            Sign in to your Authexa Support account
-          </CardDescription>
+          <div>
+            <CardTitle className="text-2xl text-white font-bold">
+              Welcome Back
+            </CardTitle>
+            <p className="text-slate-300 mt-2">
+              {organizationLogo ? `Sign in to your ${emailDomain} account` : 'Sign in to your account'}
+            </p>
+          </div>
+          {organizationLogo && (
+            <div className="text-xs text-green-400 bg-green-400/10 rounded-lg p-2 border border-green-400/20">
+              ✅ Organization verified: {emailDomain}
+            </div>
+          )}
         </CardHeader>
-        <CardContent>
-          <Tabs defaultValue="user" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 bg-slate-700/50 backdrop-blur-sm border border-slate-600/50">
-              <TabsTrigger value="user" className="data-[state=active]:bg-slate-600/50 text-white data-[state=active]:text-white">User Login</TabsTrigger>
-              <TabsTrigger value="admin" className="data-[state=active]:bg-slate-600/50 text-white data-[state=active]:text-white">
+
+        <CardContent className="space-y-6">
+          <Tabs value={signInMode} onValueChange={setSignInMode} className="w-full">
+            <TabsList className="grid w-full grid-cols-2 bg-slate-700/50">
+              <TabsTrigger 
+                value="user" 
+                className="data-[state=active]:bg-slate-600/50 data-[state=active]:text-white"
+              >
+                <User className="w-4 h-4 mr-2" />
+                User Login
+              </TabsTrigger>
+              <TabsTrigger 
+                value="admin" 
+                className="data-[state=active]:bg-slate-600/50 data-[state=active]:text-white"
+              >
                 <Shield className="w-4 h-4 mr-2" />
-                Admin Portal
+                Admin Login
               </TabsTrigger>
             </TabsList>
-            
+
             <TabsContent value="user" className="space-y-4 mt-6">
-              {/* Social Sign In Buttons */}
-              <div className="space-y-3 mb-6">
-                <Button
-                  onClick={() => handleSocialSignIn('google')}
-                  disabled={socialLoading !== null}
-                  className="w-full bg-slate-700/50 hover:bg-slate-600/50 backdrop-blur-sm border border-slate-600/50 text-white font-medium"
-                  variant="outline"
-                >
-                  {socialLoading === 'google' ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
-                      <path
-                        fill="#4285F4"
-                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                      />
-                      <path
-                        fill="#34A853"
-                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                      />
-                      <path
-                        fill="#FBBC05"
-                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                      />
-                      <path
-                        fill="#EA4335"
-                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                      />
-                    </svg>
-                  )}
-                  Continue with Google
-                </Button>
-                
-                <Button
-                  onClick={() => handleSocialSignIn('azure')}
-                  disabled={socialLoading !== null}
-                  className="w-full bg-slate-700/50 hover:bg-slate-600/50 backdrop-blur-sm border border-slate-600/50 text-white font-medium"
-                  variant="outline"
-                >
-                  {socialLoading === 'azure' ? (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  ) : (
-                    <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
-                      <path
-                        fill="#5059C9"
-                        d="M9.5 10.5h3v3h-3v-3z"
-                      />
-                      <path
-                        fill="#5059C9"
-                        d="M14.5 10.5h3v3h-3v-3z"
-                      />
-                      <path
-                        fill="#5059C9"
-                        d="M9.5 5.5h3v3h-3v-3z"
-                      />
-                      <path
-                        fill="#5059C9"
-                        d="M14.5 15.5h3v3h-3v-3z"
-                      />
-                    </svg>
-                  )}
-                  Continue with Microsoft Teams
-                </Button>
-              </div>
-
-              <div className="relative mb-6">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t border-slate-600/50" />
-                </div>
-                <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-slate-800/80 px-2 text-slate-300 font-medium">Or continue with email</span>
-                </div>
-              </div>
-
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-white font-medium">Email</Label>
+                  <Label htmlFor="email" className="text-slate-200">Email</Label>
                   <Input
                     id="email"
-                    name="email"
                     type="email"
-                    required
                     value={formData.email}
-                    onChange={handleChange}
+                    onChange={handleEmailChange}
+                    className="bg-slate-700/50 border-slate-600/50 text-white placeholder:text-slate-400 focus:border-blue-500/50"
                     placeholder="Enter your email"
-                    className="bg-slate-700/50 backdrop-blur-sm border-slate-600/50 text-white placeholder:text-slate-400 font-medium focus:border-blue-500 focus:ring-blue-500/20"
-                  />
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="password" className="text-white font-medium">Password</Label>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
                     required
-                    value={formData.password}
-                    onChange={handleChange}
-                    placeholder="Enter your password"
-                    className="bg-slate-700/50 backdrop-blur-sm border-slate-600/50 text-white placeholder:text-slate-400 font-medium focus:border-blue-500 focus:ring-blue-500/20"
                   />
                 </div>
 
-                {captchaToken && (
-                  <div className="text-center">
-                    <div className="inline-flex items-center gap-2 text-green-400 text-sm">
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                      </svg>
-                      Security verification completed
-                    </div>
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-slate-200">Password</Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    value={formData.password}
+                    onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                    className="bg-slate-700/50 border-slate-600/50 text-white placeholder:text-slate-400 focus:border-blue-500/50"
+                    placeholder="Enter your password"
+                    required
+                  />
+                </div>
+
+                {showCaptcha && (
+                  <div className="space-y-2">
+                    <Label className="text-slate-200">Security Verification</Label>
+                    <HCaptcha
+                      sitekey="9a38cd1d-fa80-475f-a8eb-42f5b8f7a68e"
+                      onVerify={handleCaptchaVerified}
+                      theme="dark"
+                      className="h-captcha-custom"
+                    />
                   </div>
                 )}
-                
-                <Button type="submit" className="w-full bg-blue-600/80 hover:bg-blue-700/80 backdrop-blur-sm font-medium text-white border border-blue-500/30" disabled={loading}>
-                  {loading ? (
+
+                {showMFA && (
+                  <div className="space-y-2">
+                    <Label htmlFor="mfaCode" className="text-slate-200">
+                      Verification Code
+                    </Label>
+                    <Input
+                      id="mfaCode"
+                      type="text"
+                      value={mfaCode}
+                      onChange={(e) => setMfaCode(e.target.value)}
+                      className="bg-slate-700/50 border-slate-600/50 text-white placeholder:text-slate-400 focus:border-blue-500/50"
+                      placeholder="Enter 6-digit code"
+                      maxLength={6}
+                      required
+                    />
+                    <p className="text-xs text-slate-400">
+                      Check your email for the verification code
+                    </p>
+                  </div>
+                )}
+
+                <Button 
+                  type="submit" 
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium py-2 rounded-lg shadow-lg hover:shadow-blue-500/25 transition-all duration-200"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Signing in...
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      {showMFA ? 'Verifying...' : 'Signing in...'}
                     </>
                   ) : (
-                    'Sign In'
+                    showMFA ? 'Verify & Sign In' : 'Sign In'
                   )}
                 </Button>
               </form>
             </TabsContent>
-            
+
             <TabsContent value="admin" className="space-y-4 mt-6">
-              <div className="bg-red-500/10 border border-red-400/30 rounded-lg p-4 mb-4">
-                <div className="flex items-center space-x-2">
-                  <Shield className="w-5 h-5 text-red-400" />
-                  <span className="text-red-300 font-medium">Admin Access Only</span>
-                </div>
-                <p className="text-red-200 text-sm mt-1">
-                  Admin credentials are pre-filled for security
-                </p>
-              </div>
-              
               <form onSubmit={handleAdminSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="admin-email" className="text-white font-medium">Admin Email</Label>
+                  <Label htmlFor="adminEmail" className="text-slate-200">Email</Label>
                   <Input
-                    id="admin-email"
-                    name="email"
+                    id="adminEmail"
                     type="email"
+                    value={formData.email || ''}
+                    onChange={handleEmailChange}
+                    className="bg-slate-700/50 border-slate-600/50 text-white placeholder:text-slate-400 focus:border-blue-500/50"
+                    placeholder="Enter your email"
                     required
-                    value={adminFormData.email}
-                    onChange={handleAdminChange}
-                    className="bg-slate-700/50 backdrop-blur-sm border-slate-600/50 text-white font-medium focus:border-blue-500 focus:ring-blue-500/20"
-                    readOnly
                   />
                 </div>
-                
+
                 <div className="space-y-2">
-                  <Label htmlFor="admin-password" className="text-white font-medium">Super Password</Label>
+                  <Label htmlFor="adminPassword" className="text-slate-200">Password</Label>
                   <Input
-                    id="admin-password"
-                    name="password"
+                    id="adminPassword"
                     type="password"
+                    value={formData.password || ''}
+                    onChange={(e) => setFormData(prev => ({ ...prev, password: e.target.value }))}
+                    className="bg-slate-700/50 border-slate-600/50 text-white placeholder:text-slate-400 focus:border-blue-500/50"
+                    placeholder="Enter your password"
                     required
-                    value={adminFormData.password}
-                    onChange={handleAdminChange}
-                    className="bg-slate-700/50 backdrop-blur-sm border-slate-600/50 text-white font-medium focus:border-blue-500 focus:ring-blue-500/20"
-                    readOnly
                   />
                 </div>
-                
-                <Button type="submit" className="w-full bg-red-600/80 hover:bg-red-700/80 backdrop-blur-sm font-medium text-white border border-red-500/30" disabled={adminLoading}>
-                  {adminLoading ? (
+
+                {showCaptcha && (
+                  <div className="space-y-2">
+                    <Label className="text-slate-200">Security Verification</Label>
+                    <HCaptcha
+                      sitekey="9a38cd1d-fa80-475f-a8eb-42f5b8f7a68e"
+                      onVerify={handleCaptchaVerified}
+                      theme="dark"
+                      className="h-captcha-custom"
+                    />
+                  </div>
+                )}
+
+                <Button
+                  type="submit"
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-medium py-2 rounded-lg shadow-lg hover:shadow-blue-500/25 transition-all duration-200"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Accessing Admin Portal...
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Signing in...
                     </>
                   ) : (
-                    <>
-                      <Shield className="mr-2 h-4 w-4" />
-                      Access Admin Portal
-                    </>
+                    'Sign In as Admin'
                   )}
                 </Button>
               </form>
             </TabsContent>
           </Tabs>
-          
-          <div className="mt-6 text-center text-sm text-slate-300 font-medium">
-            Don't have an account?{' '}
-            <Link to="/signup" className="text-blue-400 hover:underline font-medium">
-              Sign up
-            </Link>
+
+          <div className="text-center space-y-4">
+            <p className="text-slate-400 text-sm">
+              Don't have an account?{' '}
+              <Button
+                variant="link"
+                onClick={() => navigate('/signup')}
+                className="text-blue-400 hover:text-blue-300 p-0 h-auto font-normal"
+              >
+                Sign up here
+              </Button>
+            </p>
+
+            {captchaToken && (
+              <div className="text-xs text-green-400 bg-green-400/10 rounded-lg p-2 border border-green-400/20">
+                ✅ Security verification completed
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
