@@ -1,6 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { sendMFACode, verifyMFACode } from './mfaService';
+import { authConfig, logAuthEvent, shouldBypassMFA } from '@/utils/authConfig';
 
 export interface AuthResult {
   success: boolean;
@@ -10,13 +11,9 @@ export interface AuthResult {
   userId?: string;
 }
 
-// Hardcoded admin for development - bypass complex auth flow
-const ADMIN_EMAIL = 'murari.mirthipati@authexa.me';
-const ADMIN_PASSWORD = 'Qwertyuiop@0987654321';
-
 export const createAdminUserIfNeeded = async () => {
   try {
-    console.log('🔧 Checking/creating admin user...');
+    logAuthEvent('Checking/creating admin user');
     
     // Check if admin exists in auth.users
     const { data, error: listError } = await supabase.auth.admin.listUsers();
@@ -26,15 +23,15 @@ export const createAdminUserIfNeeded = async () => {
       return false;
     }
     
-    const adminAuthUser = data?.users?.find((user: any) => user.email === ADMIN_EMAIL);
+    const adminAuthUser = data?.users?.find((user: any) => user.email === authConfig.adminEmail);
     
     let adminUserId = adminAuthUser?.id;
     
     if (!adminAuthUser) {
-      console.log('🆕 Creating admin auth user...');
+      logAuthEvent('Creating admin auth user');
       const { data: newAdmin, error: authError } = await supabase.auth.admin.createUser({
-        email: ADMIN_EMAIL,
-        password: ADMIN_PASSWORD,
+        email: authConfig.adminEmail,
+        password: authConfig.adminPassword,
         email_confirm: true
       });
       
@@ -52,18 +49,18 @@ export const createAdminUserIfNeeded = async () => {
     const { data: existingUser } = await supabase
       .from('users')
       .select('*')
-      .eq('email', ADMIN_EMAIL)
+      .eq('email', authConfig.adminEmail)
       .single();
     
     if (!existingUser) {
-      console.log('🆕 Creating admin user record...');
+      logAuthEvent('Creating admin user record');
       const { error: userError } = await supabase
         .from('users')
         .insert({
           id: adminUserId,
-          user_id: '000001', // Special admin user ID
+          user_id: authConfig.adminUserId,
           name: 'Admin User',
-          email: ADMIN_EMAIL,
+          email: authConfig.adminEmail,
           password_hash: 'handled_by_supabase'
         });
       
@@ -80,7 +77,7 @@ export const createAdminUserIfNeeded = async () => {
       .single();
     
     if (!existingAdmin) {
-      console.log('🆕 Creating admin_users record...');
+      logAuthEvent('Creating admin_users record');
       const { error: adminError } = await supabase
         .from('admin_users')
         .insert({
@@ -94,7 +91,7 @@ export const createAdminUserIfNeeded = async () => {
       }
     }
     
-    console.log('✅ Admin user setup completed');
+    logAuthEvent('Admin user setup completed');
     return true;
   } catch (error) {
     console.error('💥 Error setting up admin user:', error);
@@ -104,11 +101,11 @@ export const createAdminUserIfNeeded = async () => {
 
 export const adminDirectLogin = async (email: string, password: string, captchaToken?: string): Promise<AuthResult> => {
   try {
-    console.log('🔐 Attempting admin direct login...');
+    logAuthEvent('Attempting admin direct login', { email });
     
-    // For development, allow direct admin login without MFA
-    if (email === ADMIN_EMAIL && password === ADMIN_PASSWORD) {
-      console.log('🎯 Admin credentials detected, bypassing MFA...');
+    // For development or hardcoded admin, allow direct login
+    if (email === authConfig.adminEmail && password === authConfig.adminPassword) {
+      logAuthEvent('Admin credentials detected, processing login');
       
       // Ensure admin user exists
       const adminSetup = await createAdminUserIfNeeded();
@@ -117,19 +114,23 @@ export const adminDirectLogin = async (email: string, password: string, captchaT
         return { success: false, error: 'Admin setup failed' };
       }
       
-      // Sign in with Supabase - include captcha token if provided
+      // Sign in with Supabase - include captcha token if provided and required
       const signInOptions: any = {
         email,
         password,
       };
 
-      if (captchaToken) {
+      // Only include captcha token if not in development mode
+      if (captchaToken && !authConfig.isDevelopment) {
         signInOptions.options = { captchaToken };
       }
 
       const { data: session, error } = await supabase.auth.signInWithPassword(signInOptions);
       
-      console.log('🔐 Admin sign-in session:', session?.session ? 'SUCCESS' : 'FAILED', 'Error:', error?.message || 'none');
+      logAuthEvent('Admin sign-in session result', { 
+        success: !!session?.session, 
+        error: error?.message || 'none' 
+      });
 
       if (error) {
         console.error('❌ Admin auth failed:', error);
@@ -140,7 +141,7 @@ export const adminDirectLogin = async (email: string, password: string, captchaT
         return { success: false, error: 'No user data received' };
       }
 
-      console.log('✅ Admin login successful, user ID:', session.user.id);
+      logAuthEvent('Admin login successful', { userId: session.user.id });
       return { success: true, isAdmin: true, userId: session.user.id };
     }
     
@@ -153,7 +154,7 @@ export const adminDirectLogin = async (email: string, password: string, captchaT
 
 export const regularUserLogin = async (email: string, password: string, captchaToken?: string): Promise<AuthResult> => {
   try {
-    console.log('🔐 Regular user login with MFA...');
+    logAuthEvent('Regular user login with MFA', { email });
     
     // First, validate credentials by attempting to sign in
     const signInOptions: any = {
@@ -161,7 +162,8 @@ export const regularUserLogin = async (email: string, password: string, captchaT
       password,
     };
 
-    if (captchaToken) {
+    // Only include captcha token if not in development mode
+    if (captchaToken && !authConfig.isDevelopment) {
       signInOptions.options = { captchaToken };
     }
 
@@ -175,8 +177,14 @@ export const regularUserLogin = async (email: string, password: string, captchaT
     // Immediately sign out to prevent session creation
     await supabase.auth.signOut();
     
+    // Check if should bypass MFA
+    if (shouldBypassMFA(email)) {
+      logAuthEvent('Bypassing MFA for development/admin user');
+      return { success: true, requiresMFA: false };
+    }
+    
     // Send MFA code
-    console.log('📧 Sending MFA code...');
+    logAuthEvent('Sending MFA code');
     const mfaResult = await sendMFACode(email);
     
     if (!mfaResult.success) {
@@ -184,7 +192,7 @@ export const regularUserLogin = async (email: string, password: string, captchaT
       return { success: false, error: mfaResult.error || 'Failed to send MFA code' };
     }
     
-    console.log('✅ MFA code sent, user needs to verify');
+    logAuthEvent('MFA code sent, user needs to verify');
     return { success: true, requiresMFA: true };
   } catch (error) {
     console.error('💥 Regular login error:', error);
@@ -194,7 +202,7 @@ export const regularUserLogin = async (email: string, password: string, captchaT
 
 export const completeMFALogin = async (email: string, password: string, mfaCode: string, captchaToken?: string): Promise<AuthResult> => {
   try {
-    console.log('🔓 Completing MFA login...');
+    logAuthEvent('Completing MFA login', { email });
     
     // Verify MFA code using updated service with bypass
     const verifyResult = await verifyMFACode(email, mfaCode);
@@ -209,7 +217,8 @@ export const completeMFALogin = async (email: string, password: string, mfaCode:
       password,
     };
 
-    if (captchaToken) {
+    // Only include captcha token if not in development mode
+    if (captchaToken && !authConfig.isDevelopment) {
       signInOptions.options = { captchaToken };
     }
 
@@ -219,7 +228,7 @@ export const completeMFALogin = async (email: string, password: string, mfaCode:
       return { success: false, error: error?.message || 'Login failed' };
     }
 
-    console.log('✅ MFA login completed successfully');
+    logAuthEvent('MFA login completed successfully');
     return { success: true, isAdmin: false };
   } catch (error) {
     console.error('💥 MFA completion error:', error);

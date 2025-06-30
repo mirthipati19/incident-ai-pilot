@@ -1,60 +1,71 @@
 
-import React from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
-import Index from '@/pages/Index';
-import SignIn from '@/pages/SignIn';
-import SignUp from '@/pages/SignUp';
-import ITSM from '@/pages/ITSM';
-import NotFound from '@/pages/NotFound';
-import { AuthProvider } from '@/contexts/AuthContext';
-import { ThemeProvider } from '@/contexts/ThemeContext';
-import ProtectedRoute from '@/components/ProtectedRoute';
-import AdminRoute from '@/components/AdminRoute';
-import { Toaster } from '@/components/ui/toaster';
-import AdminDashboard from '@/pages/AdminDashboard';
-import AdminPortal from '@/pages/AdminPortal';
+import { Toaster } from "@/components/ui/toaster";
+import { Toaster as Sonner } from "@/components/ui/sonner";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { ImprovedAuthProvider } from "@/contexts/ImprovedAuthContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
+import DevModeIndicator from "@/components/DevModeIndicator";
+import Index from "./pages/Index";
+import ITSM from "./pages/ITSM";
+import SignIn from "./pages/SignIn";
+import ImprovedSignIn from "./pages/ImprovedSignIn";
+import SignUp from "./pages/SignUp";
+import AdminDashboard from "./pages/AdminDashboard";
+import AdminPortal from "./pages/AdminPortal";
+import NotFound from "./pages/NotFound";
+import ProtectedRoute from "./components/ProtectedRoute";
+import AdminRoute from "./components/AdminRoute";
+
+const queryClient = new QueryClient();
 
 function App() {
   return (
-    <ThemeProvider>
-      <Router>
-        <AuthProvider>
-          <div className="App">
-            <Routes>
-              <Route path="/" element={<Index />} />
-              <Route path="/signin" element={<SignIn />} />
-              <Route path="/signup" element={<SignUp />} />
-              <Route 
-                path="/itsm" 
-                element={
-                  <ProtectedRoute>
-                    <ITSM />
-                  </ProtectedRoute>
-                } 
-              />
-              <Route 
-                path="/admin" 
-                element={
-                  <AdminRoute>
-                    <AdminPortal />
-                  </AdminRoute>
-                } 
-              />
-              <Route 
-                path="/admin-dashboard" 
-                element={
-                  <AdminRoute>
-                    <AdminDashboard />
-                  </AdminRoute>
-                } 
-              />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <ImprovedAuthProvider>
+          <TooltipProvider>
             <Toaster />
-          </div>
-        </AuthProvider>
-      </Router>
-    </ThemeProvider>
+            <Sonner />
+            <DevModeIndicator />
+            <BrowserRouter>
+              <Routes>
+                <Route path="/" element={<Index />} />
+                <Route path="/signin" element={<SignIn />} />
+                <Route path="/improved-signin" element={<ImprovedSignIn />} />
+                <Route path="/signup" element={<SignUp />} />
+                <Route
+                  path="/itsm"
+                  element={
+                    <ProtectedRoute>
+                      <ITSM />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin"
+                  element={
+                    <AdminRoute>
+                      <AdminDashboard />
+                    </AdminRoute>
+                  }
+                />
+                <Route
+                  path="/admin-portal"
+                  element={
+                    <AdminRoute>
+                      <AdminPortal />
+                    </AdminRoute>
+                  }
+                />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </BrowserRouter>
+          </TooltipProvider>
+        </ImprovedAuthProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }
 

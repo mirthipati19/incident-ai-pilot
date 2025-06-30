@@ -70,7 +70,7 @@ export const verifyMFACode = async (email: string, token: string): Promise<{ suc
         error: bypassError?.message || 'none' 
       });
 
-      if (!bypassError && bypassData?.[0]) {
+      if (!bypassError && bypassData && bypassData.length > 0) {
         const tokenData = bypassData[0];
         console.log('✅ Token found via bypass:', tokenData.token, 'Exp:', tokenData.expires_at);
         
@@ -84,7 +84,7 @@ export const verifyMFACode = async (email: string, token: string): Promise<{ suc
         return { success: true };
       }
     } catch (bypassError) {
-      console.warn('⚠️ Bypass RLS failed, falling back to direct query');
+      console.warn('⚠️ Bypass RLS failed, falling back to direct query:', bypassError);
     }
     
     // Fallback to direct query

@@ -4,6 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
 import { adminDirectLogin, regularUserLogin, completeMFALogin, createAdminUserIfNeeded } from '@/services/authService';
 import { generateSessionToken } from '@/utils/urlEncryption';
+import { authConfig, logAuthEvent, shouldBypassCaptcha } from '@/utils/authConfig';
 
 interface AuthUser extends User {
   user_id?: string;
@@ -14,10 +15,11 @@ interface AuthUser extends User {
 interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
-  signUp: (email: string, password: string, name: string) => Promise<{ success: boolean; error?: string; userId?: string }>;
+  signUp: (email: string, password: string, name: string, captchaToken?: string) => Promise<{ success: boolean; error?: string; userId?: string }>;
   signIn: (email: string, password: string, isAdmin?: boolean, captchaToken?: string) => Promise<{ success: boolean; error?: string; requiresMFA?: boolean; isAdmin?: boolean }>;
   signOut: () => Promise<void>;
   verifyMFA: (email: string, code: string, password: string, captchaToken?: string) => Promise<{ success: boolean; error?: string; isAdmin?: boolean }>;
+  isDevelopmentMode: boolean;
 }
 
 const ImprovedAuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -35,7 +37,15 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    console.log('🚀 Initializing improved auth context...');
+    logAuthEvent('Initializing improved auth context');
+    
+    // Show development mode indicator
+    if (authConfig.isDevelopment) {
+      console.log('🔧 DEVELOPMENT MODE ACTIVE');
+      console.log('  - Captcha bypass:', shouldBypassCaptcha());
+      console.log('  - Extended session timeout:', authConfig.sessionSettings.timeoutMinutes, 'minutes');
+      console.log('  - Verbose logging enabled');
+    }
     
     // Initialize admin user on startup
     createAdminUserIfNeeded();
@@ -55,7 +65,7 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
     getSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('🔄 Auth state changed:', event, session?.user?.email);
+      logAuthEvent('Auth state changed', { event, email: session?.user?.email });
       
       if (session?.user) {
         await updateUserFromSession(session.user);
@@ -87,7 +97,10 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
         isAdmin
       });
       
-      console.log('✅ User session updated:', authUser.email, isAdmin ? '(Admin)' : '(User)');
+      logAuthEvent('User session updated', { 
+        email: authUser.email, 
+        isAdmin: isAdmin ? '(Admin)' : '(User)' 
+      });
     } catch (error) {
       console.error('❌ Error updating user session:', error);
       setUser({ ...authUser, isAdmin: false });
@@ -97,8 +110,8 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
   const checkAdminStatus = async (userId: string, email?: string): Promise<boolean> => {
     try {
       // First check for hardcoded admin email
-      if (email === 'murari.mirthipati@authexa.me') {
-        console.log('✅ Admin detected by email:', email);
+      if (email === authConfig.adminEmail) {
+        logAuthEvent('Admin detected by email', { email });
         return true;
       }
 
@@ -112,21 +125,31 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
       return adminData?.role === 'admin';
     } catch (error) {
       console.error('❌ Admin check error:', error);
-      return email === 'murari.mirthipati@authexa.me';
+      return email === authConfig.adminEmail;
     }
   };
 
-  const signUp = async (email: string, password: string, name: string) => {
+  const signUp = async (email: string, password: string, name: string, captchaToken?: string) => {
     try {
-      const { data, error } = await supabase.auth.signUp({
+      logAuthEvent('Sign up attempt', { email });
+      
+      const signUpOptions: any = {
         email,
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/itsm`
         }
-      });
+      };
+
+      // Only include captcha token if not bypassed in development
+      if (captchaToken && !shouldBypassCaptcha()) {
+        signUpOptions.options.captchaToken = captchaToken;
+      }
+
+      const { data, error } = await supabase.auth.signUp(signUpOptions);
 
       if (error) {
+        logAuthEvent('Sign up failed', { error: error.message });
         return { success: false, error: error.message };
       }
 
@@ -149,6 +172,7 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
           return { success: false, error: 'Failed to create user profile' };
         }
 
+        logAuthEvent('Sign up successful', { userId });
         return { success: true, userId };
       }
 
@@ -161,7 +185,7 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signIn = async (email: string, password: string, isAdmin = false, captchaToken?: string) => {
     try {
-      console.log('🔐 Sign in attempt:', email, isAdmin ? '(Admin)' : '(User)');
+      logAuthEvent('Sign in attempt', { email, isAdmin: isAdmin ? '(Admin)' : '(User)' });
       
       if (isAdmin) {
         // Use direct admin login
@@ -200,7 +224,7 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
       }
       
       await supabase.auth.signOut();
-      console.log('✅ User signed out successfully');
+      logAuthEvent('User signed out successfully');
     } catch (error) {
       console.error('❌ Sign out error:', error);
     }
@@ -214,6 +238,7 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
       signIn,
       signOut,
       verifyMFA,
+      isDevelopmentMode: authConfig.isDevelopment,
     }}>
       {children}
     </ImprovedAuthContext.Provider>
