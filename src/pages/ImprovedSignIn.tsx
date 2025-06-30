@@ -27,10 +27,12 @@ const ImprovedSignIn = () => {
   const [socialLoading, setSocialLoading] = useState<string | null>(null);
   const [showCaptcha, setShowCaptcha] = useState(false);
   const [captchaVerified, setCaptchaVerified] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [showMFA, setShowMFA] = useState(false);
   const [mfaCode, setMfaCode] = useState('');
   const [mfaEmail, setMfaEmail] = useState('');
   const [mfaPassword, setMfaPassword] = useState('');
+  const [mfaCaptchaToken, setMfaCaptchaToken] = useState<string | null>(null);
   const [debugInfo, setDebugInfo] = useState<string[]>([]);
   
   const { signIn, verifyMFA } = useImprovedAuth();
@@ -59,7 +61,7 @@ const ImprovedSignIn = () => {
     e.preventDefault();
     addDebugInfo('Starting user login process');
     
-    if (!captchaVerified) {
+    if (!captchaVerified || !captchaToken) {
       setShowCaptcha(true);
       return;
     }
@@ -67,12 +69,13 @@ const ImprovedSignIn = () => {
     setLoading(true);
     
     try {
-      const result = await signIn(formData.email, formData.password, false);
+      const result = await signIn(formData.email, formData.password, false, captchaToken);
       addDebugInfo(`Login result: ${JSON.stringify(result)}`);
       
       if (result.success && result.requiresMFA) {
         setMfaEmail(formData.email);
         setMfaPassword(formData.password);
+        setMfaCaptchaToken(captchaToken);
         setShowMFA(true);
         addDebugInfo('MFA required, showing MFA form');
         toast({
@@ -93,6 +96,10 @@ const ImprovedSignIn = () => {
           description: result.error || "Failed to sign in",
           variant: "destructive"
         });
+        // Reset captcha on login failure
+        setCaptchaVerified(false);
+        setCaptchaToken(null);
+        setShowCaptcha(true);
       }
     } catch (error: any) {
       addDebugInfo(`Login exception: ${error.message}`);
@@ -101,6 +108,10 @@ const ImprovedSignIn = () => {
         description: "An unexpected error occurred",
         variant: "destructive"
       });
+      // Reset captcha on error
+      setCaptchaVerified(false);
+      setCaptchaToken(null);
+      setShowCaptcha(true);
     } finally {
       setLoading(false);
     }
@@ -112,6 +123,7 @@ const ImprovedSignIn = () => {
     setAdminLoading(true);
     
     try {
+      // Admin login doesn't require captcha in development mode
       const result = await signIn(adminFormData.email, adminFormData.password, true);
       addDebugInfo(`Admin login result: ${JSON.stringify(result)}`);
       
@@ -156,7 +168,7 @@ const ImprovedSignIn = () => {
     setLoading(true);
     
     try {
-      const result = await verifyMFA(mfaEmail, mfaCode, mfaPassword);
+      const result = await verifyMFA(mfaEmail, mfaCode, mfaPassword, mfaCaptchaToken || undefined);
       addDebugInfo(`MFA verification result: ${JSON.stringify(result)}`);
       
       if (result.success) {
@@ -219,6 +231,7 @@ const ImprovedSignIn = () => {
   };
 
   const handleCaptchaVerified = (token: string) => {
+    setCaptchaToken(token);
     setCaptchaVerified(true);
     setShowCaptcha(false);
     addDebugInfo('Captcha verified successfully');
@@ -230,6 +243,8 @@ const ImprovedSignIn = () => {
 
   const handleCaptchaError = (error: string) => {
     addDebugInfo(`Captcha error: ${error}`);
+    setCaptchaVerified(false);
+    setCaptchaToken(null);
     toast({
       title: "Verification Error",
       description: error,
@@ -324,6 +339,9 @@ const ImprovedSignIn = () => {
                   setMfaCode('');
                   setMfaEmail('');
                   setMfaPassword('');
+                  setMfaCaptchaToken(null);
+                  setCaptchaVerified(false);
+                  setCaptchaToken(null);
                 }}
                 className="text-slate-300 hover:bg-slate-700/50"
               >
@@ -453,6 +471,17 @@ const ImprovedSignIn = () => {
                       className="bg-slate-700/50 backdrop-blur-sm border-slate-600/50 text-white placeholder:text-slate-400 font-medium focus:border-blue-500 focus:ring-blue-500/20"
                     />
                   </div>
+
+                  {captchaVerified && (
+                    <div className="text-center">
+                      <div className="inline-flex items-center gap-2 text-green-400 text-sm">
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                        Security verification completed
+                      </div>
+                    </div>
+                  )}
                   
                   <Button type="submit" className="w-full bg-blue-600/80 hover:bg-blue-700/80 backdrop-blur-sm font-medium text-white border border-blue-500/30" disabled={loading}>
                     {loading ? (

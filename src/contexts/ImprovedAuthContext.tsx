@@ -15,9 +15,9 @@ interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
   signUp: (email: string, password: string, name: string) => Promise<{ success: boolean; error?: string; userId?: string }>;
-  signIn: (email: string, password: string, isAdmin?: boolean) => Promise<{ success: boolean; error?: string; requiresMFA?: boolean; isAdmin?: boolean }>;
+  signIn: (email: string, password: string, isAdmin?: boolean, captchaToken?: string) => Promise<{ success: boolean; error?: string; requiresMFA?: boolean; isAdmin?: boolean }>;
   signOut: () => Promise<void>;
-  verifyMFA: (email: string, code: string, password: string) => Promise<{ success: boolean; error?: string; isAdmin?: boolean }>;
+  verifyMFA: (email: string, code: string, password: string, captchaToken?: string) => Promise<{ success: boolean; error?: string; isAdmin?: boolean }>;
 }
 
 const ImprovedAuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -159,17 +159,17 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const signIn = async (email: string, password: string, isAdmin = false) => {
+  const signIn = async (email: string, password: string, isAdmin = false, captchaToken?: string) => {
     try {
       console.log('🔐 Sign in attempt:', email, isAdmin ? '(Admin)' : '(User)');
       
       if (isAdmin) {
         // Use direct admin login
-        const result = await adminDirectLogin(email, password);
+        const result = await adminDirectLogin(email, password, captchaToken);
         return result;
       } else {
         // Use regular user login with MFA
-        const result = await regularUserLogin(email, password);
+        const result = await regularUserLogin(email, password, captchaToken);
         return result;
       }
     } catch (error) {
@@ -178,9 +178,9 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const verifyMFA = async (email: string, code: string, password: string) => {
+  const verifyMFA = async (email: string, code: string, password: string, captchaToken?: string) => {
     try {
-      const result = await completeMFALogin(email, password, code);
+      const result = await completeMFALogin(email, password, code, captchaToken);
       return result;
     } catch (error) {
       console.error('❌ MFA verification error:', error);

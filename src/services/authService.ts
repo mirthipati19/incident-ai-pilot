@@ -102,7 +102,7 @@ export const createAdminUserIfNeeded = async () => {
   }
 };
 
-export const adminDirectLogin = async (email: string, password: string): Promise<AuthResult> => {
+export const adminDirectLogin = async (email: string, password: string, captchaToken?: string): Promise<AuthResult> => {
   try {
     console.log('🔐 Attempting admin direct login...');
     
@@ -113,11 +113,17 @@ export const adminDirectLogin = async (email: string, password: string): Promise
       // Ensure admin user exists
       await createAdminUserIfNeeded();
       
-      // Sign in with Supabase
-      const { data, error } = await supabase.auth.signInWithPassword({
+      // Sign in with Supabase - include captcha token if provided
+      const signInOptions: any = {
         email,
         password,
-      });
+      };
+
+      if (captchaToken) {
+        signInOptions.options = { captchaToken };
+      }
+
+      const { data, error } = await supabase.auth.signInWithPassword(signInOptions);
 
       if (error) {
         console.error('❌ Admin auth failed:', error);
@@ -139,15 +145,21 @@ export const adminDirectLogin = async (email: string, password: string): Promise
   }
 };
 
-export const regularUserLogin = async (email: string, password: string): Promise<AuthResult> => {
+export const regularUserLogin = async (email: string, password: string, captchaToken?: string): Promise<AuthResult> => {
   try {
     console.log('🔐 Regular user login with MFA...');
     
     // First, validate credentials by attempting to sign in
-    const { data: testAuth, error: testError } = await supabase.auth.signInWithPassword({
+    const signInOptions: any = {
       email,
       password,
-    });
+    };
+
+    if (captchaToken) {
+      signInOptions.options = { captchaToken };
+    }
+
+    const { data: testAuth, error: testError } = await supabase.auth.signInWithPassword(signInOptions);
     
     if (testError) {
       console.error('❌ Credential validation failed:', testError);
@@ -174,7 +186,7 @@ export const regularUserLogin = async (email: string, password: string): Promise
   }
 };
 
-export const completeMFALogin = async (email: string, password: string, mfaCode: string): Promise<AuthResult> => {
+export const completeMFALogin = async (email: string, password: string, mfaCode: string, captchaToken?: string): Promise<AuthResult> => {
   try {
     console.log('🔓 Completing MFA login...');
     
@@ -186,10 +198,16 @@ export const completeMFALogin = async (email: string, password: string, mfaCode:
     }
     
     // Complete login
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const signInOptions: any = {
       email,
       password,
-    });
+    };
+
+    if (captchaToken) {
+      signInOptions.options = { captchaToken };
+    }
+
+    const { data, error } = await supabase.auth.signInWithPassword(signInOptions);
 
     if (error || !data.user) {
       return { success: false, error: error?.message || 'Login failed' };
