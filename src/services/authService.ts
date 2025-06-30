@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { sendMFACode, verifyMFACode } from './mfaService';
 
@@ -19,8 +18,14 @@ export const createAdminUserIfNeeded = async () => {
     console.log('🔧 Checking/creating admin user...');
     
     // Check if admin exists in auth.users
-    const { data: authUsers } = await supabase.auth.admin.listUsers();
-    const adminAuthUser = authUsers.users?.find(u => u.email === ADMIN_EMAIL);
+    const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
+    
+    if (listError) {
+      console.error('❌ Failed to list users:', listError);
+      return false;
+    }
+    
+    const adminAuthUser = users?.find(u => u.email === ADMIN_EMAIL);
     
     let adminUserId = adminAuthUser?.id;
     
