@@ -39,12 +39,13 @@ export const sendMFACode = async (email: string): Promise<{ success: boolean; er
     }
 
     console.log('✅ MFA token stored successfully in database');
-    console.log(`📱 MFA Code for ${email}: ${token}`);
-    console.log('💡 In production, this would be sent via email service');
     
-    // TODO: In production, integrate with email service like Resend
-    // await sendEmailWithMFACode(email, token);
-
+    // Log OTP in development mode (no SMTP)
+    if (import.meta.env.DEV) {
+      console.log(`📬 [Dev Mode] MFA OTP for ${email}: ${token}`);
+      console.log('💡 In production, this would be sent via email service');
+    }
+    
     return { success: true };
   } catch (error) {
     console.error('💥 MFA send error:', error);
@@ -54,8 +55,39 @@ export const sendMFACode = async (email: string): Promise<{ success: boolean; er
 
 export const verifyMFACode = async (email: string, token: string): Promise<{ success: boolean; error?: string }> => {
   try {
-    console.log('🔍 Verifying MFA code for:', email, 'with token:', token);
+    console.log('🔍 MFA VERIFICATION ATTEMPT:', { email, token });
     
+    // First try the bypass RLS function for secure verification
+    try {
+      const { data: bypassData, error: bypassError } = await supabase
+        .rpc('bypass_rls_verify_token', { 
+          email_arg: email, 
+          token_arg: token 
+        });
+
+      console.log('🔐 Bypass RLS result:', { 
+        foundToken: !!bypassData?.[0], 
+        error: bypassError?.message || 'none' 
+      });
+
+      if (!bypassError && bypassData?.[0]) {
+        const tokenData = bypassData[0];
+        console.log('✅ Token found via bypass:', tokenData.token, 'Exp:', tokenData.expires_at);
+        
+        // Delete used token
+        await supabase
+          .from('mfa_tokens')
+          .delete()
+          .eq('id', tokenData.id);
+        
+        console.log('✅ MFA verification successful via bypass');
+        return { success: true };
+      }
+    } catch (bypassError) {
+      console.warn('⚠️ Bypass RLS failed, falling back to direct query');
+    }
+    
+    // Fallback to direct query
     const { data, error } = await supabase
       .from('mfa_tokens')
       .select('*')
@@ -66,7 +98,7 @@ export const verifyMFACode = async (email: string, token: string): Promise<{ suc
       .limit(1)
       .single();
 
-    console.log('📊 MFA verification query result:', { 
+    console.log('📊 Direct MFA verification query result:', { 
       foundToken: !!data, 
       error: error?.message || 'none',
       tokenExpiry: data?.expires_at 
@@ -86,6 +118,12 @@ export const verifyMFACode = async (email: string, token: string): Promise<{ suc
       if (expiredToken) {
         console.log('⏰ Token found but expired');
         return { success: false, error: 'MFA code has expired. Please request a new one.' };
+      }
+
+      // Handle permission denied for fallback
+      if (error?.message?.includes('permission denied')) {
+        console.warn('⚠️ RLS blocking access, MFA system may need admin attention');
+        return { success: false, error: 'MFA system unreachable. Please try again or contact admin.' };
       }
 
       return { success: false, error: 'Invalid MFA code. Please check and try again.' };

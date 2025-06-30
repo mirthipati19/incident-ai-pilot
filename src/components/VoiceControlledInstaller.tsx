@@ -1,11 +1,14 @@
-
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { Mic, MicOff, Download, MessageSquare, Send, Loader2 } from 'lucide-react';
+import { Mic, MicOff, Download, MessageSquare, Send, Loader2, RefreshCw } from 'lucide-react';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+// Initialize Gemini AI
+const genAI = new GoogleGenerativeAI('AIzaSyCmJo1OqeIK38FaoxlVKDsBc12UiNV4n7I');
 
 // Extend window object for speech recognition
 declare global {
@@ -197,6 +200,38 @@ echo.
 pause`;
   };
 
+  const generateWithGemini = async (input: string): Promise<string> => {
+    try {
+      console.log('🤖 Generating batch script with Gemini AI for:', input);
+      
+      const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+      
+      const prompt = `Generate a Windows batch file (.bat) for installing software based on this request: "${input}"
+
+Please create a comprehensive batch script that:
+1. Uses winget (Windows Package Manager) when possible
+2. Includes error handling and verification
+3. Provides clear feedback to the user
+4. Checks if winget is available
+5. Handles installation failures gracefully
+
+Format the response as a complete .bat file with proper comments and error handling.
+
+Software request: ${input}`;
+
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      const generatedText = response.text();
+      
+      console.log('✅ Gemini AI generated script successfully');
+      return generatedText;
+    } catch (error) {
+      console.error('❌ Gemini AI generation failed:', error);
+      // Fallback to original logic
+      return generateBatchScript(input);
+    }
+  };
+
   const handleGenerate = async () => {
     const inputText = chatInput || transcript;
     if (!inputText.trim()) return;
@@ -208,17 +243,27 @@ pause`;
     const userMessage = { id: Date.now(), text: inputText, isBot: false };
     setChatMessages(prev => [...prev, userMessage]);
 
-    // Generate batch script
-    const script = generateBatchScript(inputText);
-    setGeneratedScript(script);
+    try {
+      // Generate batch script with Gemini AI
+      const script = await generateWithGemini(inputText);
+      setGeneratedScript(script);
 
-    // Add bot response to chat
-    const botMessage = { 
-      id: Date.now() + 1, 
-      text: `I've generated a Windows batch file for "${inputText}". You can download it below and run it as administrator.`, 
-      isBot: true 
-    };
-    setChatMessages(prev => [...prev, botMessage]);
+      // Add bot response to chat
+      const botMessage = { 
+        id: Date.now() + 1, 
+        text: `I've generated a Windows batch file using AI for "${inputText}". The script includes error handling and verification steps. You can download it below and run it as administrator.`, 
+        isBot: true 
+      };
+      setChatMessages(prev => [...prev, botMessage]);
+    } catch (error) {
+      console.error('❌ Script generation failed:', error);
+      const errorMessage = { 
+        id: Date.now() + 1, 
+        text: `Sorry, I encountered an error generating the script for "${inputText}". Please try again or contact support.`, 
+        isBot: true 
+      };
+      setChatMessages(prev => [...prev, errorMessage]);
+    }
 
     setChatInput('');
     setTranscript('');
@@ -247,15 +292,27 @@ pause`;
     handleGenerate();
   };
 
+  const refreshCaptcha = () => {
+    console.log('🔄 Refreshing voice recognition...');
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+    setIsListening(false);
+    setTranscript('');
+    setTimeout(() => {
+      startListening();
+    }, 1000);
+  };
+
   return (
     <div className="max-w-4xl mx-auto">
       <Card className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50">
         <CardHeader>
           <CardTitle className="text-2xl text-white text-center">
-            Voice-Controlled Software Installer
+            🎙️ AI-Powered Voice Software Installer
           </CardTitle>
           <p className="text-slate-300 text-center">
-            Generate Windows batch files for software installation using voice or text input
+            Generate Windows batch files for software installation using voice or text input with Google Gemini AI
           </p>
         </CardHeader>
         <CardContent>
@@ -267,7 +324,7 @@ pause`;
               </TabsTrigger>
               <TabsTrigger value="chat" className="data-[state=active]:bg-slate-600/50">
                 <MessageSquare className="w-4 h-4 mr-2" />
-                Chat Support
+                AI Chat
               </TabsTrigger>
               <TabsTrigger value="text" className="data-[state=active]:bg-slate-600/50">
                 Text Input
@@ -276,26 +333,37 @@ pause`;
 
             <TabsContent value="voice" className="space-y-4">
               <div className="text-center space-y-4">
-                <Button
-                  onClick={isListening ? stopListening : startListening}
-                  className={`w-32 h-32 rounded-full text-white font-bold ${
-                    isListening
-                      ? 'bg-red-600 hover:bg-red-700 animate-pulse'
-                      : 'bg-blue-600 hover:bg-blue-700'
-                  }`}
-                >
-                  {isListening ? (
-                    <>
-                      <MicOff className="w-8 h-8 mb-2" />
-                      Stop
-                    </>
-                  ) : (
-                    <>
-                      <Mic className="w-8 h-8 mb-2" />
-                      Speak
-                    </>
-                  )}
-                </Button>
+                <div className="flex justify-center gap-4">
+                  <Button
+                    onClick={isListening ? stopListening : startListening}
+                    className={`w-32 h-32 rounded-full text-white font-bold ${
+                      isListening
+                        ? 'bg-red-600 hover:bg-red-700 animate-pulse'
+                        : 'bg-blue-600 hover:bg-blue-700'
+                    }`}
+                  >
+                    {isListening ? (
+                      <>
+                        <MicOff className="w-8 h-8 mb-2" />
+                        Stop
+                      </>
+                    ) : (
+                      <>
+                        <Mic className="w-8 h-8 mb-2" />
+                        Speak
+                      </>
+                    )}
+                  </Button>
+                  
+                  <Button
+                    onClick={refreshCaptcha}
+                    className="w-16 h-16 rounded-full bg-slate-600 hover:bg-slate-700 text-white"
+                    title="Refresh Voice Recognition"
+                  >
+                    <RefreshCw className="w-6 h-6" />
+                  </Button>
+                </div>
+                
                 <p className="text-slate-300">
                   {isListening ? 'Listening... Speak your software installation request' : 'Click to start voice input'}
                 </p>
@@ -327,9 +395,9 @@ pause`;
                 ))}
                 {isGenerating && (
                   <div className="text-left mb-4">
-                    <div className="inline-block bg-blue-600/20 text-blue-100 p-3 rounded-lg">
+                    <div className="inline-block bg-green-600/20 text-green-100 p-3 rounded-lg">
                       <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
-                      Generating your batch file...
+                      🤖 Gemini AI is generating your batch file...
                     </div>
                   </div>
                 )}
@@ -338,7 +406,7 @@ pause`;
                 <Input
                   value={chatInput}
                   onChange={(e) => setChatInput(e.target.value)}
-                  placeholder="Ask me to install any software..."
+                  placeholder="Ask AI to install any software..."
                   className="bg-slate-700/50 border-slate-600/50 text-white"
                   disabled={isGenerating}
                 />
@@ -370,10 +438,10 @@ pause`;
               {isGenerating ? (
                 <>
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Generating...
+                  🤖 AI Generating...
                 </>
               ) : (
-                'Generate Installation Script'
+                '🤖 Generate with AI'
               )}
             </Button>
           </div>
@@ -381,8 +449,8 @@ pause`;
           {generatedScript && (
             <div className="mt-6 space-y-4">
               <div className="bg-slate-700/50 p-4 rounded-lg">
-                <h3 className="text-white font-semibold mb-2">Generated Batch Script:</h3>
-                <pre className="text-sm text-slate-300 overflow-x-auto whitespace-pre-wrap">
+                <h3 className="text-white font-semibold mb-2">🤖 AI-Generated Batch Script:</h3>
+                <pre className="text-sm text-slate-300 overflow-x-auto whitespace-pre-wrap max-h-96 overflow-y-auto">
                   {generatedScript}
                 </pre>
               </div>
@@ -392,19 +460,21 @@ pause`;
                   className="bg-purple-600 hover:bg-purple-700 text-white"
                 >
                   <Download className="w-4 h-4 mr-2" />
-                  Download .bat File
+                  Download AI-Generated .bat File
                 </Button>
               </div>
             </div>
           )}
 
           <div className="mt-6 bg-slate-700/50 p-4 rounded-lg">
-            <h4 className="text-white font-semibold mb-2">Instructions:</h4>
+            <h4 className="text-white font-semibold mb-2">🤖 AI-Enhanced Instructions:</h4>
             <ul className="text-slate-300 text-sm space-y-1">
-              <li>• Use voice input or type your software installation request</li>
-              <li>• Supported software includes VS Code, Chrome, Firefox, Node.js, Python, and more</li>
+              <li>• Use voice input, chat with AI, or type your software installation request</li>
+              <li>• Google Gemini AI generates intelligent batch scripts with error handling</li>
+              <li>• Scripts include verification, fallbacks, and user-friendly feedback</li>
               <li>• Download the generated .bat file and run it as administrator</li>
-              <li>• Requires Windows Package Manager (winget) to be installed</li>
+              <li>• Requires Windows Package Manager (winget) for optimal functionality</li>
+              <li>• 🔄 Use the refresh button if voice recognition gets stuck</li>
             </ul>
           </div>
         </CardContent>

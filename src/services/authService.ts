@@ -111,7 +111,11 @@ export const adminDirectLogin = async (email: string, password: string, captchaT
       console.log('🎯 Admin credentials detected, bypassing MFA...');
       
       // Ensure admin user exists
-      await createAdminUserIfNeeded();
+      const adminSetup = await createAdminUserIfNeeded();
+      if (!adminSetup) {
+        console.error('❌ Failed to set up admin user');
+        return { success: false, error: 'Admin setup failed' };
+      }
       
       // Sign in with Supabase - include captcha token if provided
       const signInOptions: any = {
@@ -123,19 +127,21 @@ export const adminDirectLogin = async (email: string, password: string, captchaT
         signInOptions.options = { captchaToken };
       }
 
-      const { data, error } = await supabase.auth.signInWithPassword(signInOptions);
+      const { data: session, error } = await supabase.auth.signInWithPassword(signInOptions);
+      
+      console.log('🔐 Admin sign-in session:', session?.session ? 'SUCCESS' : 'FAILED', 'Error:', error?.message || 'none');
 
       if (error) {
         console.error('❌ Admin auth failed:', error);
         return { success: false, error: error.message };
       }
 
-      if (!data.user) {
+      if (!session.user) {
         return { success: false, error: 'No user data received' };
       }
 
-      console.log('✅ Admin login successful');
-      return { success: true, isAdmin: true };
+      console.log('✅ Admin login successful, user ID:', session.user.id);
+      return { success: true, isAdmin: true, userId: session.user.id };
     }
     
     return { success: false, error: 'Invalid admin credentials' };
@@ -190,7 +196,7 @@ export const completeMFALogin = async (email: string, password: string, mfaCode:
   try {
     console.log('🔓 Completing MFA login...');
     
-    // Verify MFA code
+    // Verify MFA code using updated service with bypass
     const verifyResult = await verifyMFACode(email, mfaCode);
     
     if (!verifyResult.success) {
