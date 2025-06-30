@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PromptAnimator from '@/components/Assistant/PromptAnimator';
@@ -10,7 +11,7 @@ import IncidentResolutionPopup from '@/components/IncidentResolutionPopup';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { HeadphonesIcon, List, CheckCircle, XCircle, Clock, MessageCircle, Phone, Shield, AlertTriangle, Settings, LogOut } from 'lucide-react';
-import { useImprovedAuth } from '@/contexts/ImprovedAuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { incidentService, type Incident } from '@/services/incidentService';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
@@ -35,7 +36,7 @@ const ITSMPage = () => {
   });
   const [loading, setLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const { user, signOut } = useImprovedAuth();
+  const { user, signOut } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 

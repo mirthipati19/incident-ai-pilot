@@ -1,5 +1,5 @@
 
-import { useImprovedAuth } from '@/contexts/ImprovedAuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { Navigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
 
@@ -8,7 +8,7 @@ interface ProtectedRouteProps {
 }
 
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
-  const { user, loading } = useImprovedAuth();
+  const { user, loading } = useAuth();
 
   if (loading) {
     return (

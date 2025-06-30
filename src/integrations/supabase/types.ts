@@ -121,7 +121,6 @@ export type Database = {
           description: string
           first_response_at: string | null
           id: string
-          organization_id: string | null
           priority: string
           resolution_time_minutes: number | null
           resolved_at: string | null
@@ -138,7 +137,6 @@ export type Database = {
           description: string
           first_response_at?: string | null
           id?: string
-          organization_id?: string | null
           priority?: string
           resolution_time_minutes?: number | null
           resolved_at?: string | null
@@ -155,7 +153,6 @@ export type Database = {
           description?: string
           first_response_at?: string | null
           id?: string
-          organization_id?: string | null
           priority?: string
           resolution_time_minutes?: number | null
           resolved_at?: string | null
@@ -166,13 +163,6 @@ export type Database = {
           user_id?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "incidents_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "incidents_user_id_fkey"
             columns: ["user_id"]
@@ -203,36 +193,6 @@ export type Database = {
           expires_at?: string
           id?: string
           token?: string
-        }
-        Relationships: []
-      }
-      organizations: {
-        Row: {
-          created_at: string
-          created_by: string | null
-          domain: string | null
-          id: string
-          logo_url: string | null
-          name: string
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          created_by?: string | null
-          domain?: string | null
-          id?: string
-          logo_url?: string | null
-          name: string
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string | null
-          domain?: string | null
-          id?: string
-          logo_url?: string | null
-          name?: string
-          updated_at?: string
         }
         Relationships: []
       }
@@ -331,7 +291,6 @@ export type Database = {
           email: string
           id: string
           name: string
-          organization_id: string | null
           password_hash: string
           updated_at: string
           user_id: string
@@ -341,7 +300,6 @@ export type Database = {
           email: string
           id?: string
           name: string
-          organization_id?: string | null
           password_hash: string
           updated_at?: string
           user_id: string
@@ -351,20 +309,11 @@ export type Database = {
           email?: string
           id?: string
           name?: string
-          organization_id?: string | null
           password_hash?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "users_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Views: {
@@ -374,16 +323,6 @@ export type Database = {
       generate_unique_user_id: {
         Args: Record<PropertyKey, never>
         Returns: string
-      }
-      verify_mfa_token_bypass: {
-        Args: { email_arg: string; token_arg: string }
-        Returns: {
-          id: string
-          email: string
-          token: string
-          expires_at: string
-          created_at: string
-        }[]
       }
     }
     Enums: {

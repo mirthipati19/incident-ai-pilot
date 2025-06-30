@@ -1,10 +1,10 @@
 
 import { useEffect, useRef } from 'react';
-import { useImprovedAuth } from '@/contexts/ImprovedAuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
 export const useSessionTimeout = (timeoutMinutes: number = 1.67) => { // 100 seconds = 1.67 minutes
-  const { signOut, user } = useImprovedAuth();
+  const { signOut, user } = useAuth();
   const { toast } = useToast();
   const timeoutRef = useRef<NodeJS.Timeout>();
   const warningTimeoutRef = useRef<NodeJS.Timeout>();

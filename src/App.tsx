@@ -6,22 +6,20 @@ import SignIn from '@/pages/SignIn';
 import SignUp from '@/pages/SignUp';
 import ITSM from '@/pages/ITSM';
 import NotFound from '@/pages/NotFound';
-import { ImprovedAuthProvider } from '@/contexts/ImprovedAuthContext';
+import { AuthProvider } from '@/contexts/AuthContext';
 import { ThemeProvider } from '@/contexts/ThemeContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import AdminRoute from '@/components/AdminRoute';
 import { Toaster } from '@/components/ui/toaster';
 import AdminDashboard from '@/pages/AdminDashboard';
 import AdminPortal from '@/pages/AdminPortal';
-import DeveloperModeIndicator from '@/components/DeveloperModeIndicator';
 
 function App() {
   return (
     <ThemeProvider>
       <Router>
-        <ImprovedAuthProvider>
+        <AuthProvider>
           <div className="App">
-            <DeveloperModeIndicator />
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/signin" element={<SignIn />} />
@@ -54,7 +52,7 @@ function App() {
             </Routes>
             <Toaster />
           </div>
-        </ImprovedAuthProvider>
+        </AuthProvider>
       </Router>
     </ThemeProvider>
   );

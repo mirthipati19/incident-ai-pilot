@@ -1,10 +1,11 @@
+
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useImprovedAuth } from '@/contexts/ImprovedAuthContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, UserPlus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -21,7 +22,7 @@ const SignUp = () => {
   const [socialLoading, setSocialLoading] = useState<string | null>(null);
   const [showCaptcha, setShowCaptcha] = useState(false);
   const [captchaVerified, setCaptchaVerified] = useState(false);
-  const { signUp } = useImprovedAuth();
+  const { signUp } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
