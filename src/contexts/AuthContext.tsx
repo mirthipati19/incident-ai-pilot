@@ -2,6 +2,8 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
+import { sendMFACode, verifyMFACode } from '@/services/mfaService';
+import { generateSessionToken } from '@/utils/urlEncryption';
 
 interface AuthUser extends User {
   user_id?: string;
@@ -13,10 +15,11 @@ interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
   signUp: (email: string, password: string, name: string) => Promise<{ success: boolean; error?: string; userId?: string }>;
-  signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string; isAdmin?: boolean }>;
+  signIn: (email: string, password: string) => Promise<{ success: boolean; error?: string; isAdmin?: boolean; requiresMFA?: boolean }>;
   signOut: () => Promise<void>;
   sendMFA: (email: string) => Promise<{ success: boolean; error?: string }>;
   verifyMFA: (email: string, code: string) => Promise<{ success: boolean; error?: string }>;
+  completeMFALogin: (email: string, password: string) => Promise<{ success: boolean; error?: string; isAdmin?: boolean }>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -35,13 +38,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const checkAdminStatus = async (userId: string, email?: string) => {
     try {
-      // First check if this is the admin email
       if (email === 'murari.mirthipati@authexa.me') {
         console.log('Admin email detected:', email);
         return true;
       }
 
-      // Then check database
       const { data } = await supabase
         .from('admin_users')
         .select('role')
@@ -50,7 +51,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       
       return !!data;
     } catch (error) {
-      // If database check fails but email matches admin, still return true
       if (email === 'murari.mirthipati@authexa.me') {
         return true;
       }
@@ -58,19 +58,43 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
+  const createUserSession = async (userId: string) => {
+    try {
+      const sessionToken = generateSessionToken();
+      
+      // End any existing active sessions for this user
+      await supabase
+        .from('user_sessions')
+        .update({ is_active: false, ended_at: new Date().toISOString() })
+        .eq('user_id', userId)
+        .eq('is_active', true);
+
+      // Create new session
+      await supabase
+        .from('user_sessions')
+        .insert({
+          user_id: userId,
+          session_token: sessionToken,
+          is_active: true
+        });
+
+      return sessionToken;
+    } catch (error) {
+      console.error('Session creation error:', error);
+      return null;
+    }
+  };
+
   useEffect(() => {
-    // Get initial session
     const getSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
-        // Get user profile data
         const { data: profile } = await supabase
           .from('users')
           .select('user_id, name')
           .eq('id', session.user.id)
           .single();
         
-        // Check admin status
         const isAdmin = await checkAdminStatus(session.user.id, session.user.email);
         
         setUser({ 
@@ -85,14 +109,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
     getSession();
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       console.log('Auth state change:', event, session?.user?.email);
       
       if (session?.user) {
-        // For social auth, we might need to create a user profile
         if (event === 'SIGNED_IN' && session.user.app_metadata?.provider !== 'email') {
-          // Check if user profile exists
           const { data: existingProfile } = await supabase
             .from('users')
             .select('user_id, name')
@@ -100,7 +121,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             .single();
 
           if (!existingProfile) {
-            // Create profile for social auth user
             const userId = generateUserId();
             await supabase
               .from('users')
@@ -131,7 +151,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             });
           }
         } else {
-          // Regular email auth or existing social auth user
           const { data: profile } = await supabase
             .from('users')
             .select('user_id, name')
@@ -161,26 +180,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const sendMFA = async (email: string) => {
-    try {
-      // Generate OTP
-      const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      
-      // For now, just log the OTP (in production, this would send via email)
-      console.log('MFA OTP for', email, ':', otp);
-      
-      return { success: true };
-    } catch (error: any) {
-      return { success: false, error: error.message };
-    }
+    return await sendMFACode(email);
   };
 
   const verifyMFA = async (email: string, code: string) => {
+    return await verifyMFACode(email, code);
+  };
+
+  const completeMFALogin = async (email: string, password: string) => {
     try {
-      // Simple verification for now
-      console.log('Verifying MFA for', email, 'with code', code);
-      return { success: true };
-    } catch (error: any) {
-      return { success: false, error: error.message };
+      const { error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (error) {
+        return { success: false, error: error.message };
+      }
+
+      const isAdmin = email === 'murari.mirthipati@authexa.me';
+      return { success: true, isAdmin };
+    } catch (error) {
+      console.error('Complete MFA login error:', error);
+      return { success: false, error: 'An unexpected error occurred' };
     }
   };
 
@@ -199,7 +221,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       if (data.user) {
-        // Generate unique 6-digit user ID
         let userId = generateUserId();
         let attempts = 0;
         
@@ -215,7 +236,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           attempts++;
         }
 
-        // Store user profile
         const { error: profileError } = await supabase
           .from('users')
           .insert({
@@ -243,149 +263,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signIn = async (email: string, password: string) => {
     try {
-      console.log('Attempting to sign in with:', email);
+      console.log('Sign in attempt for:', email);
       
-      // Special handling for admin email with the specific password
+      // For admin, handle special login
       if (email === 'murari.mirthipati@authexa.me' && password === 'Qwertyuiop@0987654321') {
-        console.log('Admin login with special password detected');
-        
-        // Try to authenticate with Supabase first
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email,
-          password: 'admin123' // Use a simpler password for Supabase auth
-        });
-
-        if (error) {
-          // If Supabase auth fails, create the admin user
-          console.log('Creating admin user in Supabase auth');
-          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-            email,
-            password: 'admin123'
-          });
-
-          if (signUpError) {
-            console.error('Failed to create admin user:', signUpError);
-            return { success: false, error: 'Failed to create admin account' };
-          }
-
-          const adminUserId = signUpData?.user?.id;
-
-          // Sign in again after creating the user
-          const { error: signInError } = await supabase.auth.signInWithPassword({
-            email,
-            password: 'admin123'
-          });
-
-          if (signInError) {
-            console.error('Failed to sign in admin after creation:', signInError);
-            return { success: false, error: 'Failed to sign in admin account' };
-          }
-
-          // Ensure admin profile exists
-          if (adminUserId) {
-            try {
-              const { data: existingProfile } = await supabase
-                .from('users')
-                .select('*')
-                .eq('email', email)
-                .single();
-
-              if (!existingProfile) {
-                await supabase
-                  .from('users')
-                  .insert({
-                    id: adminUserId,
-                    user_id: '000001',
-                    name: 'Admin User',
-                    email,
-                    password_hash: 'admin_bypass'
-                  });
-              }
-
-              // Ensure admin role exists
-              const { data: adminRole } = await supabase
-                .from('admin_users')
-                .select('*')
-                .eq('user_id', adminUserId)
-                .single();
-
-              if (!adminRole) {
-                await supabase
-                  .from('admin_users')
-                  .insert({
-                    user_id: adminUserId,
-                    role: 'admin',
-                    permissions: ['view_tickets', 'manage_users', 'view_stats', 'admin_dashboard']
-                  });
-              }
-            } catch (dbError) {
-              console.log('Database operations completed or had minor issues:', dbError);
-            }
-          }
-        } else {
-          const adminUserId = data?.user?.id;
-          
-          // Ensure admin profile exists
-          if (adminUserId) {
-            try {
-              const { data: existingProfile } = await supabase
-                .from('users')
-                .select('*')
-                .eq('email', email)
-                .single();
-
-              if (!existingProfile) {
-                await supabase
-                  .from('users')
-                  .insert({
-                    id: adminUserId,
-                    user_id: '000001',
-                    name: 'Admin User',
-                    email,
-                    password_hash: 'admin_bypass'
-                  });
-              }
-
-              // Ensure admin role exists
-              const { data: adminRole } = await supabase
-                .from('admin_users')
-                .select('*')
-                .eq('user_id', adminUserId)
-                .single();
-
-              if (!adminRole) {
-                await supabase
-                  .from('admin_users')
-                  .insert({
-                    user_id: adminUserId,
-                    role: 'admin',
-                    permissions: ['view_tickets', 'manage_users', 'view_stats', 'admin_dashboard']
-                  });
-              }
-            } catch (dbError) {
-              console.log('Database operations completed or had minor issues:', dbError);
-            }
-          }
+        // Send MFA first
+        const mfaResult = await sendMFA(email);
+        if (!mfaResult.success) {
+          return { success: false, error: 'Failed to send MFA code' };
         }
-
-        return { success: true, isAdmin: true };
+        return { success: true, requiresMFA: true };
       }
 
-      // Regular authentication for other users
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) {
-        return { success: false, error: error.message };
+      // For regular users, also require MFA
+      const mfaResult = await sendMFA(email);
+      if (!mfaResult.success) {
+        return { success: false, error: 'Failed to send MFA code' };
       }
 
-      // Check if this is admin email
-      const isAdmin = email === 'murari.mirthipati@authexa.me';
-      console.log('Sign in successful, isAdmin:', isAdmin);
-
-      return { success: true, isAdmin };
+      return { success: true, requiresMFA: true };
     } catch (error) {
       console.error('Sign in error:', error);
       return { success: false, error: 'An unexpected error occurred' };
@@ -393,6 +289,15 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const signOut = async () => {
+    if (user?.id) {
+      // Mark current session as inactive
+      await supabase
+        .from('user_sessions')
+        .update({ is_active: false, ended_at: new Date().toISOString() })
+        .eq('user_id', user.id)
+        .eq('is_active', true);
+    }
+    
     await supabase.auth.signOut();
   };
 
@@ -405,6 +310,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       signOut,
       sendMFA,
       verifyMFA,
+      completeMFALogin,
     }}>
       {children}
     </AuthContext.Provider>

@@ -1,176 +1,200 @@
 
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { HeadphonesIcon, Zap, Shield, Users, ArrowRight } from "lucide-react";
-import { Link } from "react-router-dom";
-import { useAuth } from "@/contexts/AuthContext";
+import { Button } from '@/components/ui/button';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Link } from 'react-router-dom';
+import { ArrowRight, Shield, Users, Zap, BarChart3, Clock, MessageSquare } from 'lucide-react';
 
 const Index = () => {
-  const { user } = useAuth();
-
   return (
     <div 
-      className="min-h-screen relative"
+      className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800"
       style={{
-        backgroundImage: `url('/lovable-uploads/18aee1b3-d01e-4a44-a199-ef10d89b5466.png')`,
-        backgroundSize: '80%',
+        backgroundImage: `linear-gradient(rgba(15, 23, 42, 0.8), rgba(30, 58, 138, 0.8), rgba(15, 23, 42, 0.8)), url('/lovable-uploads/c94935e4-6231-41ae-993c-155a820c9885.png')`,
+        backgroundSize: '70%',
         backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat',
-        backgroundColor: '#f8fafc'
+        backgroundRepeat: 'no-repeat'
       }}
     >
-      {/* Overlay for better text readability */}
-      <div className="absolute inset-0 bg-black/20"></div>
-      
       {/* Navigation */}
-      <nav className="relative z-10 p-4">
-        <div className="container mx-auto flex justify-between items-center">
-          <div className="text-gray-800 font-bold text-xl">Authexa Support</div>
-          <div className="space-x-4">
-            {user ? (
-              <span className="text-gray-800">Welcome, {user.name}! (ID: {user.user_id})</span>
-            ) : (
-              <>
-                <Link to="/signin">
-                  <Button variant="outline" className="bg-white/10 backdrop-blur-sm border-gray-300 text-gray-800 hover:bg-white/20">
-                    Sign In
-                  </Button>
-                </Link>
-                <Link to="/signup">
-                  <Button className="bg-blue-600/80 hover:bg-blue-700/80 backdrop-blur-sm border border-white/20">
-                    Sign Up
-                  </Button>
-                </Link>
-              </>
-            )}
-          </div>
+      <nav className="flex justify-between items-center p-6 relative z-10">
+        <div className="flex items-center space-x-2">
+          <Shield className="w-8 h-8 text-blue-400" />
+          <span className="text-2xl font-bold text-white">Authexa Support</span>
+        </div>
+        <div className="space-x-4">
+          <Link to="/signin">
+            <Button variant="ghost" className="text-white hover:bg-white/10 border border-white/20">
+              Sign In
+            </Button>
+          </Link>
+          <Link to="/signup">
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+              Get Started
+            </Button>
+          </Link>
         </div>
       </nav>
-      
-      <div className="relative z-10 container mx-auto px-4 py-16">
-        {/* Hero Section */}
-        <div className="text-center mb-16">
-          <div className="flex justify-center mb-6">
-            <div className="p-4 bg-blue-600/80 backdrop-blur-sm rounded-full border border-white/20">
-              <HeadphonesIcon className="w-12 h-12 text-white" />
-            </div>
+
+      {/* Hero Section */}
+      <div className="flex flex-col items-center justify-center min-h-[80vh] text-center px-4 relative z-10">
+        <div className="max-w-4xl mx-auto space-y-8">
+          <div className="space-y-4">
+            <h1 className="text-5xl md:text-7xl font-bold text-white leading-tight">
+              Welcome to
+              <span className="block text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-300">
+                Authexa Support
+              </span>
+            </h1>
+            <p className="text-xl md:text-2xl text-gray-300 max-w-3xl mx-auto leading-relaxed">
+              Enterprise-grade IT Service Management platform that streamlines your support operations with intelligent automation and comprehensive analytics.
+            </p>
           </div>
-          <h1 className="text-5xl font-bold text-gray-800 mb-6 drop-shadow-lg">
-            Welcome to Authexa Support
-          </h1>
-          <p className="text-xl text-gray-700 mb-8 max-w-2xl mx-auto drop-shadow-md">
-            AI-powered IT Service Management with voice recognition, automated incident handling, 
-            and ServiceNow-style workflow management.
-          </p>
-          {user ? (
-            <Link to="/itsm">
-              <Button size="lg" className="text-lg px-8 py-4 bg-blue-600/80 hover:bg-blue-700/80 backdrop-blur-sm border border-white/20">
-                Launch Support Assistant
-                <ArrowRight className="ml-2 w-5 h-5" />
-              </Button>
-            </Link>
-          ) : (
+
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Link to="/signup">
-              <Button size="lg" className="text-lg px-8 py-4 bg-blue-600/80 hover:bg-blue-700/80 backdrop-blur-sm border border-white/20">
-                Get Started
+              <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-6 text-lg font-semibold">
+                Start Your Journey
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Button>
             </Link>
-          )}
-        </div>
-
-        {/* Features Grid */}
-        <div className="grid md:grid-cols-3 gap-8 mb-16">
-          <Card className="bg-white/20 backdrop-blur-sm border border-gray-200 hover:bg-white/30 transition-all hover:shadow-xl">
-            <CardHeader>
-              <div className="w-12 h-12 bg-blue-100/20 backdrop-blur-sm rounded-lg flex items-center justify-center mb-4 border border-gray-300">
-                <Zap className="w-6 h-6 text-blue-600" />
-              </div>
-              <CardTitle className="text-gray-800">Voice-Activated Support</CardTitle>
-              <CardDescription className="text-gray-600">
-                Speak naturally to create incidents, check status, and get instant assistance with our Siri-style voice interface.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-
-          <Card className="bg-white/20 backdrop-blur-sm border border-gray-200 hover:bg-white/30 transition-all hover:shadow-xl">
-            <CardHeader>
-              <div className="w-12 h-12 bg-green-100/20 backdrop-blur-sm rounded-lg flex items-center justify-center mb-4 border border-gray-300">
-                <Shield className="w-6 h-6 text-green-600" />
-              </div>
-              <CardTitle className="text-gray-800">Smart Automation</CardTitle>
-              <CardDescription className="text-gray-600">
-                Intelligent routing, auto-assignment, and priority classification based on AI analysis of incident content.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-
-          <Card className="bg-white/20 backdrop-blur-sm border border-gray-200 hover:bg-white/30 transition-all hover:shadow-xl">
-            <CardHeader>
-              <div className="w-12 h-12 bg-purple-100/20 backdrop-blur-sm rounded-lg flex items-center justify-center mb-4 border border-gray-300">
-                <Users className="w-6 h-6 text-purple-600" />
-              </div>
-              <CardTitle className="text-gray-800">ServiceNow Experience</CardTitle>
-              <CardDescription className="text-gray-600">
-                Familiar interface with modern design, comprehensive incident tracking, and powerful filtering capabilities.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </div>
-
-        {/* Quick Stats */}
-        <div className="bg-white/20 backdrop-blur-sm border border-gray-200 rounded-2xl shadow-lg p-8">
-          <h2 className="text-2xl font-bold text-center mb-8 text-gray-800">Platform Capabilities</h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
-            <div className="text-center">
-              <div className="text-3xl font-bold text-blue-600 mb-2">24/7</div>
-              <div className="text-gray-600">AI Availability</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-green-600 mb-2">90%</div>
-              <div className="text-gray-600">Auto-Resolution</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-purple-600 mb-2">60s</div>
-              <div className="text-gray-600">Avg Response</div>
-            </div>
-            <div className="text-center">
-              <div className="text-3xl font-bold text-orange-600 mb-2">99.9%</div>
-              <div className="text-gray-600">Uptime SLA</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Getting Started */}
-        <div className="text-center mt-16">
-          <h2 className="text-3xl font-bold mb-4 text-gray-800 drop-shadow-lg">Ready to Transform Your Support?</h2>
-          <p className="text-lg text-gray-700 mb-8 drop-shadow-md">
-            Experience the future of IT service management with our intelligent assistant.
-          </p>
-          {user ? (
-            <Link to="/itsm">
-              <Button size="lg" className="bg-blue-600/80 hover:bg-blue-700/80 backdrop-blur-sm border border-white/20">
-                Launch Assistant
-                <ArrowRight className="ml-2 w-4 h-4" />
+            <Link to="/signin">
+              <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10 px-8 py-6 text-lg font-semibold">
+                Access Portal
               </Button>
             </Link>
-          ) : (
-            <>
-              <Link to="/signin">
-                <Button variant="outline" size="lg" className="mr-4 bg-white/20 backdrop-blur-sm border-gray-300 text-gray-800 hover:bg-white/30">
-                  Sign In
-                </Button>
-              </Link>
-              <Link to="/signup">
-                <Button size="lg" className="bg-blue-600/80 hover:bg-blue-700/80 backdrop-blur-sm border border-white/20">
-                  Sign Up
-                  <ArrowRight className="ml-2 w-4 h-4" />
-                </Button>
-              </Link>
-            </>
-          )}
+          </div>
         </div>
       </div>
+
+      {/* Features Section */}
+      <div className="py-20 px-4 relative z-10">
+        <div className="max-w-7xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-4xl font-bold text-white mb-4">
+              Enterprise Features
+            </h2>
+            <p className="text-xl text-gray-300 max-w-2xl mx-auto">
+              Powerful tools designed for modern IT service management
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <Card className="bg-white/10 backdrop-blur-xl border border-white/20 hover:bg-white/15 transition-all duration-300">
+              <CardHeader>
+                <div className="w-12 h-12 bg-blue-600/20 rounded-lg flex items-center justify-center mb-4">
+                  <Users className="w-6 h-6 text-blue-400" />
+                </div>
+                <CardTitle className="text-white">User Management</CardTitle>
+                <CardDescription className="text-gray-300">
+                  Comprehensive user authentication with multi-factor security and role-based access control.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="bg-white/10 backdrop-blur-xl border border-white/20 hover:bg-white/15 transition-all duration-300">
+              <CardHeader>
+                <div className="w-12 h-12 bg-green-600/20 rounded-lg flex items-center justify-center mb-4">
+                  <Zap className="w-6 h-6 text-green-400" />
+                </div>
+                <CardTitle className="text-white">Smart Automation</CardTitle>
+                <CardDescription className="text-gray-300">
+                  AI-powered incident resolution and automated workflow management for faster response times.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="bg-white/10 backdrop-blur-xl border border-white/20 hover:bg-white/15 transition-all duration-300">
+              <CardHeader>
+                <div className="w-12 h-12 bg-purple-600/20 rounded-lg flex items-center justify-center mb-4">
+                  <BarChart3 className="w-6 h-6 text-purple-400" />
+                </div>
+                <CardTitle className="text-white">Advanced Analytics</CardTitle>
+                <CardDescription className="text-gray-300">
+                  Real-time dashboards and comprehensive reporting for data-driven decision making.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="bg-white/10 backdrop-blur-xl border border-white/20 hover:bg-white/15 transition-all duration-300">
+              <CardHeader>
+                <div className="w-12 h-12 bg-orange-600/20 rounded-lg flex items-center justify-center mb-4">
+                  <Clock className="w-6 h-6 text-orange-400" />
+                </div>
+                <CardTitle className="text-white">24/7 Support</CardTitle>
+                <CardDescription className="text-gray-300">
+                  Round-the-clock incident management with intelligent escalation and SLA monitoring.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="bg-white/10 backdrop-blur-xl border border-white/20 hover:bg-white/15 transition-all duration-300">
+              <CardHeader>
+                <div className="w-12 h-12 bg-cyan-600/20 rounded-lg flex items-center justify-center mb-4">
+                  <MessageSquare className="w-6 h-6 text-cyan-400" />
+                </div>
+                <CardTitle className="text-white">Smart Assistant</CardTitle>
+                <CardDescription className="text-gray-300">
+                  AI-powered virtual assistant for instant support and automated problem resolution.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+
+            <Card className="bg-white/10 backdrop-blur-xl border border-white/20 hover:bg-white/15 transition-all duration-300">
+              <CardHeader>
+                <div className="w-12 h-12 bg-red-600/20 rounded-lg flex items-center justify-center mb-4">
+                  <Shield className="w-6 h-6 text-red-400" />
+                </div>
+                <CardTitle className="text-white">Enterprise Security</CardTitle>
+                <CardDescription className="text-gray-300">
+                  Bank-level security with encryption, audit trails, and compliance monitoring.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </div>
+        </div>
+      </div>
+
+      {/* CTA Section */}
+      <div className="py-20 px-4 relative z-10">
+        <div className="max-w-4xl mx-auto text-center">
+          <Card className="bg-white/10 backdrop-blur-xl border border-white/20 p-8">
+            <CardContent className="space-y-6">
+              <h3 className="text-3xl font-bold text-white">
+                Ready to Transform Your IT Support?
+              </h3>
+              <p className="text-xl text-gray-300">
+                Join thousands of organizations that trust Authexa Support for their IT service management needs.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Link to="/signup">
+                  <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4">
+                    Start Free Trial
+                    <ArrowRight className="ml-2 w-5 h-5" />
+                  </Button>
+                </Link>
+                <Link to="/signin">
+                  <Button size="lg" variant="outline" className="border-white/30 text-white hover:bg-white/10 px-8 py-4">
+                    Access Your Account
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <footer className="py-8 px-4 border-t border-white/20 relative z-10">
+        <div className="max-w-7xl mx-auto text-center">
+          <div className="flex items-center justify-center space-x-2 mb-4">
+            <Shield className="w-6 h-6 text-blue-400" />
+            <span className="text-xl font-bold text-white">Authexa Support</span>
+          </div>
+          <p className="text-gray-400">
+            © 2024 Authexa Support. All rights reserved. | Enterprise IT Service Management Platform
+          </p>
+        </div>
+      </footer>
     </div>
   );
 };
