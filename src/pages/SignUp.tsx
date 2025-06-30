@@ -9,7 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, UserPlus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import CaptchaVerification from '@/components/CaptchaVerification';
+import MathCaptcha from '@/components/MathCaptcha';
 
 const SignUp = () => {
   const [formData, setFormData] = useState({
@@ -127,18 +127,10 @@ const SignUp = () => {
 
   if (showCaptcha) {
     return (
-      <div 
-        className="min-h-screen flex items-center justify-center p-4"
-        style={{
-          backgroundImage: `url('/lovable-uploads/50b753fc-5735-49ae-ad55-1cc4efdd1bc3.png')`,
-          backgroundSize: 'cover',
-          backgroundPosition: 'center',
-          backgroundRepeat: 'no-repeat'
-        }}
-      >
-        <div className="absolute inset-0 bg-black/50"></div>
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+        <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 via-slate-900/40 to-purple-900/20"></div>
         <div className="relative z-10">
-          <CaptchaVerification 
+          <MathCaptcha 
             onVerified={handleCaptchaVerified}
             onError={handleCaptchaError}
           />
@@ -157,26 +149,18 @@ const SignUp = () => {
   }
 
   return (
-    <div 
-      className="min-h-screen flex items-center justify-center p-4"
-      style={{
-        backgroundImage: `url('/lovable-uploads/50b753fc-5735-49ae-ad55-1cc4efdd1bc3.png')`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat'
-      }}
-    >
-      <div className="absolute inset-0 bg-black/50"></div>
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 via-slate-900/40 to-purple-900/20"></div>
       
-      <Card className="w-full max-w-md relative z-10 bg-white/20 backdrop-blur-lg border border-white/30 shadow-2xl">
+      <Card className="w-full max-w-md relative z-10 bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="p-3 bg-white/30 backdrop-blur-sm rounded-full border border-white/40">
-              <UserPlus className="w-6 h-6 text-black" />
+            <div className="p-3 bg-blue-600/20 backdrop-blur-sm rounded-full border border-blue-400/30">
+              <UserPlus className="w-6 h-6 text-blue-300" />
             </div>
           </div>
-          <CardTitle className="text-2xl text-black font-bold">Create Account</CardTitle>
-          <CardDescription className="text-gray-800 font-semibold">
+          <CardTitle className="text-2xl text-white font-bold">Create Account</CardTitle>
+          <CardDescription className="text-blue-200 font-medium">
             Join Mouritech Support and get your unique user ID
           </CardDescription>
         </CardHeader>
@@ -186,7 +170,7 @@ const SignUp = () => {
             <Button
               onClick={() => handleSocialSignIn('google')}
               disabled={socialLoading !== null}
-              className="w-full bg-white/30 hover:bg-white/40 backdrop-blur-sm border border-white/40 text-black font-semibold"
+              className="w-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 text-white font-medium"
               variant="outline"
             >
               {socialLoading === 'google' ? (
@@ -217,7 +201,7 @@ const SignUp = () => {
             <Button
               onClick={() => handleSocialSignIn('azure')}
               disabled={socialLoading !== null}
-              className="w-full bg-white/30 hover:bg-white/40 backdrop-blur-sm border border-white/40 text-black font-semibold"
+              className="w-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 text-white font-medium"
               variant="outline"
             >
               {socialLoading === 'azure' ? (
@@ -225,19 +209,19 @@ const SignUp = () => {
               ) : (
                 <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                   <path
-                    fill="#5059C9"
+                    fill="#00BCF2"
                     d="M9.5 10.5h3v3h-3v-3z"
                   />
                   <path
-                    fill="#5059C9"
+                    fill="#00BCF2"
                     d="M14.5 10.5h3v3h-3v-3z"
                   />
                   <path
-                    fill="#5059C9"
+                    fill="#00BCF2"
                     d="M9.5 5.5h3v3h-3v-3z"
                   />
                   <path
-                    fill="#5059C9"
+                    fill="#00BCF2"
                     d="M14.5 15.5h3v3h-3v-3z"
                   />
                 </svg>
@@ -248,16 +232,16 @@ const SignUp = () => {
 
           <div className="relative mb-6">
             <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-gray-600" />
+              <span className="w-full border-t border-white/20" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-transparent px-2 text-gray-800 font-semibold">Or continue with email</span>
+              <span className="bg-transparent px-2 text-blue-200 font-medium">Or continue with email</span>
             </div>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name" className="text-black font-semibold">Full Name</Label>
+              <Label htmlFor="name" className="text-white font-medium">Full Name</Label>
               <Input
                 id="name"
                 name="name"
@@ -266,12 +250,12 @@ const SignUp = () => {
                 value={formData.name}
                 onChange={handleChange}
                 placeholder="Enter your full name"
-                className="bg-white/30 backdrop-blur-sm border-gray-400 text-black placeholder:text-gray-700 font-medium focus:border-gray-600 focus:ring-gray-400"
+                className="bg-white/10 backdrop-blur-sm border-white/20 text-white placeholder:text-white/60 font-medium focus:border-blue-400 focus:ring-blue-400/20"
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-black font-semibold">Email</Label>
+              <Label htmlFor="email" className="text-white font-medium">Email</Label>
               <Input
                 id="email"
                 name="email"
@@ -280,12 +264,12 @@ const SignUp = () => {
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="Enter your email"
-                className="bg-white/30 backdrop-blur-sm border-gray-400 text-black placeholder:text-gray-700 font-medium focus:border-gray-600 focus:ring-gray-400"
+                className="bg-white/10 backdrop-blur-sm border-white/20 text-white placeholder:text-white/60 font-medium focus:border-blue-400 focus:ring-blue-400/20"
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-black font-semibold">Password</Label>
+              <Label htmlFor="password" className="text-white font-medium">Password</Label>
               <Input
                 id="password"
                 name="password"
@@ -295,12 +279,12 @@ const SignUp = () => {
                 value={formData.password}
                 onChange={handleChange}
                 placeholder="Enter your password (min. 6 characters)"
-                className="bg-white/30 backdrop-blur-sm border-gray-400 text-black placeholder:text-gray-700 font-medium focus:border-gray-600 focus:ring-gray-400"
+                className="bg-white/10 backdrop-blur-sm border-white/20 text-white placeholder:text-white/60 font-medium focus:border-blue-400 focus:ring-blue-400/20"
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="text-black font-semibold">Confirm Password</Label>
+              <Label htmlFor="confirmPassword" className="text-white font-medium">Confirm Password</Label>
               <Input
                 id="confirmPassword"
                 name="confirmPassword"
@@ -309,11 +293,11 @@ const SignUp = () => {
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 placeholder="Confirm your password"
-                className="bg-white/30 backdrop-blur-sm border-gray-400 text-black placeholder:text-gray-700 font-medium focus:border-gray-600 focus:ring-gray-400"
+                className="bg-white/10 backdrop-blur-sm border-white/20 text-white placeholder:text-white/60 font-medium focus:border-blue-400 focus:ring-blue-400/20"
               />
             </div>
             
-            <Button type="submit" className="w-full bg-blue-600/90 hover:bg-blue-700/90 backdrop-blur-sm font-semibold text-white" disabled={loading}>
+            <Button type="submit" className="w-full bg-blue-600/80 hover:bg-blue-700/80 backdrop-blur-sm font-medium text-white border border-blue-500/30" disabled={loading}>
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -325,9 +309,9 @@ const SignUp = () => {
             </Button>
           </form>
           
-          <div className="mt-6 text-center text-sm text-gray-800 font-semibold">
+          <div className="mt-6 text-center text-sm text-blue-200 font-medium">
             Already have an account?{' '}
-            <Link to="/signin" className="text-blue-800 hover:underline font-bold">
+            <Link to="/signin" className="text-blue-300 hover:text-blue-200 hover:underline font-medium">
               Sign in
             </Link>
           </div>
