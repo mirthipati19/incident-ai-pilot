@@ -60,7 +60,7 @@ export const verifyMFACode = async (email: string, token: string): Promise<{ suc
     // First try the bypass RLS function for secure verification
     try {
       const { data: bypassData, error: bypassError } = await supabase
-        .rpc('bypass_rls_verify_token', { 
+        .rpc('verify_mfa_token_bypass', { 
           email_arg: email, 
           token_arg: token 
         });
