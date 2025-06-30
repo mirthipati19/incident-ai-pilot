@@ -2,8 +2,8 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
-import { adminDirectLogin, regularUserLogin, completeMFALogin, createAdminUserIfNeeded } from '@/services/authService';
-import { generateSessionToken } from '@/utils/urlEncryption';
+import { unifiedAuthService, AuthResult } from '@/services/unifiedAuthService';
+import { getAuthConfig, DEV_HELPERS } from '@/config/authConfig';
 
 interface AuthUser extends User {
   user_id?: string;
@@ -14,10 +14,11 @@ interface AuthUser extends User {
 interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
-  signUp: (email: string, password: string, name: string) => Promise<{ success: boolean; error?: string; userId?: string }>;
-  signIn: (email: string, password: string, isAdmin?: boolean, captchaToken?: string) => Promise<{ success: boolean; error?: string; requiresMFA?: boolean; isAdmin?: boolean }>;
+  signUp: (email: string, password: string, name: string) => Promise<AuthResult>;
+  signIn: (email: string, password: string, isAdmin?: boolean, captchaToken?: string) => Promise<AuthResult>;
   signOut: () => Promise<void>;
-  verifyMFA: (email: string, code: string, password: string, captchaToken?: string) => Promise<{ success: boolean; error?: string; isAdmin?: boolean }>;
+  verifyMFA: (email: string, code: string, password: string, captchaToken?: string) => Promise<AuthResult>;
+  developerMode: boolean;
 }
 
 const ImprovedAuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,12 +34,10 @@ export const useImprovedAuth = () => {
 export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const config = getAuthConfig();
 
   useEffect(() => {
-    console.log('🚀 Initializing improved auth context...');
-    
-    // Initialize admin user on startup
-    createAdminUserIfNeeded();
+    DEV_HELPERS.logAuthFlow('AUTH_CONTEXT_INIT', { developerMode: config.developerMode });
     
     const getSession = async () => {
       try {
@@ -47,7 +46,7 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
           await updateUserFromSession(session.user);
         }
       } catch (error) {
-        console.error('❌ Session retrieval error:', error);
+        DEV_HELPERS.logAuthFlow('SESSION_RETRIEVAL_ERROR', error);
       }
       setLoading(false);
     };
@@ -55,7 +54,7 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
     getSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('🔄 Auth state changed:', event, session?.user?.email);
+      DEV_HELPERS.logAuthFlow('AUTH_STATE_CHANGE', { event, userEmail: session?.user?.email });
       
       if (session?.user) {
         await updateUserFromSession(session.user);
@@ -80,25 +79,29 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
       // Check admin status
       const isAdmin = await checkAdminStatus(authUser.id, authUser.email);
       
-      setUser({ 
+      const updatedUser: AuthUser = { 
         ...authUser, 
         user_id: profile?.user_id || undefined,
         name: profile?.name || authUser.user_metadata?.name || undefined,
         isAdmin
+      };
+
+      setUser(updatedUser);
+      DEV_HELPERS.logAuthFlow('USER_SESSION_UPDATED', { 
+        email: authUser.email, 
+        isAdmin,
+        userId: profile?.user_id 
       });
-      
-      console.log('✅ User session updated:', authUser.email, isAdmin ? '(Admin)' : '(User)');
     } catch (error) {
-      console.error('❌ Error updating user session:', error);
+      DEV_HELPERS.logAuthFlow('USER_SESSION_UPDATE_ERROR', error);
       setUser({ ...authUser, isAdmin: false });
     }
   };
 
   const checkAdminStatus = async (userId: string, email?: string): Promise<boolean> => {
     try {
-      // First check for hardcoded admin email
+      // Check hardcoded admin email
       if (email === 'murari.mirthipati@authexa.me') {
-        console.log('✅ Admin detected by email:', email);
         return true;
       }
 
@@ -111,81 +114,21 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
 
       return adminData?.role === 'admin';
     } catch (error) {
-      console.error('❌ Admin check error:', error);
+      DEV_HELPERS.logAuthFlow('ADMIN_CHECK_ERROR', error);
       return email === 'murari.mirthipati@authexa.me';
     }
   };
 
-  const signUp = async (email: string, password: string, name: string) => {
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          emailRedirectTo: `${window.location.origin}/itsm`
-        }
-      });
-
-      if (error) {
-        return { success: false, error: error.message };
-      }
-
-      if (data.user) {
-        let userId = Math.floor(100000 + Math.random() * 100000).toString();
-        
-        // Create user profile
-        const { error: profileError } = await supabase
-          .from('users')
-          .insert({
-            id: data.user.id,
-            user_id: userId,
-            name,
-            email,
-            password_hash: 'handled_by_supabase'
-          });
-
-        if (profileError) {
-          console.error('❌ Profile creation error:', profileError);
-          return { success: false, error: 'Failed to create user profile' };
-        }
-
-        return { success: true, userId };
-      }
-
-      return { success: false, error: 'User creation failed' };
-    } catch (error) {
-      console.error('❌ Sign up error:', error);
-      return { success: false, error: 'An unexpected error occurred' };
-    }
+  const signUp = async (email: string, password: string, name: string): Promise<AuthResult> => {
+    return unifiedAuthService.signUp(email, password, name);
   };
 
-  const signIn = async (email: string, password: string, isAdmin = false, captchaToken?: string) => {
-    try {
-      console.log('🔐 Sign in attempt:', email, isAdmin ? '(Admin)' : '(User)');
-      
-      if (isAdmin) {
-        // Use direct admin login
-        const result = await adminDirectLogin(email, password, captchaToken);
-        return result;
-      } else {
-        // Use regular user login with MFA
-        const result = await regularUserLogin(email, password, captchaToken);
-        return result;
-      }
-    } catch (error) {
-      console.error('❌ Sign in error:', error);
-      return { success: false, error: 'Sign in failed' };
-    }
+  const signIn = async (email: string, password: string, isAdmin = false, captchaToken?: string): Promise<AuthResult> => {
+    return unifiedAuthService.signIn(email, password, isAdmin, captchaToken);
   };
 
-  const verifyMFA = async (email: string, code: string, password: string, captchaToken?: string) => {
-    try {
-      const result = await completeMFALogin(email, password, code, captchaToken);
-      return result;
-    } catch (error) {
-      console.error('❌ MFA verification error:', error);
-      return { success: false, error: 'MFA verification failed' };
-    }
+  const verifyMFA = async (email: string, code: string, password: string, captchaToken?: string): Promise<AuthResult> => {
+    return unifiedAuthService.verifyMFA(email, code, password, captchaToken);
   };
 
   const signOut = async () => {
@@ -200,9 +143,9 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
       }
       
       await supabase.auth.signOut();
-      console.log('✅ User signed out successfully');
+      DEV_HELPERS.logAuthFlow('SIGNOUT_SUCCESS', {});
     } catch (error) {
-      console.error('❌ Sign out error:', error);
+      DEV_HELPERS.logAuthFlow('SIGNOUT_ERROR', error);
     }
   };
 
@@ -214,6 +157,7 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
       signIn,
       signOut,
       verifyMFA,
+      developerMode: config.developerMode,
     }}>
       {children}
     </ImprovedAuthContext.Provider>

@@ -13,6 +13,7 @@ import AdminRoute from '@/components/AdminRoute';
 import { Toaster } from '@/components/ui/toaster';
 import AdminDashboard from '@/pages/AdminDashboard';
 import AdminPortal from '@/pages/AdminPortal';
+import DeveloperModeIndicator from '@/components/DeveloperModeIndicator';
 
 function App() {
   return (
@@ -20,6 +21,7 @@ function App() {
       <Router>
         <ImprovedAuthProvider>
           <div className="App">
+            <DeveloperModeIndicator />
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/signin" element={<SignIn />} />
