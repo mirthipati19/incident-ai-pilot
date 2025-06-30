@@ -57,39 +57,7 @@ export const verifyMFACode = async (email: string, token: string): Promise<{ suc
   try {
     console.log('🔍 MFA VERIFICATION ATTEMPT:', { email, token });
     
-    // Try bypass RLS function first for secure verification
-    const { data: bypassData, error: bypassError } = await supabase
-      .rpc('bypass_rls_verify_token', { 
-        email_arg: email, 
-        token_arg: token 
-      });
-
-    console.log('🔐 Bypass RLS result:', { 
-      foundTokens: bypassData?.length || 0, 
-      error: bypassError?.message || 'none' 
-    });
-
-    if (!bypassError && bypassData && bypassData.length > 0) {
-      const tokenData = bypassData[0];
-      console.log('✅ Token found via bypass:', tokenData.token, 'Exp:', tokenData.expires_at);
-      
-      // Delete used token
-      const { error: deleteError } = await supabase
-        .from('mfa_tokens')
-        .delete()
-        .eq('id', tokenData.id);
-
-      if (deleteError) {
-        console.error('⚠️ Failed to delete used MFA token:', deleteError);
-      } else {
-        console.log('🗑️ Used MFA token deleted successfully');
-      }
-
-      console.log('✅ MFA verification successful via bypass');
-      return { success: true };
-    }
-
-    // Fallback to direct query if bypass fails
+    // Direct query to verify token
     const { data, error } = await supabase
       .from('mfa_tokens')
       .select('*')
@@ -100,7 +68,7 @@ export const verifyMFACode = async (email: string, token: string): Promise<{ suc
       .limit(1)
       .single();
 
-    console.log('📊 Direct MFA verification query result:', { 
+    console.log('📊 MFA verification query result:', { 
       foundToken: !!data, 
       error: error?.message || 'none',
       tokenExpiry: data?.expires_at 
@@ -122,7 +90,7 @@ export const verifyMFACode = async (email: string, token: string): Promise<{ suc
         return { success: false, error: 'MFA code has expired. Please request a new one.' };
       }
 
-      // Handle permission denied for fallback
+      // Handle permission denied
       if (error?.message?.includes('permission denied')) {
         console.warn('⚠️ RLS blocking access, MFA system may need admin attention');
         return { success: false, error: 'MFA system unreachable. Please try again or contact admin.' };

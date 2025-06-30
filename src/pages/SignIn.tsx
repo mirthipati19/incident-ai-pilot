@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,6 @@ import { Loader2, Shield, User } from 'lucide-react';
 import { useImprovedAuth } from '@/contexts/ImprovedAuthContext';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import HCaptcha from '@hcaptcha/react-hcaptcha';
-import { supabase } from '@/integrations/supabase/client';
 
 interface FormData {
   email?: string;
@@ -25,47 +25,10 @@ const SignIn = () => {
   const [signInMode, setSignInMode] = useState("user");
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [showCaptcha, setShowCaptcha] = useState(true);
-  const [organizationLogo, setOrganizationLogo] = useState<string | null>(null);
-  const [emailDomain, setEmailDomain] = useState<string>('');
-
-  const fetchOrganizationLogo = async (email: string) => {
-    if (!email.includes('@')) return;
-    
-    const domain = email.split('@')[1];
-    if (domain === emailDomain) return; // Don't refetch for same domain
-    
-    setEmailDomain(domain);
-    
-    try {
-      const { data, error } = await supabase
-        .from('organizations')
-        .select('logo_url')
-        .eq('domain', domain)
-        .maybeSingle();
-      
-      if (!error && data?.logo_url) {
-        setOrganizationLogo(data.logo_url);
-        console.log('🏢 Organization logo found:', data.logo_url);
-      } else {
-        setOrganizationLogo(null);
-      }
-    } catch (error) {
-      console.error('❌ Error fetching organization logo:', error);
-      setOrganizationLogo(null);
-    }
-  };
 
   const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const email = e.target.value;
     setFormData(prev => ({ ...prev, email }));
-    
-    // Fetch organization logo when email contains @
-    if (email.includes('@') && email.split('@')[1].length > 0) {
-      fetchOrganizationLogo(email);
-    } else {
-      setOrganizationLogo(null);
-      setEmailDomain('');
-    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -133,36 +96,18 @@ const SignIn = () => {
       <Card className="w-full max-w-md bg-slate-800/80 backdrop-blur-xl border border-slate-700/50 shadow-2xl">
         <CardHeader className="text-center space-y-4 pb-8">
           <div className="flex justify-center">
-            {organizationLogo ? (
-              <div className="relative">
-                <img 
-                  src={organizationLogo} 
-                  alt="Organization Logo" 
-                  className="w-16 h-16 rounded-full object-cover border-2 border-blue-500/30"
-                />
-                <div className="absolute -bottom-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-2 border-slate-800 flex items-center justify-center">
-                  <Shield className="w-3 h-3 text-white" />
-                </div>
-              </div>
-            ) : (
-              <div className="p-3 bg-gradient-to-br from-blue-600/20 to-purple-600/20 backdrop-blur-sm rounded-full border border-blue-500/30">
-                <Shield className="w-10 h-10 text-blue-400" />
-              </div>
-            )}
+            <div className="p-3 bg-gradient-to-br from-blue-600/20 to-purple-600/20 backdrop-blur-sm rounded-full border border-blue-500/30">
+              <Shield className="w-10 h-10 text-blue-400" />
+            </div>
           </div>
           <div>
             <CardTitle className="text-2xl text-white font-bold">
               Welcome Back
             </CardTitle>
             <p className="text-slate-300 mt-2">
-              {organizationLogo ? `Sign in to your ${emailDomain} account` : 'Sign in to your account'}
+              Sign in to your account
             </p>
           </div>
-          {organizationLogo && (
-            <div className="text-xs text-green-400 bg-green-400/10 rounded-lg p-2 border border-green-400/20">
-              ✅ Organization verified: {emailDomain}
-            </div>
-          )}
         </CardHeader>
 
         <CardContent className="space-y-6">
@@ -219,7 +164,6 @@ const SignIn = () => {
                       sitekey="9a38cd1d-fa80-475f-a8eb-42f5b8f7a68e"
                       onVerify={handleCaptchaVerified}
                       theme="dark"
-                      className="h-captcha-custom"
                     />
                   </div>
                 )}
@@ -297,7 +241,6 @@ const SignIn = () => {
                       sitekey="9a38cd1d-fa80-475f-a8eb-42f5b8f7a68e"
                       onVerify={handleCaptchaVerified}
                       theme="dark"
-                      className="h-captcha-custom"
                     />
                   </div>
                 )}
