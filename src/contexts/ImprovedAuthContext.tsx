@@ -3,7 +3,6 @@ import { createContext, useContext, useEffect, useState, ReactNode } from 'react
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
 import { adminDirectLogin, regularUserLogin, completeMFALogin, createAdminUserIfNeeded } from '@/services/authService';
-import { generateSessionToken } from '@/utils/urlEncryption';
 import { authConfig, logAuthEvent, shouldBypassCaptcha } from '@/utils/authConfig';
 
 interface AuthUser extends User {

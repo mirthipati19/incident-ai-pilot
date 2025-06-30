@@ -1,7 +1,7 @@
 
 import { supabase } from '@/integrations/supabase/client';
 import { sendMFACode, verifyMFACode } from './mfaService';
-import { authConfig, logAuthEvent, shouldBypassMFA } from '@/utils/authConfig';
+import { authConfig, logAuthEvent, shouldBypassMFA, shouldBypassCaptcha } from '@/utils/authConfig';
 
 export interface AuthResult {
   success: boolean;
@@ -120,8 +120,8 @@ export const adminDirectLogin = async (email: string, password: string, captchaT
         password,
       };
 
-      // Only include captcha token if not in development mode
-      if (captchaToken && !authConfig.isDevelopment) {
+      // Only include captcha token if not bypassed and provided
+      if (captchaToken && !shouldBypassCaptcha()) {
         signInOptions.options = { captchaToken };
       }
 
@@ -162,8 +162,8 @@ export const regularUserLogin = async (email: string, password: string, captchaT
       password,
     };
 
-    // Only include captcha token if not in development mode
-    if (captchaToken && !authConfig.isDevelopment) {
+    // Only include captcha token if not bypassed and provided
+    if (captchaToken && !shouldBypassCaptcha()) {
       signInOptions.options = { captchaToken };
     }
 
@@ -180,6 +180,11 @@ export const regularUserLogin = async (email: string, password: string, captchaT
     // Check if should bypass MFA
     if (shouldBypassMFA(email)) {
       logAuthEvent('Bypassing MFA for development/admin user');
+      // Re-sign in if MFA is bypassed
+      const { data: finalAuth, error: finalError } = await supabase.auth.signInWithPassword(signInOptions);
+      if (finalError || !finalAuth.user) {
+        return { success: false, error: finalError?.message || 'Login failed' };
+      }
       return { success: true, requiresMFA: false };
     }
     
@@ -217,8 +222,8 @@ export const completeMFALogin = async (email: string, password: string, mfaCode:
       password,
     };
 
-    // Only include captcha token if not in development mode
-    if (captchaToken && !authConfig.isDevelopment) {
+    // Only include captcha token if not bypassed and provided
+    if (captchaToken && !shouldBypassCaptcha()) {
       signInOptions.options = { captchaToken };
     }
 
