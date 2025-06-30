@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { sendMFACode, verifyMFACode } from './mfaService';
 
@@ -26,7 +25,7 @@ export const createAdminUserIfNeeded = async () => {
       return false;
     }
     
-    const adminAuthUser = data.users?.find(user => user.email === ADMIN_EMAIL);
+    const adminAuthUser = data?.users?.find(user => user.email === ADMIN_EMAIL);
     
     let adminUserId = adminAuthUser?.id;
     
