@@ -265,7 +265,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             .eq('email', email)
             .single();
 
-          if (!existingProfile) {
+          if (!existingProfile && adminUserId) {
             await supabase
               .from('users')
               .insert({
@@ -278,20 +278,22 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
           }
 
           // Ensure admin role exists
-          const { data: adminRole } = await supabase
-            .from('admin_users')
-            .select('*')
-            .eq('user_id', adminUserId)
-            .single();
-
-          if (!adminRole) {
-            await supabase
+          if (adminUserId) {
+            const { data: adminRole } = await supabase
               .from('admin_users')
-              .insert({
-                user_id: adminUserId,
-                role: 'admin',
-                permissions: ['view_tickets', 'manage_users', 'view_stats', 'admin_dashboard']
-              });
+              .select('*')
+              .eq('user_id', adminUserId)
+              .single();
+
+            if (!adminRole) {
+              await supabase
+                .from('admin_users')
+                .insert({
+                  user_id: adminUserId,
+                  role: 'admin',
+                  permissions: ['view_tickets', 'manage_users', 'view_stats', 'admin_dashboard']
+                });
+            }
           }
         } catch (dbError) {
           console.log('Database operations completed or had minor issues:', dbError);

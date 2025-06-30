@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PromptAnimator from '@/components/Assistant/PromptAnimator';
@@ -9,16 +10,16 @@ import IncidentDetails from '@/components/Incidents/IncidentDetails';
 import IncidentResolutionPopup from '@/components/IncidentResolutionPopup';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { HeadphonesIcon, List, CheckCircle, XCircle, Clock, MessageCircle, Phone, Shield, AlertTriangle, Settings } from 'lucide-react';
+import { HeadphonesIcon, List, CheckCircle, XCircle, Clock, MessageCircle, Phone, Shield, AlertTriangle, Settings, LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { incidentService, type Incident } from '@/services/incidentService';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 const ITSMPage = () => {
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
-  const [currentPrompt, setCurrentPrompt] = useState("Welcome to Mouritech Support! How can I assist you today?");
+  const [currentPrompt, setCurrentPrompt] = useState("Welcome to Authexa Support! How can I assist you today?");
   const [incidents, setIncidents] = useState<Incident[]>([]);
   const [showConnectPrompt, setShowConnectPrompt] = useState(false);
   const [resolutionPopup, setResolutionPopup] = useState<{
@@ -35,8 +36,9 @@ const ITSMPage = () => {
   });
   const [loading, setLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const { user } = useAuth();
+  const { user, signOut } = useAuth();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   // Load user incidents and stats
   useEffect(() => {
@@ -89,6 +91,24 @@ const ITSMPage = () => {
       setStats(userStats);
     } catch (error) {
       console.error('Failed to load stats:', error);
+    }
+  };
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast({
+        title: "Signed Out",
+        description: "You have been successfully signed out",
+      });
+      navigate('/signin');
+    } catch (error) {
+      console.error('Sign out error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to sign out",
+        variant: "destructive"
+      });
     }
   };
 
@@ -149,14 +169,23 @@ const ITSMPage = () => {
       loadStats(); // Refresh stats
       setRefreshTrigger(prev => prev + 1); // Trigger refresh for IncidentList
       
-      // Show AI resolution popup after a short delay
-      setTimeout(() => {
-        const suggestedResolution = generateAIResolution(text);
-        setResolutionPopup({
-          incident: newIncident,
-          suggestedResolution
-        });
-      }, 2000);
+      // Auto-assign to AI for immediate resolution attempt
+      setTimeout(async () => {
+        try {
+          await incidentService.updateIncidentStatus(newIncident.id, 'In Progress');
+          const suggestedResolution = generateAIResolution(text);
+          
+          // Simulate AI processing time
+          setTimeout(() => {
+            setResolutionPopup({
+              incident: { ...newIncident, status: 'In Progress' },
+              suggestedResolution
+            });
+          }, 3000);
+        } catch (error) {
+          console.error('Failed to auto-assign incident:', error);
+        }
+      }, 1000);
       
       return newIncident;
     } catch (error) {
@@ -180,7 +209,7 @@ const ITSMPage = () => {
     if (containsProblemKeyword && text.length > 10) {
       const incident = await createIncidentFromInput(text, 'call');
       if (incident) {
-        setCurrentPrompt(`I've created incident #${incident.id.slice(0, 8)} for your issue. Analyzing the problem and preparing a solution...`);
+        setCurrentPrompt(`I've created incident #${incident.id.slice(0, 8)} for your issue. AI is analyzing the problem and preparing a solution...`);
       }
     } else if (text.toLowerCase().includes('install') || text.toLowerCase().includes('software')) {
       setCurrentPrompt('I can help you install software. Would you like me to connect to your device?');
@@ -202,7 +231,7 @@ const ITSMPage = () => {
     if (containsProblemKeyword && message.length > 10) {
       const incident = await createIncidentFromInput(message, 'chat');
       if (incident) {
-        setCurrentPrompt(`I've automatically created incident #${incident.id.slice(0, 8)} for your issue. Analyzing your problem and preparing an AI-powered solution...`);
+        setCurrentPrompt(`I've automatically created incident #${incident.id.slice(0, 8)} for your issue. AI is analyzing your problem and preparing a solution...`);
       }
     } else {
       setCurrentPrompt(`Chat: "${message}". How else can I help you?`);
@@ -283,6 +312,18 @@ const ITSMPage = () => {
         title: "Resolution Accepted",
         description: "Great! Your incident has been resolved. Thank you for the feedback!",
       });
+      
+      // Auto-close incident after 30 seconds
+      setTimeout(async () => {
+        try {
+          await incidentService.updateIncidentStatus(resolutionPopup.incident.id, 'Closed');
+          loadStats();
+          setRefreshTrigger(prev => prev + 1);
+        } catch (error) {
+          console.error('Failed to auto-close incident:', error);
+        }
+      }, 30000);
+      
     } catch (error) {
       console.error('Failed to record resolution:', error);
       toast({
@@ -349,7 +390,7 @@ const ITSMPage = () => {
     <div 
       className="min-h-screen relative p-4"
       style={{
-        backgroundImage: `url('/lovable-uploads/50b753fc-5735-49ae-ad55-1cc4efdd1bc3.png')`,
+        backgroundImage: `url('/lovable-uploads/c94935e4-6231-41ae-993c-155a820c9885.png')`,
         backgroundSize: 'cover',
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat'
@@ -362,18 +403,33 @@ const ITSMPage = () => {
         {/* Header */}
         <div className="text-center space-y-4">
           <div className="flex items-center justify-center gap-3">
-            <HeadphonesIcon className="w-10 h-10 text-blue-300" />
+            <img 
+              src="/lovable-uploads/c94935e4-6231-41ae-993c-155a820c9885.png" 
+              alt="Authexa Logo" 
+              className="w-12 h-12"
+            />
             <h1 className="text-4xl font-bold text-white drop-shadow-lg">
-              Mouritech Support
+              Authexa Support
             </h1>
-            {isAdmin && (
-              <Link to="/admin">
-                <Button variant="outline" size="sm" className="bg-white/20 text-white border-white/30 hover:bg-white/30">
-                  <Settings className="w-4 h-4 mr-2" />
-                  Admin
-                </Button>
-              </Link>
-            )}
+            <div className="flex gap-2">
+              {isAdmin && (
+                <Link to="/admin">
+                  <Button variant="outline" size="sm" className="bg-white/20 text-white border-white/30 hover:bg-white/30">
+                    <Settings className="w-4 h-4 mr-2" />
+                    Admin
+                  </Button>
+                </Link>
+              )}
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleSignOut}
+                className="bg-red-600/20 text-white border-red-400/30 hover:bg-red-600/30"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Sign Out
+              </Button>
+            </div>
           </div>
           <p className="text-lg text-white/90 drop-shadow-md">
             AI-powered IT Service Management with voice, automation and smart device integration

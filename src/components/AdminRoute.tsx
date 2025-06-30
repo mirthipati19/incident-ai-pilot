@@ -34,9 +34,7 @@ const AdminRoute = ({ children }: AdminRouteProps) => {
             .eq('user_id', user.id)
             .single();
 
-          if (error && !error.message.includes('No rows')) {
-            console.error('Admin verification error:', error);
-          }
+          console.log('Admin database check result:', adminData, error);
 
           // Admin is verified if they have the right email (with or without DB entry)
           setIsAdminVerified(true);
@@ -46,6 +44,7 @@ const AdminRoute = ({ children }: AdminRouteProps) => {
           setIsAdminVerified(true); // Still allow if email matches
         }
       } else {
+        console.log('User email does not match admin email:', user.email);
         setIsAdminVerified(false);
       }
     };
@@ -57,10 +56,10 @@ const AdminRoute = ({ children }: AdminRouteProps) => {
 
   if (loading || isAdminVerified === null) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Verifying admin access...</p>
+          <Loader2 className="w-8 h-8 animate-spin mx-auto mb-4 text-white" />
+          <p className="text-white/80">Verifying admin access...</p>
         </div>
       </div>
     );

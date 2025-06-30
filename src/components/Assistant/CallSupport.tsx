@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Phone, PhoneCall, PhoneOff } from 'lucide-react';
+import { Phone, PhoneCall, PhoneOff, Mic, MicOff } from 'lucide-react';
 import Vapi from '@vapi-ai/web';
 
 interface CallSupportProps {
@@ -14,8 +14,15 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
   const [connectionStatus, setConnectionStatus] = useState('Ready to connect');
   const [vapi, setVapi] = useState<Vapi | null>(null);
   const [callDuration, setCallDuration] = useState(0);
+  const [isMuted, setIsMuted] = useState(false);
+  const [callSession, setCallSession] = useState<{
+    startTime: Date;
+    endTime?: Date;
+    transcript: string;
+    duration: number;
+  } | null>(null);
 
-  // Your API credentials
+  // Updated webhook URL for Authexa
   const VAPI_API_KEY = "2474c624-2391-475a-a306-71d6c4642924";
   const ASSISTANT_ID = "8352c787-40ac-44e6-b77e-b8a903b3f2d9";
 
@@ -27,13 +34,26 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
     // Set up event listeners
     vapiInstance.on('call-start', () => {
       console.log('Call started');
+      const startTime = new Date();
       setIsConnected(true);
-      setConnectionStatus('Connected to Mouritech Support');
+      setConnectionStatus('Connected to Authexa Support');
       setCallDuration(0);
+      setCallSession({
+        startTime,
+        transcript: '',
+        duration: 0
+      });
       
       // Start call duration counter
       const durationInterval = setInterval(() => {
-        setCallDuration(prev => prev + 1);
+        setCallDuration(prev => {
+          const newDuration = prev + 1;
+          setCallSession(prevSession => prevSession ? {
+            ...prevSession,
+            duration: newDuration
+          } : null);
+          return newDuration;
+        });
       }, 1000);
 
       // Store interval to clear it later
@@ -42,19 +62,7 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
 
     vapiInstance.on('call-end', () => {
       console.log('Call ended');
-      setIsConnected(false);
-      setTranscript('');
-      setConnectionStatus('Call ended');
-      setCallDuration(0);
-      
-      // Clear duration interval
-      if ((vapiInstance as any).durationInterval) {
-        clearInterval((vapiInstance as any).durationInterval);
-      }
-      
-      setTimeout(() => {
-        setConnectionStatus('Ready to connect');
-      }, 2000);
+      handleCallEnd();
     });
 
     vapiInstance.on('message', (message) => {
@@ -65,6 +73,10 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
         
         if (message.role === 'user') {
           setTranscript(message.transcript);
+          setCallSession(prev => prev ? {
+            ...prev,
+            transcript: prev.transcript + ' ' + message.transcript
+          } : null);
           onCallResult?.(message.transcript);
         }
       }
@@ -75,8 +87,8 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
       }
       
       if (message.type === 'hang') {
-        console.log('Call hang detected, but keeping connection alive');
-        // Don't automatically end the call on hang
+        console.log('Call hang detected, ending call gracefully');
+        handleEndCall();
       }
     });
 
@@ -84,6 +96,7 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
       console.error('Vapi error:', error);
       setConnectionStatus('Connection error - please try again');
       setIsConnected(false);
+      handleCallEnd();
     });
 
     // Add speech events to monitor call activity
@@ -116,6 +129,39 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
       return () => clearTimeout(timer);
     }
   }, [isConnected]);
+
+  const handleCallEnd = () => {
+    if (callSession) {
+      const endTime = new Date();
+      setCallSession(prev => prev ? {
+        ...prev,
+        endTime
+      } : null);
+      
+      // Log session info
+      console.log('Call session ended:', {
+        duration: callDuration,
+        transcript: callSession.transcript,
+        startTime: callSession.startTime,
+        endTime
+      });
+    }
+
+    setIsConnected(false);
+    setTranscript('');
+    setConnectionStatus('Call ended');
+    setCallDuration(0);
+    setIsMuted(false);
+    
+    // Clear duration interval
+    if (vapi && (vapi as any).durationInterval) {
+      clearInterval((vapi as any).durationInterval);
+    }
+    
+    setTimeout(() => {
+      setConnectionStatus('Ready to connect');
+    }, 2000);
+  };
 
   const handleStartCall = async () => {
     if (!vapi) {
@@ -160,15 +206,36 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
     try {
       console.log('Manually ending call');
       await vapi.stop();
-      setIsConnected(false);
-      setTranscript('');
-      setConnectionStatus('Call ended');
       
+      // Force immediate cleanup
       setTimeout(() => {
-        setConnectionStatus('Ready to connect');
-      }, 2000);
+        handleCallEnd();
+      }, 100);
+      
     } catch (error) {
       console.error('Failed to end call:', error);
+      // Force cleanup even if stop fails
+      handleCallEnd();
+    }
+  };
+
+  const handleToggleMute = async () => {
+    if (!vapi || !isConnected) return;
+
+    try {
+      if (isMuted) {
+        // Unmute by starting microphone again
+        await vapi.setMuted(false);
+        setIsMuted(false);
+        console.log('Microphone unmuted');
+      } else {
+        // Mute microphone
+        await vapi.setMuted(true);
+        setIsMuted(true);
+        console.log('Microphone muted');
+      }
+    } catch (error) {
+      console.error('Failed to toggle mute:', error);
     }
   };
 
@@ -227,6 +294,12 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
                 Live • {formatDuration(callDuration)}
               </span>
             </div>
+            {isMuted && (
+              <div className="flex items-center gap-2 px-3 py-1 bg-red-600/20 rounded-full border border-red-500/30">
+                <MicOff className="w-3 h-3 text-red-400" />
+                <span className="text-red-200 text-xs">Muted</span>
+              </div>
+            )}
           </div>
         )}
         
@@ -239,6 +312,19 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
           </button>
         ) : (
           <div className="flex gap-4">
+            {/* Mute/Unmute Button */}
+            <button 
+              onClick={handleToggleMute}
+              className={`${
+                isMuted 
+                  ? 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800' 
+                  : 'bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800'
+              } text-white px-6 py-3 rounded-xl transition-all shadow-lg font-medium flex items-center gap-2`}
+            >
+              {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+              {isMuted ? 'Unmute' : 'Mute'}
+            </button>
+            
             {/* End Call Button */}
             <button 
               onClick={handleEndCall}
