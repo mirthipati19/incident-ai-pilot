@@ -108,4 +108,4 @@ const ImprovedHCaptcha = ({ onVerify, onError, onExpire }: ImprovedHCaptchaProps
   );
 };
 
-export default ImProvedHCaptcha;
+export default ImprovedHCaptcha;
