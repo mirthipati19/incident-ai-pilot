@@ -3,8 +3,6 @@ import React, { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { AlertTriangle, RefreshCw } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { authConfig, shouldBypassCaptcha } from '@/utils/authConfig';
 
 interface ImprovedHCaptchaProps {
   onVerify: (token: string) => void;
@@ -24,17 +22,6 @@ const ImprovedHCaptcha = ({ onVerify, onError, onExpire }: ImprovedHCaptchaProps
   useEffect(() => {
     const loadHCaptcha = async () => {
       try {
-        if (shouldBypassCaptcha()) {
-          console.log('🔧 Captcha bypassed in development mode');
-          setIsLoading(false);
-          // Auto-verify in development mode
-          setTimeout(() => {
-            const devToken = 'dev-bypass-token-' + Date.now();
-            onVerify(devToken);
-          }, 100);
-          return;
-        }
-
         const HCaptcha = await import('@hcaptcha/react-hcaptcha');
         setHCaptchaComponent(() => HCaptcha.default);
         setIsLoading(false);
@@ -46,20 +33,10 @@ const ImprovedHCaptcha = ({ onVerify, onError, onExpire }: ImprovedHCaptchaProps
     };
 
     loadHCaptcha();
-  }, [onVerify]);
-
-  const handleFallbackVerification = () => {
-    console.log('🔧 Using fallback captcha verification');
-    const fallbackToken = 'dev-fallback-token-' + Date.now();
-    onVerify(fallbackToken);
-    toast({
-      title: "Development Mode",
-      description: "Captcha bypassed for development testing",
-    });
-  };
+  }, []);
 
   const handleCaptchaVerify = (token: string) => {
-    console.log('✅ Captcha verified:', token.substring(0, 20) + '...');
+    console.log('✅ Captcha verified');
     setCaptchaError(null);
     onVerify(token);
   };
@@ -76,26 +53,12 @@ const ImprovedHCaptcha = ({ onVerify, onError, onExpire }: ImprovedHCaptchaProps
     onExpire?.();
   };
 
-  // Show bypass option in development
-  if (shouldBypassCaptcha()) {
-    return (
-      <div className="my-4 space-y-3">
-        <Alert className="border-blue-200 bg-blue-50">
-          <AlertTriangle className="h-4 w-4 text-blue-600" />
-          <AlertDescription className="text-blue-800">
-            Development Mode: Security verification bypassed
-          </AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
-
   if (isLoading) {
     return (
       <div className="flex justify-center my-4">
-        <div className="flex items-center gap-2 text-slate-400">
+        <div className="flex items-center gap-2 text-slate-500">
           <RefreshCw className="w-4 h-4 animate-spin" />
-          <span>Loading security verification...</span>
+          <span className="text-sm">Loading security verification...</span>
         </div>
       </div>
     );
@@ -103,28 +66,13 @@ const ImprovedHCaptcha = ({ onVerify, onError, onExpire }: ImprovedHCaptchaProps
 
   if (captchaError) {
     return (
-      <div className="my-4 space-y-3">
+      <div className="my-4">
         <Alert className="border-orange-200 bg-orange-50">
           <AlertTriangle className="h-4 w-4 text-orange-600" />
           <AlertDescription className="text-orange-800">
             {captchaError}
           </AlertDescription>
         </Alert>
-        {authConfig.isDevelopment && (
-          <div className="text-center">
-            <p className="text-sm text-slate-600 mb-2">
-              Development Mode: You can bypass security verification
-            </p>
-            <Button 
-              onClick={handleFallbackVerification}
-              variant="outline"
-              size="sm"
-              className="text-xs"
-            >
-              Skip Verification (Dev Mode)
-            </Button>
-          </div>
-        )}
       </div>
     );
   }
@@ -133,20 +81,23 @@ const ImprovedHCaptcha = ({ onVerify, onError, onExpire }: ImprovedHCaptchaProps
   if (HCaptchaComponent) {
     return (
       <div className="flex justify-center my-4">
-        <HCaptchaComponent
-          sitekey={siteKey}
-          onVerify={handleCaptchaVerify}
-          onError={handleCaptchaError}
-          onExpire={handleCaptchaExpire}
-          theme="light"
-        />
+        <div className="w-full max-w-sm">
+          <HCaptchaComponent
+            sitekey={siteKey}
+            onVerify={handleCaptchaVerify}
+            onError={handleCaptchaError}
+            onExpire={handleCaptchaExpire}
+            theme="light"
+            size="normal"
+          />
+        </div>
       </div>
     );
   }
 
-  // Fallback for production when HCaptcha fails to load
+  // Fallback when HCaptcha fails to load
   return (
-    <div className="my-4 space-y-3">
+    <div className="my-4">
       <Alert className="border-red-200 bg-red-50">
         <AlertTriangle className="h-4 w-4 text-red-600" />
         <AlertDescription className="text-red-800">

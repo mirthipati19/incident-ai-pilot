@@ -8,10 +8,9 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useImprovedAuth } from "@/contexts/ImprovedAuthContext";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Eye, EyeOff, Mail, Lock, Shield, User } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, Shield, Bot, Zap, Users, BarChart3 } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import ImprovedHCaptcha from "@/components/ImprovedHCaptcha";
-import { authConfig } from "@/utils/authConfig";
 
 const SignIn = () => {
   const [email, setEmail] = useState("");
@@ -24,17 +23,15 @@ const SignIn = () => {
   const [mfaCode, setMfaCode] = useState("");
   const [isMfaLoading, setIsMfaLoading] = useState(false);
   
-  const { signIn, verifyMFA, isDevelopmentMode } = useImprovedAuth();
+  const { signIn, verifyMFA } = useImprovedAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
   const handleCaptchaVerify = (token: string) => {
-    console.log('✅ Captcha verified for sign in');
     setCaptchaToken(token);
   };
 
   const handleCaptchaError = (error: string) => {
-    console.error('❌ Captcha error:', error);
     toast({
       title: "Security Verification Failed",
       description: "Please try the security verification again.",
@@ -45,7 +42,7 @@ const SignIn = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!captchaToken && !authConfig.isDevelopment) {
+    if (!captchaToken) {
       toast({
         title: "Security Verification Required",
         description: "Please complete the security verification.",
@@ -57,21 +54,19 @@ const SignIn = () => {
     setIsLoading(true);
 
     try {
-      const result = await signIn(email, password, isAdmin, captchaToken || undefined);
+      const result = await signIn(email, password, isAdmin, captchaToken);
       
       if (result.success) {
         if (result.requiresMFA) {
           setRequiresMFA(true);
           toast({
             title: "Verification Required",
-            description: isDevelopmentMode 
-              ? "Check the console for your MFA code (Development Mode)"
-              : "We've sent a verification code to your email.",
+            description: "We've sent a verification code to your email.",
           });
         } else {
           toast({
-            title: "Success!",
-            description: `Welcome back${isAdmin ? ", Admin" : ""}!`,
+            title: "Welcome Back!",
+            description: `Successfully signed in${isAdmin ? " as Administrator" : ""}.`,
           });
           navigate(isAdmin ? "/admin" : "/itsm");
         }
@@ -83,7 +78,6 @@ const SignIn = () => {
         });
       }
     } catch (error) {
-      console.error('Sign in error:', error);
       toast({
         title: "Error",
         description: "An unexpected error occurred. Please try again.",
@@ -109,12 +103,12 @@ const SignIn = () => {
     setIsMfaLoading(true);
 
     try {
-      const result = await verifyMFA(email, mfaCode, password, captchaToken || undefined);
+      const result = await verifyMFA(email, mfaCode, password, captchaToken);
       
       if (result.success) {
         toast({
-          title: "Success!",
-          description: "Welcome back!",
+          title: "Access Granted",
+          description: "Welcome to your ITSM portal!",
         });
         navigate(result.isAdmin ? "/admin" : "/itsm");
       } else {
@@ -126,7 +120,6 @@ const SignIn = () => {
         setMfaCode("");
       }
     } catch (error) {
-      console.error('MFA verification error:', error);
       toast({
         title: "Error",
         description: "An unexpected error occurred. Please try again.",
@@ -145,17 +138,19 @@ const SignIn = () => {
 
   if (requiresMFA) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <div className="mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-              <Shield className="w-6 h-6 text-blue-600" />
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.03"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20"></div>
+        
+        <Card className="w-full max-w-md bg-white/95 backdrop-blur-sm border-0 shadow-2xl">
+          <CardHeader className="text-center pb-8">
+            <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mb-6 shadow-lg">
+              <Shield className="w-8 h-8 text-white" />
             </div>
-            <CardTitle className="text-xl font-semibold">Verification Required</CardTitle>
-            <CardDescription>
-              {isDevelopmentMode 
-                ? "Check the browser console for your verification code"
-                : "Enter the 6-digit code sent to your email"}
+            <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+              Security Verification
+            </CardTitle>
+            <CardDescription className="text-gray-600 mt-2">
+              Enter the 6-digit code sent to your email
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -165,14 +160,15 @@ const SignIn = () => {
                   maxLength={6} 
                   value={mfaCode} 
                   onChange={(value) => setMfaCode(value)}
+                  className="gap-2"
                 >
                   <InputOTPGroup>
-                    <InputOTPSlot index={0} />
-                    <InputOTPSlot index={1} />
-                    <InputOTPSlot index={2} />
-                    <InputOTPSlot index={3} />
-                    <InputOTPSlot index={4} />
-                    <InputOTPSlot index={5} />
+                    <InputOTPSlot index={0} className="w-12 h-12 text-lg font-semibold border-2" />
+                    <InputOTPSlot index={1} className="w-12 h-12 text-lg font-semibold border-2" />
+                    <InputOTPSlot index={2} className="w-12 h-12 text-lg font-semibold border-2" />
+                    <InputOTPSlot index={3} className="w-12 h-12 text-lg font-semibold border-2" />
+                    <InputOTPSlot index={4} className="w-12 h-12 text-lg font-semibold border-2" />
+                    <InputOTPSlot index={5} className="w-12 h-12 text-lg font-semibold border-2" />
                   </InputOTPGroup>
                 </InputOTP>
               </div>
@@ -180,16 +176,16 @@ const SignIn = () => {
               <div className="space-y-3">
                 <Button 
                   type="submit" 
-                  className="w-full"
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 text-lg shadow-lg"
                   disabled={isMfaLoading || mfaCode.length !== 6}
                 >
-                  {isMfaLoading ? "Verifying..." : "Verify Code"}
+                  {isMfaLoading ? "Verifying..." : "Verify & Continue"}
                 </Button>
                 
                 <Button 
                   type="button" 
                   variant="outline" 
-                  className="w-full"
+                  className="w-full border-2 hover:bg-gray-50"
                   onClick={resetForm}
                 >
                   Back to Sign In
@@ -203,98 +199,138 @@ const SignIn = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
-      <Card className="w-full max-w-md">
-        <CardHeader className="text-center">
-          <div className="mx-auto w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mb-4">
-            <User className="w-6 h-6 text-blue-600" />
-          </div>
-          <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
-          <CardDescription>
-            Sign in to your Authexa Support account
-          </CardDescription>
-          {isDevelopmentMode && (
-            <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs text-yellow-800">
-              Development Mode Active
-            </div>
-          )}
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Enter your email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10"
-                  required
-                />
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex">
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.03"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20"></div>
+      
+      {/* Left Side - Branding */}
+      <div className="hidden lg:flex lg:flex-1 items-center justify-center p-12 relative">
+        <div className="max-w-md text-center">
+          <div className="mb-8">
+            <div className="inline-flex items-center gap-3 mb-6">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-xl flex items-center justify-center">
+                <Bot className="w-6 h-6 text-white" />
               </div>
+              <h1 className="text-3xl font-bold text-white">Authexa ITSM</h1>
             </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                <Input
-                  id="password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Enter your password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10 pr-10"
-                  required
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
-                >
-                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="admin"
-                checked={isAdmin}
-                onCheckedChange={(checked) => setIsAdmin(checked as boolean)}
-              />
-              <Label htmlFor="admin" className="text-sm">
-                Sign in as Administrator
-              </Label>
-            </div>
-
-            <ImprovedHCaptcha 
-              onVerify={handleCaptchaVerify}
-              onError={handleCaptchaError}
-            />
-
-            <Button 
-              type="submit" 
-              className="w-full" 
-              disabled={isLoading || (!captchaToken && !authConfig.isDevelopment)}
-            >
-              {isLoading ? "Signing In..." : "Sign In"}
-            </Button>
-          </form>
-
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Don't have an account?{" "}
-              <Link to="/signup" className="text-blue-600 hover:underline font-medium">
-                Sign up here
-              </Link>
+            <h2 className="text-4xl font-bold text-white mb-4">
+              AI-Powered IT Service Management
+            </h2>
+            <p className="text-blue-200 text-lg mb-8">
+              Transform your IT operations with intelligent automation and streamlined workflows
             </p>
           </div>
-        </CardContent>
-      </Card>
+          
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 text-blue-100">
+              <Zap className="w-5 h-5 text-blue-400" />
+              <span>Intelligent Ticket Routing</span>
+            </div>
+            <div className="flex items-center gap-3 text-blue-100">
+              <Users className="w-5 h-5 text-purple-400" />
+              <span>Team Collaboration</span>
+            </div>
+            <div className="flex items-center gap-3 text-blue-100">
+              <BarChart3 className="w-5 h-5 text-green-400" />
+              <span>Advanced Analytics</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Right Side - Sign In Form */}
+      <div className="flex-1 flex items-center justify-center p-4 lg:p-12">
+        <Card className="w-full max-w-md bg-white/95 backdrop-blur-sm border-0 shadow-2xl">
+          <CardHeader className="text-center pb-8">
+            <div className="lg:hidden mb-6">
+              <div className="inline-flex items-center gap-2 mb-4">
+                <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-500 rounded-lg flex items-center justify-center">
+                  <Bot className="w-4 h-4 text-white" />
+                </div>
+                <span className="text-xl font-bold text-gray-800">Authexa ITSM</span>
+              </div>
+            </div>
+            <CardTitle className="text-2xl font-bold text-gray-800">Welcome Back</CardTitle>
+            <CardDescription className="text-gray-600 mt-2">
+              Sign in to your ITSM portal
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-gray-700 font-medium">Email Address</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="Enter your email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="pl-10 h-12 border-2 focus:border-blue-500"
+                    required
+                  />
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-gray-700 font-medium">Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="pl-10 pr-10 h-12 border-2 focus:border-blue-500"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="admin"
+                  checked={isAdmin}
+                  onCheckedChange={(checked) => setIsAdmin(checked as boolean)}
+                />
+                <Label htmlFor="admin" className="text-sm text-gray-600">
+                  Sign in as Administrator
+                </Label>
+              </div>
+
+              <ImprovedHCaptcha 
+                onVerify={handleCaptchaVerify}
+                onError={handleCaptchaError}
+              />
+
+              <Button 
+                type="submit" 
+                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 text-lg shadow-lg h-12"
+                disabled={isLoading || !captchaToken}
+              >
+                {isLoading ? "Signing In..." : "Sign In"}
+              </Button>
+            </form>
+
+            <div className="mt-8 text-center">
+              <p className="text-sm text-gray-600">
+                Don't have an account?{" "}
+                <Link to="/signup" className="text-blue-600 hover:text-blue-700 font-medium hover:underline">
+                  Create one here
+                </Link>
+              </p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 };

@@ -1,208 +1,154 @@
-import { Link } from 'react-router-dom';
-import { Button } from '@/components/ui/button';
-import { ArrowRight, Shield, Zap, BarChart3, Users, Settings, Headphones } from 'lucide-react';
-import VoiceControlledInstaller from '@/components/VoiceControlledInstaller';
-import PricingPlans from '@/components/PricingPlans';
-import ThemeToggle from '@/components/ThemeToggle';
-import SimranAssistant from '@/components/SimranAssistant';
+
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Bot, Shield, Zap, Users, BarChart3, ArrowRight, CheckCircle, Star, Sparkles } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Index = () => {
+  const features = [
+    {
+      icon: <Zap className="w-6 h-6 text-blue-500" />,
+      title: "AI-Powered Automation",
+      description: "Intelligent ticket routing and automated resolution suggestions powered by advanced AI"
+    },
+    {
+      icon: <Users className="w-6 h-6 text-purple-500" />,
+      title: "Team Collaboration",
+      description: "Seamless communication tools and shared knowledge base for your IT team"
+    },
+    {
+      icon: <BarChart3 className="w-6 h-6 text-green-500" />,
+      title: "Advanced Analytics",
+      description: "Real-time insights and performance metrics to optimize your IT operations"
+    },
+    {
+      icon: <Shield className="w-6 h-6 text-orange-500" />,
+      title: "Enterprise Security",
+      description: "Bank-grade security with multi-factor authentication and compliance features"
+    }
+  ];
+
+  const benefits = [
+    "Reduce ticket resolution time by 60%",
+    "Automate 80% of routine IT tasks",
+    "24/7 AI-powered support assistant",
+    "Enterprise-grade security & compliance",
+    "Seamless integration with existing tools",
+    "Real-time performance monitoring"
+  ];
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800 dark:from-slate-800 dark:via-slate-900 dark:to-slate-800 bg-white dark:bg-slate-900 transition-colors">
-      {/* Navigation */}
-      <nav className="bg-slate-900/80 backdrop-blur-sm border-b border-slate-700/50 sticky top-0 z-50 dark:bg-slate-900/80 bg-white/80 dark:border-slate-700/50 border-gray-200/50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center space-x-2">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <Shield className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-bold text-white dark:text-white text-gray-900">Authexa Support</span>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg width="60" height="60" viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg"%3E%3Cg fill="none" fill-rule="evenodd"%3E%3Cg fill="%23ffffff" fill-opacity="0.03"%3E%3Cpath d="M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z"/%3E%3C/g%3E%3C/g%3E%3C/svg%3E')] opacity-20"></div>
+      
+      {/* Header */}
+      <header className="relative z-10 px-4 py-6">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-xl flex items-center justify-center">
+              <Bot className="w-5 h-5 text-white" />
             </div>
-            <div className="flex items-center space-x-4">
-              <ThemeToggle />
-              <Link to="/signin">
-                <Button variant="outline" className="bg-slate-800/50 border-slate-600/50 text-white hover:bg-slate-700/50 dark:bg-slate-800/50 dark:border-slate-600/50 dark:text-white dark:hover:bg-slate-700/50 bg-white border-gray-300 text-gray-900 hover:bg-gray-50">
-                  Sign In
-                </Button>
-              </Link>
-              <Link to="/signup">
-                <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-                  Get Started
-                </Button>
-              </Link>
-            </div>
+            <h1 className="text-2xl font-bold text-white">Authexa ITSM</h1>
+          </div>
+          <div className="flex items-center gap-4">
+            <Link to="/signin">
+              <Button variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20">
+                Sign In
+              </Button>
+            </Link>
+            <Link to="/signup">
+              <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
+                Get Started
+              </Button>
+            </Link>
           </div>
         </div>
-      </nav>
+      </header>
 
       {/* Hero Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
+      <main className="relative z-10 px-4 pt-16 pb-24">
         <div className="max-w-7xl mx-auto text-center">
-          <h1 className="text-4xl md:text-6xl font-bold text-white mb-6 dark:text-white text-gray-900">
-            Welcome to{' '}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-cyan-400">
-              Authexa Support
-            </span>
-          </h1>
-          <p className="text-xl md:text-2xl text-slate-300 mb-8 max-w-4xl mx-auto dark:text-slate-300 text-gray-600">
-            Enterprise-grade IT Service Management platform that streamlines your support operations with intelligent automation and comprehensive analytics.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
+          <div className="mb-8">
+            <div className="inline-flex items-center gap-2 bg-blue-500/10 border border-blue-500/20 rounded-full px-4 py-2 mb-6">
+              <Sparkles className="w-4 h-4 text-blue-400" />
+              <span className="text-blue-200 text-sm font-medium">AI-Powered ITSM Platform</span>
+            </div>
+            <h2 className="text-5xl lg:text-7xl font-bold text-white mb-6 leading-tight">
+              Transform Your
+              <span className="bg-gradient-to-r from-blue-400 to-purple-500 bg-clip-text text-transparent"> IT Operations</span>
+            </h2>
+            <p className="text-xl text-blue-200 mb-8 max-w-3xl mx-auto leading-relaxed">
+              Experience the future of IT Service Management with AI-driven automation, intelligent insights, and seamless team collaboration
+            </p>
+          </div>
+
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-16">
             <Link to="/signup">
-              <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-4 text-lg">
-                Start Your Journey
-                <ArrowRight className="ml-2 w-5 h-5" />
+              <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-lg px-8 py-4 h-auto">
+                Start Free Trial
+                <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
             </Link>
             <Link to="/signin">
-              <Button size="lg" variant="outline" className="bg-slate-800/50 border-slate-600/50 text-white hover:bg-slate-700/50 px-8 py-4 text-lg dark:bg-slate-800/50 dark:border-slate-600/50 dark:text-white dark:hover:bg-slate-700/50 bg-white border-gray-300 text-gray-900 hover:bg-gray-50">
+              <Button size="lg" variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20 text-lg px-8 py-4 h-auto">
                 Sign In
               </Button>
             </Link>
           </div>
-        </div>
-      </section>
 
-      {/* Voice-Controlled Installer Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-slate-900/30 dark:bg-slate-900/30 bg-gray-50">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4 dark:text-white text-gray-900">
-              Voice-Controlled Software Installation
-            </h2>
-            <p className="text-xl text-slate-300 max-w-3xl mx-auto dark:text-slate-300 text-gray-600">
-              Revolutionary voice-controlled software installation system. Speak your requirements and get instant Windows batch files for automated software deployment.
+          {/* Features Grid */}
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+            {features.map((feature, index) => (
+              <Card key={index} className="bg-white/10 backdrop-blur-sm border-white/20 text-white">
+                <CardHeader className="pb-4">
+                  <div className="w-12 h-12 bg-white/10 rounded-lg flex items-center justify-center mb-3">
+                    {feature.icon}
+                  </div>
+                  <CardTitle className="text-lg text-white">{feature.title}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <CardDescription className="text-blue-200">
+                    {feature.description}
+                  </CardDescription>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Benefits Section */}
+          <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-8 mb-16">
+            <h3 className="text-3xl font-bold text-white mb-8">Why Choose Authexa ITSM?</h3>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {benefits.map((benefit, index) => (
+                <div key={index} className="flex items-center gap-3 text-left">
+                  <CheckCircle className="w-5 h-5 text-green-400 flex-shrink-0" />
+                  <span className="text-blue-200">{benefit}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* CTA Section */}
+          <div className="bg-gradient-to-r from-blue-600/20 to-purple-600/20 backdrop-blur-sm border border-blue-500/20 rounded-2xl p-8">
+            <h3 className="text-3xl font-bold text-white mb-4">Ready to Get Started?</h3>
+            <p className="text-blue-200 mb-6 text-lg">
+              Join thousands of IT teams already using Authexa ITSM to streamline their operations
             </p>
-          </div>
-          <VoiceControlledInstaller />
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="text-center mb-16">
-            <h2 className="text-3xl md:text-4xl font-bold text-white mb-4 dark:text-white text-gray-900">
-              Powerful Features
-            </h2>
-            <p className="text-xl text-slate-300 max-w-3xl mx-auto dark:text-slate-300 text-gray-600">
-              Everything you need to manage your IT support operations efficiently
-            </p>
-          </div>
-          
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6 hover:bg-slate-800/70 transition-colors dark:bg-slate-800/50 dark:border-slate-700/50 dark:hover:bg-slate-800/70 bg-white border-gray-200 hover:bg-gray-50">
-              <div className="w-12 h-12 bg-blue-600/20 rounded-lg flex items-center justify-center mb-4">
-                <Zap className="w-6 h-6 text-blue-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-2 dark:text-white text-gray-900">Intelligent Automation</h3>
-              <p className="text-slate-300 dark:text-slate-300 text-gray-600">
-                Automate routine tasks and streamline workflows with AI-powered automation tools.
-              </p>
+            <div className="flex items-center justify-center gap-2 mb-6">
+              {[...Array(5)].map((_, i) => (
+                <Star key={i} className="w-5 h-5 text-yellow-400 fill-current" />
+              ))}
+              <span className="text-white ml-2 font-semibold">4.9/5 from 1,200+ reviews</span>
             </div>
-            
-            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6 hover:bg-slate-800/70 transition-colors dark:bg-slate-800/50 dark:border-slate-700/50 dark:hover:bg-slate-800/70 bg-white border-gray-200 hover:bg-gray-50">
-              <div className="w-12 h-12 bg-green-600/20 rounded-lg flex items-center justify-center mb-4">
-                <BarChart3 className="w-6 h-6 text-green-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-2 dark:text-white text-gray-900">Comprehensive Analytics</h3>
-              <p className="text-slate-300 dark:text-slate-300 text-gray-600">
-                Get detailed insights into your support operations with advanced analytics and reporting.
-              </p>
-            </div>
-            
-            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6 hover:bg-slate-800/70 transition-colors dark:bg-slate-800/50 dark:border-slate-700/50 dark:hover:bg-slate-800/70 bg-white border-gray-200 hover:bg-gray-50">
-              <div className="w-12 h-12 bg-purple-600/20 rounded-lg flex items-center justify-center mb-4">
-                <Users className="w-6 h-6 text-purple-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-2 dark:text-white text-gray-900">Team Collaboration</h3>
-              <p className="text-slate-300 dark:text-slate-300 text-gray-600">
-                Enhance team productivity with integrated collaboration tools and communication features.
-              </p>
-            </div>
-            
-            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6 hover:bg-slate-800/70 transition-colors dark:bg-slate-800/50 dark:border-slate-700/50 dark:hover:bg-slate-800/70 bg-white border-gray-200 hover:bg-gray-50">
-              <div className="w-12 h-12 bg-red-600/20 rounded-lg flex items-center justify-center mb-4">
-                <Shield className="w-6 h-6 text-red-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-2 dark:text-white text-gray-900">Enterprise Security</h3>
-              <p className="text-slate-300 dark:text-slate-300 text-gray-600">
-                Bank-level security with multi-factor authentication and advanced access controls.
-              </p>
-            </div>
-            
-            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6 hover:bg-slate-800/70 transition-colors dark:bg-slate-800/50 dark:border-slate-700/50 dark:hover:bg-slate-800/70 bg-white border-gray-200 hover:bg-gray-50">
-              <div className="w-12 h-12 bg-yellow-600/20 rounded-lg flex items-center justify-center mb-4">
-                <Settings className="w-6 h-6 text-yellow-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-2 dark:text-white text-gray-900">Customizable Workflows</h3>
-              <p className="text-slate-300 dark:text-slate-300 text-gray-600">
-                Tailor the platform to your specific needs with flexible workflow configurations.
-              </p>
-            </div>
-            
-            <div className="bg-slate-800/50 backdrop-blur-sm border border-slate-700/50 rounded-xl p-6 hover:bg-slate-800/70 transition-colors dark:bg-slate-800/50 dark:border-slate-700/50 dark:hover:bg-slate-800/70 bg-white border-gray-200 hover:bg-gray-50">
-              <div className="w-12 h-12 bg-cyan-600/20 rounded-lg flex items-center justify-center mb-4">
-                <Headphones className="w-6 h-6 text-cyan-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-2 dark:text-white text-gray-900">24/7 Support</h3>
-              <p className="text-slate-300 dark:text-slate-300 text-gray-600">
-                Round-the-clock support with our dedicated team of experts ready to help you.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Pricing Plans Section */}
-      <PricingPlans />
-
-      {/* CTA Section */}
-      <section className="py-20 px-4 sm:px-6 lg:px-8 bg-gradient-to-r from-blue-600/20 to-cyan-600/20">
-        <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl md:text-4xl font-bold text-white mb-6 dark:text-white text-gray-900">
-            Ready to Transform Your IT Support?
-          </h2>
-          <p className="text-xl text-slate-300 mb-8 dark:text-slate-300 text-gray-600">
-            Join thousands of organizations already using Authexa Support to streamline their operations.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Link to="/signup">
-              <Button size="lg" className="bg-blue-600 hover:bg-blue-700 text-white font-semibold px-8 py-4">
-                Get Started Today
-                <ArrowRight className="ml-2 w-5 h-5" />
-              </Button>
-            </Link>
-            <Link to="/signin">
-              <Button size="lg" variant="outline" className="bg-slate-800/50 border-slate-600/50 text-white hover:bg-slate-700/50 px-8 py-4 dark:bg-slate-800/50 dark:border-slate-600/50 dark:text-white dark:hover:bg-slate-700/50 bg-white border-gray-300 text-gray-900 hover:bg-gray-50">
-                Sign In to Your Account
+              <Button size="lg" className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-lg px-8 py-4 h-auto">
+                Start Your Free Trial Today
+                <ArrowRight className="w-5 h-5 ml-2" />
               </Button>
             </Link>
           </div>
         </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="bg-slate-900/80 backdrop-blur-sm border-t border-slate-700/50 py-12 dark:bg-slate-900/80 dark:border-slate-700/50 bg-white border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="flex items-center space-x-2 mb-4 md:mb-0">
-              <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                <Shield className="w-5 h-5 text-white" />
-              </div>
-              <span className="text-xl font-bold text-white dark:text-white text-gray-900">Authexa Support</span>
-            </div>
-            <p className="text-slate-400 text-center md:text-right dark:text-slate-400 text-gray-500">
-              © 2024 Authexa Support. All rights reserved.<br />
-              Enterprise-grade IT Service Management platform.
-            </p>
-          </div>
-        </div>
-      </footer>
-
-      {/* Simran Assistant */}
-      <SimranAssistant />
+      </main>
     </div>
   );
 };
