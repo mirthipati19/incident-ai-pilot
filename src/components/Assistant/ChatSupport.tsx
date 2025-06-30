@@ -1,9 +1,8 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, Bot, User, AlertCircle, CheckCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { useAuth } from '@/contexts/AuthContext';
+import { useImprovedAuth } from '@/contexts/ImprovedAuthContext';
 
 interface Message {
   id: string;
@@ -34,7 +33,7 @@ const ChatSupport = ({ onMessageSent, onTicketCreated, onTicketResolved }: ChatS
   const [isTyping, setIsTyping] = useState(false);
   const [activeTickets, setActiveTickets] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { user } = useAuth();
+  const { user } = useImprovedAuth();
 
   // Your webhook URL
   const WEBHOOK_URL = "http://localhost:5678/webhook-test/64d38da4-3add-46d8-a8d2-88eea11f29b6";

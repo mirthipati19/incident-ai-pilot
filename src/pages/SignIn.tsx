@@ -1,11 +1,10 @@
-
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { useAuth } from '@/contexts/AuthContext';
+import { useImprovedAuth } from '@/contexts/ImprovedAuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, LogIn, Shield, Home, Mail } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
@@ -31,7 +30,7 @@ const SignIn = () => {
   const [mfaCode, setMfaCode] = useState('');
   const [mfaEmail, setMfaEmail] = useState('');
   const [mfaPassword, setMfaPassword] = useState('');
-  const { signIn, verifyMFA, completeMFALogin } = useAuth();
+  const { signIn, verifyMFA } = useImprovedAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -62,26 +61,17 @@ const SignIn = () => {
     setLoading(true);
     
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email: formData.email,
-        password: formData.password,
-        options: {
-          captchaToken: captchaToken || undefined,
-        },
-      });
-
-      if (error) {
+      const result = await signIn(formData.email, formData.password, false, captchaToken);
+      
+      if (result.success && result.requiresMFA) {
+        setMfaEmail(formData.email);
+        setMfaPassword(formData.password);
+        setShowMFA(true);
         toast({
-          title: "Error",
-          description: error.message || "Failed to sign in",
-          variant: "destructive"
+          title: "MFA Required",
+          description: "Please check your email for the verification code.",
         });
-        // Reset captcha on error
-        setCaptchaToken(null);
-        setShowCaptcha(true);
-      } else if (data.session) {
-        // Check if user requires MFA (this would be handled by your auth system)
-        // For now, assume successful login
+      } else if (result.success) {
         toast({
           title: "Welcome back!",
           description: "You have been signed in successfully.",
@@ -89,10 +79,13 @@ const SignIn = () => {
         navigate('/itsm');
       } else {
         toast({
-          title: "Unexpected Error",
-          description: "Login response invalid.",
+          title: "Error",
+          description: result.error || "Failed to sign in",
           variant: "destructive"
         });
+        // Reset captcha on error
+        setCaptchaToken(null);
+        setShowCaptcha(true);
       }
     } catch (error: any) {
       toast({
@@ -113,19 +106,20 @@ const SignIn = () => {
     setAdminLoading(true);
     
     try {
-      // Admin login uses the custom signIn function which handles MFA bypass
-      const result = await signIn(adminFormData.email, adminFormData.password);
+      const result = await signIn(adminFormData.email, adminFormData.password, true);
       
-      if (result.success && result.requiresMFA) {
-        setMfaEmail(adminFormData.email);
-        setMfaPassword(adminFormData.password);
-        setShowMFA(true);
+      if (result.success) {
         toast({
-          title: "Admin MFA Required",
-          description: "Please check your email for the verification code.",
+          title: "Admin Access Granted",
+          description: "Welcome to the admin portal.",
         });
+        navigate('/admin');
       } else {
-        throw new Error('MFA setup failed');
+        toast({
+          title: "Admin Login Failed",
+          description: result.error || "Please check your credentials and try again.",
+          variant: "destructive"
+        });
       }
     } catch (error: any) {
       console.error('Admin login error:', error);
@@ -152,33 +146,18 @@ const SignIn = () => {
     setLoading(true);
     
     try {
-      const verifyResult = await verifyMFA(mfaEmail, mfaCode);
+      const result = await verifyMFA(mfaEmail, mfaCode, mfaPassword, captchaToken || '');
       
-      if (verifyResult.success) {
-        const loginResult = await completeMFALogin(mfaEmail, mfaPassword);
-        
-        if (loginResult.success) {
-          toast({
-            title: loginResult.isAdmin ? "Admin Access Granted" : "Welcome back!",
-            description: "MFA verification successful.",
-          });
-          
-          if (loginResult.isAdmin) {
-            navigate('/admin', { replace: true });
-          } else {
-            navigate('/itsm');
-          }
-        } else {
-          toast({
-            title: "Login Failed",
-            description: loginResult.error || "Failed to complete login",
-            variant: "destructive"
-          });
-        }
+      if (result.success) {
+        toast({
+          title: "Welcome back!",
+          description: "MFA verification successful.",
+        });
+        navigate('/itsm');
       } else {
         toast({
           title: "MFA Verification Failed",
-          description: verifyResult.error || "Invalid MFA code",
+          description: result.error || "Invalid MFA code",
           variant: "destructive"
         });
       }

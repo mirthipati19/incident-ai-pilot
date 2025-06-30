@@ -1,10 +1,9 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { useAuth } from '@/contexts/AuthContext';
+import { useImprovedAuth } from '@/contexts/ImprovedAuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
@@ -78,7 +77,7 @@ const AdminPortal = () => {
   
   const [userTickets, setUserTickets] = useState<UserTicket[]>([]);
   const [loading, setLoading] = useState(true);
-  const { user, signOut } = useAuth();
+  const { user, signOut } = useImprovedAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -428,10 +427,11 @@ const AdminPortal = () => {
                         data={categoryData}
                         cx="50%"
                         cy="50%"
-                        outerRadius={100}
+                        labelLine={false}
+                        label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                        outerRadius={80}
                         fill="#8884d8"
                         dataKey="value"
-                        label={({ name, value }) => `${name}: ${value}%`}
                       >
                         {categoryData.map((entry, index) => (
                           <Cell key={`cell-${index}`} fill={entry.color} />
@@ -439,6 +439,68 @@ const AdminPortal = () => {
                       </Pie>
                       <Tooltip />
                     </PieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          <TabsContent value="tickets" className="mt-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Tickets</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {userTickets.map((ticket) => (
+                    <div key={ticket.id} className="flex items-center justify-between p-4 border rounded-lg">
+                      <div className="flex-1">
+                        <h4 className="font-medium">{ticket.title}</h4>
+                        <p className="text-sm text-gray-600">by {ticket.user_name}</p>
+                        <p className="text-xs text-gray-500">{new Date(ticket.created_at).toLocaleDateString()}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge className={getPriorityColor(ticket.priority)}>{ticket.priority}</Badge>
+                        <Badge className={getStatusColor(ticket.status)}>{ticket.status}</Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="ai-insights" className="mt-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Bot className="w-5 h-5" />
+                    AI Performance
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <ResponsiveContainer width="100%" height={300}>
+                    <LineChart data={aiPerformanceData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="time" />
+                      <YAxis />
+                      <Tooltip />
+                      <Line 
+                        type="monotone" 
+                        dataKey="confidence" 
+                        stroke="#3b82f6" 
+                        strokeWidth={2}
+                        name="AI Confidence %"
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="satisfaction" 
+                        stroke="#22c55e" 
+                        strokeWidth={2}
+                        name="User Satisfaction"
+                      />
+                    </LineChart>
                   </ResponsiveContainer>
                 </CardContent>
               </Card>
@@ -466,181 +528,32 @@ const AdminPortal = () => {
                   </ResponsiveContainer>
                 </CardContent>
               </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Zap className="w-5 h-5" />
-                    AI Performance Metrics
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={aiPerformanceData}>
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="time" />
-                      <YAxis />
-                      <Tooltip />
-                      <Line 
-                        type="monotone" 
-                        dataKey="confidence" 
-                        stroke="#3b82f6" 
-                        strokeWidth={3}
-                        name="AI Confidence %"
-                      />
-                      <Line 
-                        type="monotone" 
-                        dataKey="satisfaction" 
-                        stroke="#22c55e" 
-                        strokeWidth={3}
-                        name="User Satisfaction"
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="tickets" className="mt-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Database className="w-5 h-5" />
-                  Recent Tickets Management
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {userTickets.map((ticket) => (
-                    <div key={ticket.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50">
-                      <div className="flex-1">
-                        <h4 className="font-medium text-gray-900">{ticket.title}</h4>
-                        <div className="flex items-center gap-4 mt-1 text-sm text-gray-600">
-                          <span>User: {ticket.user_name}</span>
-                          <span>Category: {ticket.category}</span>
-                          <span>{new Date(ticket.created_at).toLocaleDateString()}</span>
-                        </div>
-                        {ticket.assignee && (
-                          <p className="text-sm text-blue-600 mt-1">Assignee: {ticket.assignee}</p>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge className={getPriorityColor(ticket.priority)}>
-                          {ticket.priority}
-                        </Badge>
-                        <Badge className={getStatusColor(ticket.status)}>
-                          {ticket.status}
-                        </Badge>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="ai-insights" className="mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">AI Resolution Rate</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center">
-                    <div className="text-4xl font-bold text-green-600">{stats.aiSuccessRate}%</div>
-                    <p className="text-sm text-gray-600 mt-2">Successfully auto-resolved</p>
-                    <div className="w-full bg-gray-200 rounded-full h-2 mt-4">
-                      <div 
-                        className="bg-green-600 h-2 rounded-full" 
-                        style={{ width: `${stats.aiSuccessRate}%` }}
-                      ></div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">Response Time</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center">
-                    <div className="text-4xl font-bold text-blue-600">{stats.avgResolutionTime}min</div>
-                    <p className="text-sm text-gray-600 mt-2">Average AI response</p>
-                    <div className="text-xs text-green-600 mt-2">↓ 15% faster than human agents</div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-lg">User Satisfaction</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="text-center">
-                    <div className="text-4xl font-bold text-yellow-600">{stats.userSatisfaction.toFixed(1)}</div>
-                    <p className="text-sm text-gray-600 mt-2">Average rating out of 5</p>
-                    <div className="flex justify-center mt-2">
-                      {[...Array(5)].map((_, i) => (
-                        <span key={i} className={`text-lg ${i < Math.floor(stats.userSatisfaction) ? 'text-yellow-400' : 'text-gray-300'}`}>
-                          ★
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
             </div>
           </TabsContent>
 
           <TabsContent value="reports" className="mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>System Health Report</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="flex justify-between items-center">
-                    <span>Database Performance</span>
-                    <Badge className="bg-green-100 text-green-800">Excellent</Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>AI Model Accuracy</span>
-                    <Badge className="bg-blue-100 text-blue-800">95.2%</Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>System Uptime</span>
-                    <Badge className="bg-green-100 text-green-800">{stats.systemUptime}%</Badge>
-                  </div>
-                  <div className="flex justify-between items-center">
-                    <span>Security Status</span>
-                    <Badge className="bg-green-100 text-green-800">Secure</Badge>
-                  </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+                <CardContent className="p-6 text-center">
+                  <Database className="w-12 h-12 mx-auto mb-4 text-blue-600" />
+                  <h3 className="font-semibold mb-2">System Reports</h3>
+                  <p className="text-sm text-gray-600">Generate comprehensive system performance reports</p>
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle>Quick Actions</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <Button className="w-full justify-start" variant="outline">
-                    <Database className="w-4 h-4 mr-2" />
-                    Export Ticket Data
-                  </Button>
-                  <Button className="w-full justify-start" variant="outline">
-                    <UserCheck className="w-4 h-4 mr-2" />
-                    Generate User Report
-                  </Button>
-                  <Button className="w-full justify-start" variant="outline">
-                    <Bot className="w-4 h-4 mr-2" />
-                    AI Performance Report
-                  </Button>
-                  <Button className="w-full justify-start" variant="outline">
-                    <TrendingUp className="w-4 h-4 mr-2" />
-                    Analytics Dashboard
-                  </Button>
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+                <CardContent className="p-6 text-center">
+                  <Users className="w-12 h-12 mx-auto mb-4 text-green-600" />
+                  <h3 className="font-semibold mb-2">User Activity</h3>
+                  <p className="text-sm text-gray-600">Detailed user engagement and activity reports</p>
+                </CardContent>
+              </Card>
+
+              <Card className="cursor-pointer hover:shadow-lg transition-shadow">
+                <CardContent className="p-6 text-center">
+                  <Zap className="w-12 h-12 mx-auto mb-4 text-purple-600" />
+                  <h3 className="font-semibold mb-2">Performance Metrics</h3>
+                  <p className="text-sm text-gray-600">AI efficiency and resolution time analytics</p>
                 </CardContent>
               </Card>
             </div>
