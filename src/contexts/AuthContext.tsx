@@ -180,25 +180,42 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const sendMFA = async (email: string) => {
-    return await sendMFACode(email);
+    const result = await sendMFACode(email);
+    console.log('MFA send result:', result);
+    return result;
   };
 
   const verifyMFA = async (email: string, code: string) => {
-    return await verifyMFACode(email, code);
+    const result = await verifyMFACode(email, code);
+    console.log('MFA verify result:', result);
+    return result;
   };
 
   const completeMFALogin = async (email: string, password: string) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      console.log('Completing MFA login for:', email);
+      
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) {
+        console.error('Supabase auth error:', error);
         return { success: false, error: error.message };
       }
 
-      const isAdmin = email === 'murari.mirthipati@authexa.me';
+      if (!data.user) {
+        return { success: false, error: 'No user data received' };
+      }
+
+      console.log('Auth successful, user:', data.user.email);
+      
+      // Check if user is admin
+      const isAdmin = email === 'murari.mirthipati@authexa.me' || await checkAdminStatus(data.user.id, email);
+      
+      console.log('Admin status:', isAdmin);
+      
       return { success: true, isAdmin };
     } catch (error) {
       console.error('Complete MFA login error:', error);
@@ -265,22 +282,30 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       console.log('Sign in attempt for:', email);
       
-      // For admin, handle special login
-      if (email === 'murari.mirthipati@authexa.me' && password === 'Qwertyuiop@0987654321') {
-        // Send MFA first
-        const mfaResult = await sendMFA(email);
-        if (!mfaResult.success) {
-          return { success: false, error: 'Failed to send MFA code' };
-        }
-        return { success: true, requiresMFA: true };
+      // First, validate credentials by attempting to sign in
+      const { data: testAuth, error: testError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (testError) {
+        console.error('Credential validation failed:', testError);
+        return { success: false, error: testError.message };
       }
-
-      // For regular users, also require MFA
+      
+      // Immediately sign out to prevent session creation
+      await supabase.auth.signOut();
+      
+      // Now send MFA code
+      console.log('Credentials validated, sending MFA...');
       const mfaResult = await sendMFA(email);
+      
       if (!mfaResult.success) {
-        return { success: false, error: 'Failed to send MFA code' };
+        console.error('MFA send failed:', mfaResult.error);
+        return { success: false, error: mfaResult.error || 'Failed to send MFA code' };
       }
-
+      
+      console.log('MFA sent successfully');
       return { success: true, requiresMFA: true };
     } catch (error) {
       console.error('Sign in error:', error);

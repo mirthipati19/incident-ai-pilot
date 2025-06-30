@@ -3,11 +3,21 @@ import { supabase } from '@/integrations/supabase/client';
 
 export const sendMFACode = async (email: string): Promise<{ success: boolean; error?: string }> => {
   try {
+    console.log('Sending MFA code for:', email);
+    
     // Generate 6-digit OTP
     const token = Math.floor(100000 + Math.random() * 900000).toString();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
 
-    // Store token in database
+    console.log('Generated MFA token:', token);
+
+    // Delete any existing tokens for this email
+    await supabase
+      .from('mfa_tokens')
+      .delete()
+      .eq('email', email);
+
+    // Store new token in database
     const { error: insertError } = await supabase
       .from('mfa_tokens')
       .insert({
@@ -21,11 +31,10 @@ export const sendMFACode = async (email: string): Promise<{ success: boolean; er
       return { success: false, error: 'Failed to generate MFA code' };
     }
 
-    // In a real application, you would send this via email
-    // For now, we'll log it to console for testing
     console.log(`MFA Code for ${email}: ${token}`);
+    console.log('MFA token stored successfully in database');
     
-    // You can integrate with email service here
+    // TODO: In production, integrate with email service like Resend
     // await sendEmailWithMFACode(email, token);
 
     return { success: true };
@@ -37,6 +46,8 @@ export const sendMFACode = async (email: string): Promise<{ success: boolean; er
 
 export const verifyMFACode = async (email: string, token: string): Promise<{ success: boolean; error?: string }> => {
   try {
+    console.log('Verifying MFA code for:', email, 'with token:', token);
+    
     const { data, error } = await supabase
       .from('mfa_tokens')
       .select('*')
@@ -47,16 +58,24 @@ export const verifyMFACode = async (email: string, token: string): Promise<{ suc
       .limit(1)
       .single();
 
+    console.log('MFA verification query result:', { data, error });
+
     if (error || !data) {
+      console.error('MFA verification failed:', error);
       return { success: false, error: 'Invalid or expired MFA code' };
     }
 
     // Delete used token
-    await supabase
+    const { error: deleteError } = await supabase
       .from('mfa_tokens')
       .delete()
       .eq('id', data.id);
 
+    if (deleteError) {
+      console.error('Failed to delete used MFA token:', deleteError);
+    }
+
+    console.log('MFA verification successful');
     return { success: true };
   } catch (error) {
     console.error('MFA verify error:', error);
