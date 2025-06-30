@@ -57,37 +57,7 @@ export const verifyMFACode = async (email: string, token: string): Promise<{ suc
   try {
     console.log('🔍 MFA VERIFICATION ATTEMPT:', { email, token });
     
-    // First try the bypass RLS function for secure verification
-    try {
-      const { data: bypassData, error: bypassError } = await supabase
-        .rpc('bypass_rls_verify_token', { 
-          email_arg: email, 
-          token_arg: token 
-        });
-
-      console.log('🔐 Bypass RLS result:', { 
-        foundToken: !!bypassData?.[0], 
-        error: bypassError?.message || 'none' 
-      });
-
-      if (!bypassError && bypassData?.[0]) {
-        const tokenData = bypassData[0];
-        console.log('✅ Token found via bypass:', tokenData.token, 'Exp:', tokenData.expires_at);
-        
-        // Delete used token
-        await supabase
-          .from('mfa_tokens')
-          .delete()
-          .eq('id', tokenData.id);
-        
-        console.log('✅ MFA verification successful via bypass');
-        return { success: true };
-      }
-    } catch (bypassError) {
-      console.warn('⚠️ Bypass RLS failed, falling back to direct query');
-    }
-    
-    // Fallback to direct query
+    // Direct query with proper error handling
     const { data, error } = await supabase
       .from('mfa_tokens')
       .select('*')
@@ -98,7 +68,7 @@ export const verifyMFACode = async (email: string, token: string): Promise<{ suc
       .limit(1)
       .single();
 
-    console.log('📊 Direct MFA verification query result:', { 
+    console.log('📊 MFA verification query result:', { 
       foundToken: !!data, 
       error: error?.message || 'none',
       tokenExpiry: data?.expires_at 
