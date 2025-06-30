@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -8,7 +9,7 @@ import { useImprovedAuth } from '@/contexts/ImprovedAuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, UserPlus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import HCaptchaComponent from '@/components/HCaptchaComponent';
+import ImprovedHCaptcha from '@/components/ImprovedHCaptcha';
 
 const SignUp = () => {
   const [formData, setFormData] = useState({
@@ -21,7 +22,8 @@ const SignUp = () => {
   const [socialLoading, setSocialLoading] = useState<string | null>(null);
   const [showCaptcha, setShowCaptcha] = useState(false);
   const [captchaVerified, setCaptchaVerified] = useState(false);
-  const { signUp } = useImprovedAuth();
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const { signUp, isDevelopmentMode } = useImprovedAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
@@ -53,14 +55,14 @@ const SignUp = () => {
       return;
     }
 
-    if (!captchaVerified) {
+    if (!captchaVerified && !isDevelopmentMode) {
       setShowCaptcha(true);
       return;
     }
 
     setLoading(true);
     
-    const result = await signUp(formData.email, formData.password, formData.name);
+    const result = await signUp(formData.email, formData.password, formData.name, captchaToken || undefined);
     
     if (result.success) {
       toast({
@@ -108,6 +110,7 @@ const SignUp = () => {
   };
 
   const handleCaptchaVerified = (token: string) => {
+    setCaptchaToken(token);
     setCaptchaVerified(true);
     setShowCaptcha(false);
     toast({
@@ -117,6 +120,8 @@ const SignUp = () => {
   };
 
   const handleCaptchaError = (error: string) => {
+    setCaptchaVerified(false);
+    setCaptchaToken(null);
     toast({
       title: "Verification Error",
       description: error,
@@ -137,7 +142,7 @@ const SignUp = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <HCaptchaComponent 
+              <ImprovedHCaptcha 
                 onVerify={handleCaptchaVerified}
                 onError={handleCaptchaError}
               />
@@ -305,6 +310,17 @@ const SignUp = () => {
                 className="bg-slate-700/50 backdrop-blur-sm border-slate-600/50 text-white placeholder:text-slate-400 font-medium focus:border-blue-500 focus:ring-blue-500/20"
               />
             </div>
+
+            {captchaVerified && (
+              <div className="text-center">
+                <div className="inline-flex items-center gap-2 text-green-400 text-sm">
+                  <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                  Security verification completed
+                </div>
+              </div>
+            )}
             
             <Button type="submit" className="w-full bg-blue-600/80 hover:bg-blue-700/80 backdrop-blur-sm font-medium text-white border border-blue-500/30" disabled={loading}>
               {loading ? (

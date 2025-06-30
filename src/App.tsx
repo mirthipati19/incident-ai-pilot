@@ -10,7 +10,6 @@ import DevModeIndicator from "@/components/DevModeIndicator";
 import Index from "./pages/Index";
 import ITSM from "./pages/ITSM";
 import SignIn from "./pages/SignIn";
-import ImprovedSignIn from "./pages/ImprovedSignIn";
 import SignUp from "./pages/SignUp";
 import AdminDashboard from "./pages/AdminDashboard";
 import AdminPortal from "./pages/AdminPortal";
@@ -33,7 +32,6 @@ function App() {
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/signin" element={<SignIn />} />
-                <Route path="/improved-signin" element={<ImprovedSignIn />} />
                 <Route path="/signup" element={<SignUp />} />
                 <Route
                   path="/itsm"

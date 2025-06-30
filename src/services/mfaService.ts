@@ -40,13 +40,30 @@ export const sendMFACode = async (email: string): Promise<{ success: boolean; er
 
     console.log('✅ MFA token stored successfully in database');
     
-    // Log OTP in development mode (no SMTP)
+    // Send email via edge function in production, log in development
     if (import.meta.env.DEV) {
       console.log(`📬 [Dev Mode] MFA OTP for ${email}: ${token}`);
       console.log('💡 In production, this would be sent via email service');
+      return { success: true };
+    } else {
+      // Call edge function to send email
+      const { data, error: emailError } = await supabase.functions.invoke('send-mfa-email', {
+        body: { email, code: token }
+      });
+
+      if (emailError) {
+        console.error('❌ Failed to send MFA email:', emailError);
+        return { success: false, error: 'Failed to send MFA code via email' };
+      }
+
+      if (!data?.success) {
+        console.error('❌ Email service returned error:', data?.error);
+        return { success: false, error: data?.error || 'Failed to send MFA code' };
+      }
+
+      console.log('✅ MFA email sent successfully');
+      return { success: true };
     }
-    
-    return { success: true };
   } catch (error) {
     console.error('💥 MFA send error:', error);
     return { success: false, error: 'Failed to send MFA code' };
@@ -118,12 +135,6 @@ export const verifyMFACode = async (email: string, token: string): Promise<{ suc
       if (expiredToken) {
         console.log('⏰ Token found but expired');
         return { success: false, error: 'MFA code has expired. Please request a new one.' };
-      }
-
-      // Handle permission denied for fallback
-      if (error?.message?.includes('permission denied')) {
-        console.warn('⚠️ RLS blocking access, MFA system may need admin attention');
-        return { success: false, error: 'MFA system unreachable. Please try again or contact admin.' };
       }
 
       return { success: false, error: 'Invalid MFA code. Please check and try again.' };
