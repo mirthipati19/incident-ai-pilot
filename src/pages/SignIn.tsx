@@ -9,7 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, LogIn, Shield, Home, Mail } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import MathCaptcha from '@/components/MathCaptcha';
+import HCaptchaComponent from '@/components/HCaptchaComponent';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useSessionTimeout } from '@/hooks/useSessionTimeout';
 
@@ -200,7 +200,7 @@ const SignIn = () => {
     }
   };
 
-  const handleCaptchaVerified = () => {
+  const handleCaptchaVerified = (token: string) => {
     setCaptchaVerified(true);
     setShowCaptcha(false);
     toast({
@@ -219,22 +219,32 @@ const SignIn = () => {
 
   if (showCaptcha) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800">
-        <div className="absolute inset-0 bg-black/40"></div>
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800">
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900/90 via-slate-800/95 to-slate-900/90"></div>
         <div className="relative z-10">
-          <MathCaptcha 
-            onVerified={handleCaptchaVerified}
-            onError={handleCaptchaError}
-          />
-          <div className="text-center mt-4">
-            <Button 
-              variant="ghost" 
-              onClick={() => setShowCaptcha(false)}
-              className="text-white hover:bg-white/20"
-            >
-              Back to Sign In
-            </Button>
-          </div>
+          <Card className="w-full max-w-md bg-slate-800/80 backdrop-blur-xl border border-slate-700/50 shadow-2xl">
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl text-white font-bold">Security Verification</CardTitle>
+              <CardDescription className="text-slate-300">
+                Please complete the security verification to continue
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <HCaptchaComponent 
+                onVerify={handleCaptchaVerified}
+                onError={handleCaptchaError}
+              />
+              <div className="text-center mt-4">
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setShowCaptcha(false)}
+                  className="text-slate-300 hover:bg-slate-700/50"
+                >
+                  Back to Sign In
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
@@ -242,38 +252,38 @@ const SignIn = () => {
 
   if (showMFA) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800">
-        <div className="absolute inset-0 bg-black/40"></div>
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800">
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900/90 via-slate-800/95 to-slate-900/90"></div>
         
-        <Card className="w-full max-w-md relative z-10 bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl">
+        <Card className="w-full max-w-md relative z-10 bg-slate-800/80 backdrop-blur-xl border border-slate-700/50 shadow-2xl">
           <CardHeader className="text-center">
             <div className="flex justify-center mb-4">
-              <div className="p-3 bg-blue-600/20 backdrop-blur-sm rounded-full border border-blue-400/30">
-                <Mail className="w-6 h-6 text-blue-300" />
+              <div className="p-3 bg-blue-600/20 backdrop-blur-sm rounded-full border border-blue-500/30">
+                <Mail className="w-6 h-6 text-blue-400" />
               </div>
             </div>
             <CardTitle className="text-2xl text-white font-bold">Multi-Factor Authentication</CardTitle>
-            <CardDescription className="text-gray-300 font-semibold">
+            <CardDescription className="text-slate-300 font-medium">
               Enter the verification code sent to your email
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="mfaCode" className="text-white font-semibold">Verification Code</Label>
+              <Label htmlFor="mfaCode" className="text-white font-medium">Verification Code</Label>
               <Input
                 id="mfaCode"
                 type="text"
                 value={mfaCode}
                 onChange={(e) => setMfaCode(e.target.value)}
                 placeholder="Enter 6-digit code"
-                className="bg-white/10 backdrop-blur-sm border-white/30 text-white placeholder:text-white/50 font-medium focus:border-blue-400 focus:ring-blue-400/20"
+                className="bg-slate-700/50 backdrop-blur-sm border-slate-600/50 text-white placeholder:text-slate-400 font-medium focus:border-blue-500 focus:ring-blue-500/20"
                 maxLength={6}
               />
             </div>
             
             <Button 
               onClick={handleMFAVerification} 
-              className="w-full bg-blue-600/80 hover:bg-blue-700/80 backdrop-blur-sm font-semibold text-white" 
+              className="w-full bg-blue-600/80 hover:bg-blue-700/80 backdrop-blur-sm font-medium text-white border border-blue-500/30" 
               disabled={loading}
             >
               {loading ? (
@@ -295,7 +305,7 @@ const SignIn = () => {
                   setMfaEmail('');
                   setMfaPassword('');
                 }}
-                className="text-white/80 hover:bg-white/10"
+                className="text-slate-300 hover:bg-slate-700/50"
               >
                 Back to Sign In
               </Button>
@@ -307,36 +317,36 @@ const SignIn = () => {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-800">
-      <div className="absolute inset-0 bg-black/40"></div>
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800">
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-900/90 via-slate-800/95 to-slate-900/90"></div>
       
       {/* Home Button */}
       <div className="absolute top-4 left-4 z-20">
         <Link to="/">
-          <Button variant="outline" className="bg-white/10 backdrop-blur-sm border-white/30 text-white hover:bg-white/20">
+          <Button variant="outline" className="bg-slate-800/50 backdrop-blur-sm border-slate-700/50 text-white hover:bg-slate-700/50">
             <Home className="w-4 h-4 mr-2" />
             Home
           </Button>
         </Link>
       </div>
       
-      <Card className="w-full max-w-md relative z-10 bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl">
+      <Card className="w-full max-w-md relative z-10 bg-slate-800/80 backdrop-blur-xl border border-slate-700/50 shadow-2xl">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="p-3 bg-blue-600/20 backdrop-blur-sm rounded-full border border-blue-400/30">
-              <LogIn className="w-6 h-6 text-blue-300" />
+            <div className="p-3 bg-blue-600/20 backdrop-blur-sm rounded-full border border-blue-500/30">
+              <LogIn className="w-6 h-6 text-blue-400" />
             </div>
           </div>
           <CardTitle className="text-2xl text-white font-bold">Welcome Back</CardTitle>
-          <CardDescription className="text-gray-300 font-semibold">
+          <CardDescription className="text-slate-300 font-medium">
             Sign in to your Authexa Support account
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="user" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 bg-white/10 backdrop-blur-sm border border-white/20">
-              <TabsTrigger value="user" className="data-[state=active]:bg-white/20 text-white data-[state=active]:text-white">User Login</TabsTrigger>
-              <TabsTrigger value="admin" className="data-[state=active]:bg-white/20 text-white data-[state=active]:text-white">
+            <TabsList className="grid w-full grid-cols-2 bg-slate-700/50 backdrop-blur-sm border border-slate-600/50">
+              <TabsTrigger value="user" className="data-[state=active]:bg-slate-600/50 text-white data-[state=active]:text-white">User Login</TabsTrigger>
+              <TabsTrigger value="admin" className="data-[state=active]:bg-slate-600/50 text-white data-[state=active]:text-white">
                 <Shield className="w-4 h-4 mr-2" />
                 Admin Portal
               </TabsTrigger>
@@ -348,7 +358,7 @@ const SignIn = () => {
                 <Button
                   onClick={() => handleSocialSignIn('google')}
                   disabled={socialLoading !== null}
-                  className="w-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/30 text-white font-semibold"
+                  className="w-full bg-slate-700/50 hover:bg-slate-600/50 backdrop-blur-sm border border-slate-600/50 text-white font-medium"
                   variant="outline"
                 >
                   {socialLoading === 'google' ? (
@@ -379,7 +389,7 @@ const SignIn = () => {
                 <Button
                   onClick={() => handleSocialSignIn('azure')}
                   disabled={socialLoading !== null}
-                  className="w-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/30 text-white font-semibold"
+                  className="w-full bg-slate-700/50 hover:bg-slate-600/50 backdrop-blur-sm border border-slate-600/50 text-white font-medium"
                   variant="outline"
                 >
                   {socialLoading === 'azure' ? (
@@ -410,16 +420,16 @@ const SignIn = () => {
 
               <div className="relative mb-6">
                 <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t border-white/30" />
+                  <span className="w-full border-t border-slate-600/50" />
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
-                  <span className="bg-transparent px-2 text-gray-300 font-semibold">Or continue with email</span>
+                  <span className="bg-slate-800/80 px-2 text-slate-300 font-medium">Or continue with email</span>
                 </div>
               </div>
 
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email" className="text-white font-semibold">Email</Label>
+                  <Label htmlFor="email" className="text-white font-medium">Email</Label>
                   <Input
                     id="email"
                     name="email"
@@ -428,12 +438,12 @@ const SignIn = () => {
                     value={formData.email}
                     onChange={handleChange}
                     placeholder="Enter your email"
-                    className="bg-white/10 backdrop-blur-sm border-white/30 text-white placeholder:text-white/50 font-medium focus:border-blue-400 focus:ring-blue-400/20"
+                    className="bg-slate-700/50 backdrop-blur-sm border-slate-600/50 text-white placeholder:text-slate-400 font-medium focus:border-blue-500 focus:ring-blue-500/20"
                   />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="password" className="text-white font-semibold">Password</Label>
+                  <Label htmlFor="password" className="text-white font-medium">Password</Label>
                   <Input
                     id="password"
                     name="password"
@@ -442,11 +452,11 @@ const SignIn = () => {
                     value={formData.password}
                     onChange={handleChange}
                     placeholder="Enter your password"
-                    className="bg-white/10 backdrop-blur-sm border-white/30 text-white placeholder:text-white/50 font-medium focus:border-blue-400 focus:ring-blue-400/20"
+                    className="bg-slate-700/50 backdrop-blur-sm border-slate-600/50 text-white placeholder:text-slate-400 font-medium focus:border-blue-500 focus:ring-blue-500/20"
                   />
                 </div>
                 
-                <Button type="submit" className="w-full bg-blue-600/80 hover:bg-blue-700/80 backdrop-blur-sm font-semibold text-white" disabled={loading}>
+                <Button type="submit" className="w-full bg-blue-600/80 hover:bg-blue-700/80 backdrop-blur-sm font-medium text-white border border-blue-500/30" disabled={loading}>
                   {loading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -463,7 +473,7 @@ const SignIn = () => {
               <div className="bg-red-500/10 border border-red-400/30 rounded-lg p-4 mb-4">
                 <div className="flex items-center space-x-2">
                   <Shield className="w-5 h-5 text-red-400" />
-                  <span className="text-red-300 font-semibold">Admin Access Only</span>
+                  <span className="text-red-300 font-medium">Admin Access Only</span>
                 </div>
                 <p className="text-red-200 text-sm mt-1">
                   Admin credentials are pre-filled for security
@@ -472,7 +482,7 @@ const SignIn = () => {
               
               <form onSubmit={handleAdminSubmit} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="admin-email" className="text-white font-semibold">Admin Email</Label>
+                  <Label htmlFor="admin-email" className="text-white font-medium">Admin Email</Label>
                   <Input
                     id="admin-email"
                     name="email"
@@ -480,14 +490,13 @@ const SignIn = () => {
                     required
                     value={adminFormData.email}
                     onChange={handleAdminChange}
-                    placeholder="Enter admin email"
-                    className="bg-white/10 backdrop-blur-sm border-white/30 text-white placeholder:text-white/50 font-medium focus:border-blue-400 focus:ring-blue-400/20"
+                    className="bg-slate-700/50 backdrop-blur-sm border-slate-600/50 text-white font-medium focus:border-blue-500 focus:ring-blue-500/20"
                     readOnly
                   />
                 </div>
                 
                 <div className="space-y-2">
-                  <Label htmlFor="admin-password" className="text-white font-semibold">Super Password</Label>
+                  <Label htmlFor="admin-password" className="text-white font-medium">Super Password</Label>
                   <Input
                     id="admin-password"
                     name="password"
@@ -495,13 +504,12 @@ const SignIn = () => {
                     required
                     value={adminFormData.password}
                     onChange={handleAdminChange}
-                    placeholder="Enter super password"
-                    className="bg-white/10 backdrop-blur-sm border-white/30 text-white placeholder:text-white/50 font-medium focus:border-blue-400 focus:ring-blue-400/20"
+                    className="bg-slate-700/50 backdrop-blur-sm border-slate-600/50 text-white font-medium focus:border-blue-500 focus:ring-blue-500/20"
                     readOnly
                   />
                 </div>
                 
-                <Button type="submit" className="w-full bg-red-600/80 hover:bg-red-700/80 backdrop-blur-sm font-semibold text-white" disabled={adminLoading}>
+                <Button type="submit" className="w-full bg-red-600/80 hover:bg-red-700/80 backdrop-blur-sm font-medium text-white border border-red-500/30" disabled={adminLoading}>
                   {adminLoading ? (
                     <>
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -518,9 +526,9 @@ const SignIn = () => {
             </TabsContent>
           </Tabs>
           
-          <div className="mt-6 text-center text-sm text-gray-300 font-semibold">
+          <div className="mt-6 text-center text-sm text-slate-300 font-medium">
             Don't have an account?{' '}
-            <Link to="/signup" className="text-blue-400 hover:underline font-bold">
+            <Link to="/signup" className="text-blue-400 hover:underline font-medium">
               Sign up
             </Link>
           </div>

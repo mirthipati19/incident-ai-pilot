@@ -9,7 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { Loader2, UserPlus } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
-import MathCaptcha from '@/components/MathCaptcha';
+import HCaptchaComponent from '@/components/HCaptchaComponent';
 
 const SignUp = () => {
   const [formData, setFormData] = useState({
@@ -108,7 +108,7 @@ const SignUp = () => {
     }
   };
 
-  const handleCaptchaVerified = () => {
+  const handleCaptchaVerified = (token: string) => {
     setCaptchaVerified(true);
     setShowCaptcha(false);
     toast({
@@ -127,41 +127,51 @@ const SignUp = () => {
 
   if (showCaptcha) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
-        <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 via-slate-900/40 to-purple-900/20"></div>
+      <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800">
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-900/90 via-slate-800/95 to-slate-900/90"></div>
         <div className="relative z-10">
-          <MathCaptcha 
-            onVerified={handleCaptchaVerified}
-            onError={handleCaptchaError}
-          />
-          <div className="text-center mt-4">
-            <Button 
-              variant="ghost" 
-              onClick={() => setShowCaptcha(false)}
-              className="text-white hover:bg-white/20"
-            >
-              Back to Sign Up
-            </Button>
-          </div>
+          <Card className="w-full max-w-md bg-slate-800/80 backdrop-blur-xl border border-slate-700/50 shadow-2xl">
+            <CardHeader className="text-center">
+              <CardTitle className="text-2xl text-white font-bold">Security Verification</CardTitle>
+              <CardDescription className="text-slate-300">
+                Please complete the security verification to continue
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <HCaptchaComponent 
+                onVerify={handleCaptchaVerified}
+                onError={handleCaptchaError}
+              />
+              <div className="text-center mt-4">
+                <Button 
+                  variant="ghost" 
+                  onClick={() => setShowCaptcha(false)}
+                  className="text-slate-300 hover:bg-slate-700/50"
+                >
+                  Back to Sign Up
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
-      <div className="absolute inset-0 bg-gradient-to-br from-blue-900/20 via-slate-900/40 to-purple-900/20"></div>
+    <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-800 via-slate-900 to-slate-800">
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-900/90 via-slate-800/95 to-slate-900/90"></div>
       
-      <Card className="w-full max-w-md relative z-10 bg-white/10 backdrop-blur-xl border border-white/20 shadow-2xl">
+      <Card className="w-full max-w-md relative z-10 bg-slate-800/80 backdrop-blur-xl border border-slate-700/50 shadow-2xl">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="p-3 bg-blue-600/20 backdrop-blur-sm rounded-full border border-blue-400/30">
-              <UserPlus className="w-6 h-6 text-blue-300" />
+            <div className="p-3 bg-blue-600/20 backdrop-blur-sm rounded-full border border-blue-500/30">
+              <UserPlus className="w-6 h-6 text-blue-400" />
             </div>
           </div>
           <CardTitle className="text-2xl text-white font-bold">Create Account</CardTitle>
-          <CardDescription className="text-blue-200 font-medium">
-            Join Mouritech Support and get your unique user ID
+          <CardDescription className="text-slate-300 font-medium">
+            Join Authexa Support and get your unique user ID
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -170,7 +180,7 @@ const SignUp = () => {
             <Button
               onClick={() => handleSocialSignIn('google')}
               disabled={socialLoading !== null}
-              className="w-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 text-white font-medium"
+              className="w-full bg-slate-700/50 hover:bg-slate-600/50 backdrop-blur-sm border border-slate-600/50 text-white font-medium"
               variant="outline"
             >
               {socialLoading === 'google' ? (
@@ -201,7 +211,7 @@ const SignUp = () => {
             <Button
               onClick={() => handleSocialSignIn('azure')}
               disabled={socialLoading !== null}
-              className="w-full bg-white/10 hover:bg-white/20 backdrop-blur-sm border border-white/20 text-white font-medium"
+              className="w-full bg-slate-700/50 hover:bg-slate-600/50 backdrop-blur-sm border border-slate-600/50 text-white font-medium"
               variant="outline"
             >
               {socialLoading === 'azure' ? (
@@ -209,19 +219,19 @@ const SignUp = () => {
               ) : (
                 <svg className="mr-2 h-4 w-4" viewBox="0 0 24 24">
                   <path
-                    fill="#00BCF2"
+                    fill="#5059C9"
                     d="M9.5 10.5h3v3h-3v-3z"
                   />
                   <path
-                    fill="#00BCF2"
+                    fill="#5059C9"
                     d="M14.5 10.5h3v3h-3v-3z"
                   />
                   <path
-                    fill="#00BCF2"
+                    fill="#5059C9"
                     d="M9.5 5.5h3v3h-3v-3z"
                   />
                   <path
-                    fill="#00BCF2"
+                    fill="#5059C9"
                     d="M14.5 15.5h3v3h-3v-3z"
                   />
                 </svg>
@@ -232,10 +242,10 @@ const SignUp = () => {
 
           <div className="relative mb-6">
             <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-white/20" />
+              <span className="w-full border-t border-slate-600/50" />
             </div>
             <div className="relative flex justify-center text-xs uppercase">
-              <span className="bg-transparent px-2 text-blue-200 font-medium">Or continue with email</span>
+              <span className="bg-slate-800/80 px-2 text-slate-300 font-medium">Or continue with email</span>
             </div>
           </div>
 
@@ -250,7 +260,7 @@ const SignUp = () => {
                 value={formData.name}
                 onChange={handleChange}
                 placeholder="Enter your full name"
-                className="bg-white/10 backdrop-blur-sm border-white/20 text-white placeholder:text-white/60 font-medium focus:border-blue-400 focus:ring-blue-400/20"
+                className="bg-slate-700/50 backdrop-blur-sm border-slate-600/50 text-white placeholder:text-slate-400 font-medium focus:border-blue-500 focus:ring-blue-500/20"
               />
             </div>
             
@@ -264,7 +274,7 @@ const SignUp = () => {
                 value={formData.email}
                 onChange={handleChange}
                 placeholder="Enter your email"
-                className="bg-white/10 backdrop-blur-sm border-white/20 text-white placeholder:text-white/60 font-medium focus:border-blue-400 focus:ring-blue-400/20"
+                className="bg-slate-700/50 backdrop-blur-sm border-slate-600/50 text-white placeholder:text-slate-400 font-medium focus:border-blue-500 focus:ring-blue-500/20"
               />
             </div>
             
@@ -279,7 +289,7 @@ const SignUp = () => {
                 value={formData.password}
                 onChange={handleChange}
                 placeholder="Enter your password (min. 6 characters)"
-                className="bg-white/10 backdrop-blur-sm border-white/20 text-white placeholder:text-white/60 font-medium focus:border-blue-400 focus:ring-blue-400/20"
+                className="bg-slate-700/50 backdrop-blur-sm border-slate-600/50 text-white placeholder:text-slate-400 font-medium focus:border-blue-500 focus:ring-blue-500/20"
               />
             </div>
             
@@ -293,7 +303,7 @@ const SignUp = () => {
                 value={formData.confirmPassword}
                 onChange={handleChange}
                 placeholder="Confirm your password"
-                className="bg-white/10 backdrop-blur-sm border-white/20 text-white placeholder:text-white/60 font-medium focus:border-blue-400 focus:ring-blue-400/20"
+                className="bg-slate-700/50 backdrop-blur-sm border-slate-600/50 text-white placeholder:text-slate-400 font-medium focus:border-blue-500 focus:ring-blue-500/20"
               />
             </div>
             
@@ -309,9 +319,9 @@ const SignUp = () => {
             </Button>
           </form>
           
-          <div className="mt-6 text-center text-sm text-blue-200 font-medium">
+          <div className="mt-6 text-center text-sm text-slate-300 font-medium">
             Already have an account?{' '}
-            <Link to="/signin" className="text-blue-300 hover:text-blue-200 hover:underline font-medium">
+            <Link to="/signin" className="text-blue-400 hover:text-blue-300 hover:underline font-medium">
               Sign in
             </Link>
           </div>

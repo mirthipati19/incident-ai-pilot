@@ -3,7 +3,7 @@ import { useEffect, useRef } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
-export const useSessionTimeout = (timeoutMinutes: number = 2) => {
+export const useSessionTimeout = (timeoutMinutes: number = 1.67) => { // 100 seconds = 1.67 minutes
   const { signOut, user } = useAuth();
   const { toast } = useToast();
   const timeoutRef = useRef<NodeJS.Timeout>();
@@ -18,17 +18,17 @@ export const useSessionTimeout = (timeoutMinutes: number = 2) => {
     }
 
     if (user) {
-      // Warning at 30 seconds before timeout
-      const warningTime = (timeoutMinutes * 60 - 30) * 1000;
+      // Warning at 20 seconds before timeout (80 seconds)
+      const warningTime = (timeoutMinutes * 60 - 20) * 1000;
       warningTimeoutRef.current = setTimeout(() => {
         toast({
           title: "Session Warning",
-          description: "Your session will expire in 30 seconds due to inactivity.",
+          description: "Your session will expire in 20 seconds due to inactivity.",
           variant: "destructive"
         });
       }, warningTime);
 
-      // Actual timeout
+      // Actual timeout at 100 seconds
       timeoutRef.current = setTimeout(() => {
         toast({
           title: "Session Expired",
