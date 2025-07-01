@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PromptAnimator from '@/components/Assistant/PromptAnimator';
@@ -8,7 +9,7 @@ import IncidentDetails from '@/components/Incidents/IncidentDetails';
 import IncidentResolutionPopup from '@/components/IncidentResolutionPopup';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { HeadphonesIcon, List, CheckCircle, XCircle, Clock, MessageCircle, Phone, AlertTriangle, Settings, LogOut } from 'lucide-react';
+import { HeadphonesIcon, List, CheckCircle, XCircle, Clock, MessageCircle, Phone, AlertTriangle, Settings, LogOut, Shield } from 'lucide-react';
 import { useImprovedAuth } from '@/contexts/ImprovedAuthContext';
 import { incidentService, type Incident } from '@/services/incidentService';
 import { useToast } from '@/hooks/use-toast';
