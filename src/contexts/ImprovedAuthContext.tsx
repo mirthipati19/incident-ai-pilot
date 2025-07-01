@@ -124,22 +124,22 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
     try {
       logAuthEvent('Sign up attempt', { email });
       
-      // Require captcha token
-      if (!captchaToken) {
-        return { success: false, error: 'Security verification required' };
-      }
-      
+      // Updated signup with proper email redirect
       const signUpOptions: any = {
         email,
         password,
         options: {
           emailRedirectTo: `${window.location.origin}/signin`,
-          captchaToken,
           data: {
             name: name
           }
         }
       };
+
+      // Add captcha token if provided
+      if (captchaToken) {
+        signUpOptions.options.captchaToken = captchaToken;
+      }
 
       const { data, error } = await supabase.auth.signUp(signUpOptions);
 
@@ -183,12 +183,12 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
       logAuthEvent('Sign in attempt', { email, isAdmin: isAdmin ? '(Admin)' : '(User)' });
       
       if (isAdmin) {
-        // Use direct admin login
-        const result = await adminDirectLogin(email, password, captchaToken);
+        // Use direct admin login (no captcha required initially)
+        const result = await adminDirectLogin(email, password);
         return result;
       } else {
-        // Use regular user login with MFA
-        const result = await regularUserLogin(email, password, captchaToken);
+        // Use regular user login with MFA (no captcha required initially)
+        const result = await regularUserLogin(email, password);
         return result;
       }
     } catch (error) {
@@ -233,7 +233,7 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
       signIn,
       signOut,
       verifyMFA,
-      isDevelopmentMode: false, // Always false now
+      isDevelopmentMode: false,
     }}>
       {children}
     </ImprovedAuthContext.Provider>

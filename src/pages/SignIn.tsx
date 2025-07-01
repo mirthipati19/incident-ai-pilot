@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useImprovedAuth } from "@/contexts/ImprovedAuthContext";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Eye, EyeOff, Mail, Lock, Shield, Bot, Zap, Users, BarChart3 } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, Shield, Bot, Zap, Users, BarChart3, Home } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import ImprovedHCaptcha from "@/components/ImprovedHCaptcha";
 
@@ -18,7 +18,6 @@ const SignIn = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
   const [requiresMFA, setRequiresMFA] = useState(false);
   const [mfaCode, setMfaCode] = useState("");
   const [isMfaLoading, setIsMfaLoading] = useState(false);
@@ -27,10 +26,6 @@ const SignIn = () => {
   const { signIn, verifyMFA } = useImprovedAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-
-  const handleCaptchaVerify = (token: string) => {
-    setCaptchaToken(token);
-  };
 
   const handleMfaCaptchaVerify = (token: string) => {
     setMfaCaptchaToken(token);
@@ -46,26 +41,15 @@ const SignIn = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!captchaToken) {
-      toast({
-        title: "Security Verification Required",
-        description: "Please complete the security verification.",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsLoading(true);
 
     try {
-      const result = await signIn(email, password, isAdmin, captchaToken);
+      // For admin login, no captcha required initially
+      const result = await signIn(email, password, isAdmin);
       
       if (result.success) {
         if (result.requiresMFA) {
           setRequiresMFA(true);
-          // Clear the initial captcha token since we'll need a new one for MFA
-          setCaptchaToken(null);
           toast({
             title: "Verification Required",
             description: "We've sent a verification code to your email.",
@@ -124,7 +108,7 @@ const SignIn = () => {
       if (result.success) {
         toast({
           title: "Access Granted",
-          description: "Welcome to your ITSM portal!",
+          description: "Welcome to Authexa Self Service Portal!",
         });
         navigate(result.isAdmin ? "/admin" : "/itsm");
       } else {
@@ -134,7 +118,6 @@ const SignIn = () => {
           variant: "destructive",
         });
         setMfaCode("");
-        // Reset MFA captcha token so user gets a fresh one
         setMfaCaptchaToken(null);
       }
     } catch (error) {
@@ -151,7 +134,6 @@ const SignIn = () => {
   const resetForm = () => {
     setRequiresMFA(false);
     setMfaCode("");
-    setCaptchaToken(null);
     setMfaCaptchaToken(null);
   };
 
@@ -234,13 +216,13 @@ const SignIn = () => {
               <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-xl flex items-center justify-center">
                 <Bot className="w-6 h-6 text-white" />
               </div>
-              <h1 className="text-3xl font-bold text-white">Authexa ITSM</h1>
+              <h1 className="text-3xl font-bold text-white">Authexa Self Service Portal</h1>
             </div>
             <h2 className="text-4xl font-bold text-white mb-4">
-              AI-Powered IT Service Management
+              AI-Powered Support Portal
             </h2>
             <p className="text-blue-200 text-lg mb-8">
-              Transform your IT operations with intelligent automation and streamlined workflows
+              Transform your support experience with intelligent automation and streamlined workflows
             </p>
           </div>
           
@@ -270,12 +252,12 @@ const SignIn = () => {
                 <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-500 rounded-lg flex items-center justify-center">
                   <Bot className="w-4 h-4 text-white" />
                 </div>
-                <span className="text-xl font-bold text-gray-800">Authexa ITSM</span>
+                <span className="text-xl font-bold text-gray-800">Authexa Self Service Portal</span>
               </div>
             </div>
             <CardTitle className="text-2xl font-bold text-gray-800">Welcome Back</CardTitle>
             <CardDescription className="text-gray-600 mt-2">
-              Sign in to your ITSM portal
+              Sign in to your support portal
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -330,27 +312,34 @@ const SignIn = () => {
                 </Label>
               </div>
 
-              <ImprovedHCaptcha 
-                onVerify={handleCaptchaVerify}
-                onError={handleCaptchaError}
-              />
-
               <Button 
                 type="submit" 
                 className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 text-lg shadow-lg h-12"
-                disabled={isLoading || !captchaToken}
+                disabled={isLoading}
               >
                 {isLoading ? "Signing In..." : "Sign In"}
               </Button>
             </form>
 
-            <div className="mt-8 text-center">
-              <p className="text-sm text-gray-600">
-                Don't have an account?{" "}
-                <Link to="/signup" className="text-blue-600 hover:text-blue-700 font-medium hover:underline">
-                  Create one here
+            <div className="mt-8 space-y-4">
+              <div className="text-center">
+                <p className="text-sm text-gray-600">
+                  Don't have an account?{" "}
+                  <Link to="/signup" className="text-blue-600 hover:text-blue-700 font-medium hover:underline">
+                    Create one here
+                  </Link>
+                </p>
+              </div>
+              
+              <div className="text-center">
+                <Link 
+                  to="/" 
+                  className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium hover:underline text-sm"
+                >
+                  <Home className="w-4 h-4" />
+                  Back to Home
                 </Link>
-              </p>
+              </div>
             </div>
           </CardContent>
         </Card>

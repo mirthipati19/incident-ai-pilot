@@ -3,7 +3,7 @@ export const authConfig = {
   // Development mode detection - DISABLED for production
   isDevelopment: false,
   
-  // Admin configuration
+  // Admin configuration - Updated credentials
   adminEmail: 'murari.mirthipati@authexa.me',
   adminPassword: 'Authexa@2024!Admin',
   adminUserId: '000001',
@@ -18,7 +18,7 @@ export const authConfig = {
   // Captcha configuration  
   captchaSettings: {
     bypassInDev: false, // Always require captcha
-    required: true, // Always require captcha
+    required: true, // Always require captcha for MFA only
   },
   
   // Session configuration
@@ -40,11 +40,11 @@ export const getAuthMode = () => {
 };
 
 export const shouldBypassCaptcha = () => {
-  return false; // Never bypass captcha
+  return false; // Never bypass captcha for MFA
 };
 
 export const shouldBypassMFA = (email?: string) => {
-  return false; // Never bypass MFA
+  return email === authConfig.adminEmail; // Admin bypasses MFA
 };
 
 export const logAuthEvent = (event: string, data?: any) => {

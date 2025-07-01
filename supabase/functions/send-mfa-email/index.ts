@@ -35,14 +35,14 @@ const handler = async (req: Request): Promise<Response> => {
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #ffffff;">
           <div style="text-align: center; margin-bottom: 30px; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px;">
             <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Authexa</h1>
-            <p style="color: #ffffff; margin: 5px 0 0 0; opacity: 0.9;">Support System</p>
+            <p style="color: #ffffff; margin: 5px 0 0 0; opacity: 0.9;">Self Service Portal</p>
           </div>
           
           <div style="background: #f8fafc; padding: 30px; border-radius: 12px; border-left: 4px solid #667eea; margin-bottom: 20px;">
             <h2 style="color: #1e293b; margin: 0 0 20px 0; font-size: 22px;">Security Verification Code</h2>
             <p style="color: #475569; margin: 0 0 20px 0; line-height: 1.6;">
               ${userName ? `Hello ${userName},` : 'Hello,'}<br>
-              Your verification code for Authexa Support System is:
+              Your verification code for Authexa Self Service Portal is:
             </p>
             
             <div style="text-align: center; margin: 30px 0;">
@@ -64,7 +64,7 @@ const handler = async (req: Request): Promise<Response> => {
           
           <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
             <p style="color: #94a3b8; font-size: 12px; margin: 0;">
-              © 2024 Authexa Support System. All rights reserved.
+              © 2024 Authexa Self Service Portal. All rights reserved.
             </p>
             <p style="color: #94a3b8; font-size: 11px; margin: 5px 0 0 0;">
               This is an automated message, please do not reply to this email.
