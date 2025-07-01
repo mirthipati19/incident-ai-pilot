@@ -5,7 +5,7 @@ export const authConfig = {
   
   // Admin configuration
   adminEmail: 'murari.mirthipati@authexa.me',
-  adminPassword: 'Qwertyuiop@0987654321',
+  adminPassword: 'Authexa@2024!Admin',
   adminUserId: '000001',
   
   // MFA configuration

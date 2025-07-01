@@ -1,3 +1,4 @@
+
 import * as React from "react"
 import { OTPInput, OTPInputContext } from "input-otp"
 import { Dot } from "lucide-react"
@@ -39,16 +40,16 @@ const InputOTPSlot = React.forwardRef<
     <div
       ref={ref}
       className={cn(
-        "relative flex h-10 w-10 items-center justify-center border-y border-r border-input text-sm transition-all first:rounded-l-md first:border-l last:rounded-r-md",
-        isActive && "z-10 ring-2 ring-ring ring-offset-background",
+        "relative flex h-12 w-12 items-center justify-center border-2 border-slate-300 text-lg font-semibold transition-all first:rounded-l-md first:border-l last:rounded-r-md bg-white text-slate-900",
+        isActive && "z-10 ring-2 ring-blue-500 ring-offset-2 border-blue-500",
         className
       )}
       {...props}
     >
-      {char}
+      <span className="text-lg font-mono">{char}</span>
       {hasFakeCaret && (
         <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <div className="h-4 w-px animate-caret-blink bg-foreground duration-1000" />
+          <div className="h-6 w-px animate-caret-blink bg-slate-900 duration-1000" />
         </div>
       )}
     </div>

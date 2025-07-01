@@ -22,6 +22,7 @@ const SignIn = () => {
   const [requiresMFA, setRequiresMFA] = useState(false);
   const [mfaCode, setMfaCode] = useState("");
   const [isMfaLoading, setIsMfaLoading] = useState(false);
+  const [mfaCaptchaToken, setMfaCaptchaToken] = useState<string | null>(null);
   
   const { signIn, verifyMFA } = useImprovedAuth();
   const { toast } = useToast();
@@ -29,6 +30,10 @@ const SignIn = () => {
 
   const handleCaptchaVerify = (token: string) => {
     setCaptchaToken(token);
+  };
+
+  const handleMfaCaptchaVerify = (token: string) => {
+    setMfaCaptchaToken(token);
   };
 
   const handleCaptchaError = (error: string) => {
@@ -59,6 +64,8 @@ const SignIn = () => {
       if (result.success) {
         if (result.requiresMFA) {
           setRequiresMFA(true);
+          // Clear the initial captcha token since we'll need a new one for MFA
+          setCaptchaToken(null);
           toast({
             title: "Verification Required",
             description: "We've sent a verification code to your email.",
@@ -100,10 +107,19 @@ const SignIn = () => {
       return;
     }
 
+    if (!mfaCaptchaToken) {
+      toast({
+        title: "Security Verification Required",
+        description: "Please complete the security verification for MFA.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setIsMfaLoading(true);
 
     try {
-      const result = await verifyMFA(email, mfaCode, password, captchaToken);
+      const result = await verifyMFA(email, mfaCode, password, mfaCaptchaToken);
       
       if (result.success) {
         toast({
@@ -118,6 +134,8 @@ const SignIn = () => {
           variant: "destructive",
         });
         setMfaCode("");
+        // Reset MFA captcha token so user gets a fresh one
+        setMfaCaptchaToken(null);
       }
     } catch (error) {
       toast({
@@ -134,6 +152,7 @@ const SignIn = () => {
     setRequiresMFA(false);
     setMfaCode("");
     setCaptchaToken(null);
+    setMfaCaptchaToken(null);
   };
 
   if (requiresMFA) {
@@ -163,21 +182,26 @@ const SignIn = () => {
                   className="gap-2"
                 >
                   <InputOTPGroup>
-                    <InputOTPSlot index={0} className="w-12 h-12 text-lg font-semibold border-2" />
-                    <InputOTPSlot index={1} className="w-12 h-12 text-lg font-semibold border-2" />
-                    <InputOTPSlot index={2} className="w-12 h-12 text-lg font-semibold border-2" />
-                    <InputOTPSlot index={3} className="w-12 h-12 text-lg font-semibold border-2" />
-                    <InputOTPSlot index={4} className="w-12 h-12 text-lg font-semibold border-2" />
-                    <InputOTPSlot index={5} className="w-12 h-12 text-lg font-semibold border-2" />
+                    <InputOTPSlot index={0} />
+                    <InputOTPSlot index={1} />
+                    <InputOTPSlot index={2} />
+                    <InputOTPSlot index={3} />
+                    <InputOTPSlot index={4} />
+                    <InputOTPSlot index={5} />
                   </InputOTPGroup>
                 </InputOTP>
               </div>
+
+              <ImprovedHCaptcha 
+                onVerify={handleMfaCaptchaVerify}
+                onError={handleCaptchaError}
+              />
               
               <div className="space-y-3">
                 <Button 
                   type="submit" 
                   className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 text-lg shadow-lg"
-                  disabled={isMfaLoading || mfaCode.length !== 6}
+                  disabled={isMfaLoading || mfaCode.length !== 6 || !mfaCaptchaToken}
                 >
                   {isMfaLoading ? "Verifying..." : "Verify & Continue"}
                 </Button>
