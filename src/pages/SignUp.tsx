@@ -100,9 +100,9 @@ const SignUp = () => {
       if (result.success) {
         toast({
           title: "Account Created Successfully!",
-          description: "Please check your email to verify your account, then sign in.",
+          description: "Please check your email to verify your account.",
         });
-        navigate("/signin");
+        navigate("/email-confirmation");
       } else {
         toast({
           title: "Sign Up Failed",

@@ -13,7 +13,7 @@ interface AuthUser extends User {
 interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
-  signUp: (email: string, password: string, name: string, captchaToken?: string) => Promise<{ success: boolean; error?: string; userId?: string }>;
+  signUp: (email: string, password: string, name: string, captchaToken?: string) => Promise<{ success: boolean; error?: string; userId?: string; requiresEmailVerification?: boolean }>;
   signIn: (email: string, password: string, isAdmin?: boolean, captchaToken?: string) => Promise<{ success: boolean; error?: string; requiresMFA?: boolean; isAdmin?: boolean }>;
   signOut: () => Promise<void>;
   verifyMFA: (email: string, code: string, password: string, captchaToken?: string) => Promise<{ success: boolean; error?: string; isAdmin?: boolean }>;
@@ -189,7 +189,7 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
         }
 
         logAuthEvent('Sign up successful', { userId });
-        return { success: true, userId };
+        return { success: true, userId, requiresEmailVerification: true };
       }
 
       return { success: false, error: 'User creation failed' };
