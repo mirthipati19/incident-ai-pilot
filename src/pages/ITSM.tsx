@@ -1,15 +1,16 @@
+
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PromptAnimator from '@/components/Assistant/PromptAnimator';
 import CallSupport from '@/components/Assistant/CallSupport';
 import ChatSupport from '@/components/Assistant/ChatSupport';
-import ConnectPermissionPrompt from '@/components/Assistant/ConnectPermissionPrompt';
 import IncidentList from '@/components/Incidents/IncidentList';
 import IncidentDetails from '@/components/Incidents/IncidentDetails';
 import IncidentResolutionPopup from '@/components/IncidentResolutionPopup';
+import VoiceControlledInstaller from '@/components/VoiceControlledInstaller';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { HeadphonesIcon, List, CheckCircle, XCircle, Clock, MessageCircle, Phone, Shield, AlertTriangle, Settings, LogOut } from 'lucide-react';
+import { HeadphonesIcon, List, CheckCircle, XCircle, Clock, MessageCircle, Phone, Settings, LogOut, AlertTriangle } from 'lucide-react';
 import { useImprovedAuth } from '@/contexts/ImprovedAuthContext';
 import { incidentService, type Incident } from '@/services/incidentService';
 import { useToast } from '@/hooks/use-toast';
@@ -20,7 +21,6 @@ const ITSMPage = () => {
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [currentPrompt, setCurrentPrompt] = useState("Welcome to Authexa Support! How can I assist you today?");
   const [incidents, setIncidents] = useState<Incident[]>([]);
-  const [showConnectPrompt, setShowConnectPrompt] = useState(false);
   const [resolutionPopup, setResolutionPopup] = useState<{
     incident: Incident;
     suggestedResolution: string;
@@ -210,9 +210,6 @@ const ITSMPage = () => {
       if (incident) {
         setCurrentPrompt(`I've created incident #${incident.id.slice(0, 8)} for your issue. AI is analyzing the problem and preparing a solution...`);
       }
-    } else if (text.toLowerCase().includes('install') || text.toLowerCase().includes('software')) {
-      setCurrentPrompt('I can help you install software. Would you like me to connect to your device?');
-      setShowConnectPrompt(true);
     } else if (text.toLowerCase().includes('status') || text.toLowerCase().includes('check')) {
       setCurrentPrompt('Let me show you the current incident status dashboard.');
     } else {
@@ -386,19 +383,8 @@ const ITSMPage = () => {
   ];
 
   return (
-    <div 
-      className="min-h-screen relative p-4"
-      style={{
-        backgroundImage: `url('/lovable-uploads/c94935e4-6231-41ae-993c-155a820c9885.png')`,
-        backgroundSize: 'cover',
-        backgroundPosition: 'center',
-        backgroundRepeat: 'no-repeat'
-      }}
-    >
-      {/* Overlay for better readability */}
-      <div className="absolute inset-0 bg-black/30"></div>
-      
-      <div className="relative z-10 max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+      <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="text-center space-y-4">
           <div className="flex items-center justify-center gap-3">
@@ -407,13 +393,13 @@ const ITSMPage = () => {
               alt="Authexa Logo" 
               className="w-12 h-12"
             />
-            <h1 className="text-4xl font-bold text-white drop-shadow-lg">
+            <h1 className="text-4xl font-bold text-slate-800">
               Authexa Support
             </h1>
             <div className="flex gap-2">
               {isAdmin && (
                 <Link to="/admin">
-                  <Button variant="outline" size="sm" className="bg-white/20 text-white border-white/30 hover:bg-white/30">
+                  <Button variant="outline" size="sm" className="bg-white/80 text-slate-700 border-slate-300 hover:bg-white">
                     <Settings className="w-4 h-4 mr-2" />
                     Admin
                   </Button>
@@ -423,18 +409,18 @@ const ITSMPage = () => {
                 variant="outline" 
                 size="sm" 
                 onClick={handleSignOut}
-                className="bg-red-600/20 text-white border-red-400/30 hover:bg-red-600/30"
+                className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
               >
                 <LogOut className="w-4 h-4 mr-2" />
                 Sign Out
               </Button>
             </div>
           </div>
-          <p className="text-lg text-white/90 drop-shadow-md">
+          <p className="text-lg text-slate-600">
             AI-powered IT Service Management with voice, automation and smart device integration
           </p>
           {user?.name && (
-            <p className="text-md text-white/80 drop-shadow-md">
+            <p className="text-md text-slate-500">
               Welcome back, {user.name}! (ID: {user.user_id})
             </p>
           )}
@@ -443,14 +429,14 @@ const ITSMPage = () => {
         {/* Statistics Dashboard */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {statCards.map((stat) => (
-            <Card key={stat.label} className="bg-white/10 backdrop-blur-sm border border-white/20 hover:bg-white/15 transition-all">
+            <Card key={stat.label} className="bg-white/80 backdrop-blur-sm border border-slate-200 hover:bg-white transition-all shadow-sm">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-white/80">{stat.label}</p>
-                    <p className="text-2xl font-bold text-white">{stat.value}</p>
+                    <p className="text-sm font-medium text-slate-600">{stat.label}</p>
+                    <p className="text-2xl font-bold text-slate-800">{stat.value}</p>
                   </div>
-                  <stat.icon className={`w-8 h-8 ${stat.color.replace('text-', 'text-').replace('-600', '-300')}`} />
+                  <stat.icon className={`w-8 h-8 ${stat.color}`} />
                 </div>
               </CardContent>
             </Card>
@@ -460,9 +446,9 @@ const ITSMPage = () => {
         {/* AI Assistant Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Call Support */}
-          <Card className="bg-white/10 backdrop-blur-sm border border-white/20">
+          <Card className="bg-white/80 backdrop-blur-sm border border-slate-200 shadow-sm">
             <CardHeader>
-              <CardTitle className="text-center text-white flex items-center justify-center gap-2">
+              <CardTitle className="text-center text-slate-800 flex items-center justify-center gap-2">
                 <Phone className="w-5 h-5" />
                 Call Support
               </CardTitle>
@@ -474,9 +460,9 @@ const ITSMPage = () => {
           </Card>
 
           {/* Chat Support */}
-          <Card className="bg-white/10 backdrop-blur-sm border border-white/20">
+          <Card className="bg-white/80 backdrop-blur-sm border border-slate-200 shadow-sm">
             <CardHeader>
-              <CardTitle className="text-center text-white flex items-center justify-center gap-2">
+              <CardTitle className="text-center text-slate-800 flex items-center justify-center gap-2">
                 <MessageCircle className="w-5 h-5" />
                 Chat Support
               </CardTitle>
@@ -486,37 +472,26 @@ const ITSMPage = () => {
             </CardContent>
           </Card>
 
-          {/* Device Connection */}
-          <Card className="bg-white/10 backdrop-blur-sm border border-white/20">
+          {/* Windows Batch Script Generator */}
+          <Card className="bg-white/80 backdrop-blur-sm border border-slate-200 shadow-sm">
             <CardHeader>
-              <CardTitle className="text-center text-white flex items-center justify-center gap-2">
-                <Shield className="w-5 h-5" />
-                Smart Agent
+              <CardTitle className="text-center text-slate-800 flex items-center justify-center gap-2">
+                <HeadphonesIcon className="w-5 h-5" />
+                Batch Script Generator
               </CardTitle>
             </CardHeader>
-            <CardContent>
-              {showConnectPrompt ? (
-                <ConnectPermissionPrompt onApproval={() => setShowConnectPrompt(false)} />
-              ) : (
-                <div className="text-center py-8">
-                  <Shield className="w-12 h-12 mx-auto mb-4 text-white/60" />
-                  <p className="text-white/80 text-sm">Ready to connect when needed</p>
-                  <button 
-                    onClick={() => setShowConnectPrompt(true)}
-                    className="mt-3 bg-blue-600/80 hover:bg-blue-700/80 text-white px-4 py-2 rounded-lg text-sm"
-                  >
-                    Request Connection
-                  </button>
-                </div>
-              )}
+            <CardContent className="p-4" style={{ height: '400px' }}>
+              <div className="h-full overflow-y-auto">
+                <VoiceControlledInstaller />
+              </div>
             </CardContent>
           </Card>
         </div>
 
         {/* Main Content - Only Incidents Tab */}
         <Tabs defaultValue="incidents" className="w-full">
-          <TabsList className="grid w-full grid-cols-1 bg-white/10 backdrop-blur-sm border border-white/20">
-            <TabsTrigger value="incidents" className="flex items-center gap-2 text-white data-[state=active]:bg-white/20 data-[state=active]:text-white">
+          <TabsList className="grid w-full grid-cols-1 bg-white/80 backdrop-blur-sm border border-slate-200">
+            <TabsTrigger value="incidents" className="flex items-center gap-2 text-slate-700 data-[state=active]:bg-white data-[state=active]:text-slate-800">
               <List className="w-4 h-4" />
               My Incidents
             </TabsTrigger>
