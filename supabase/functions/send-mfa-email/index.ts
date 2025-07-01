@@ -26,9 +26,9 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log(`📧 Sending MFA code to: ${email}`);
 
-    // Use Resend's verified domain for sending emails
+    // Use your verified domain for sending emails
     const emailResponse = await resend.emails.send({
-      from: "Authexa Support <onboarding@resend.dev>",
+      from: "Authexa Support <noreply@selfservice.authexa.me>",
       to: [email],
       subject: "Your Authexa Verification Code",
       html: `
