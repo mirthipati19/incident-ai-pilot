@@ -15,8 +15,89 @@ export const createAdminUserIfNeeded = async () => {
   try {
     logAuthEvent('Checking/creating admin user');
     
-    // For admin login, we'll verify by attempting authentication
-    return await verifyAdminExists();
+    // Check if admin exists in auth.users using service role
+    const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
+    
+    if (listError) {
+      console.warn('⚠️ Cannot list users with current permissions, trying alternative approach');
+      // Alternative: Check if we can sign in as admin
+      return await verifyAdminExists();
+    }
+    
+    const adminAuthUser = users?.find((user: any) => user.email === authConfig.adminEmail);
+    
+    let adminUserId = adminAuthUser?.id;
+    
+    if (!adminAuthUser) {
+      logAuthEvent('Creating admin auth user');
+      const { data: newAdmin, error: authError } = await supabase.auth.admin.createUser({
+        email: authConfig.adminEmail,
+        password: authConfig.adminPassword,
+        email_confirm: true
+      });
+      
+      if (authError) {
+        console.warn('⚠️ Cannot create admin user with current permissions:', authError);
+        return await verifyAdminExists();
+      }
+      
+      if (!newAdmin.user) {
+        return false;
+      }
+      
+      adminUserId = newAdmin.user.id;
+    }
+    
+    if (!adminUserId) return false;
+    
+    // Check if admin exists in users table
+    const { data: existingUser } = await supabase
+      .from('users')
+      .select('*')
+      .eq('email', authConfig.adminEmail)
+      .single();
+    
+    if (!existingUser) {
+      logAuthEvent('Creating admin user record');
+      const { error: userError } = await supabase
+        .from('users')
+        .insert({
+          id: adminUserId,
+          user_id: authConfig.adminUserId,
+          name: 'Admin User',
+          email: authConfig.adminEmail,
+          password_hash: 'handled_by_supabase'
+        });
+      
+      if (userError) {
+        console.error('❌ Failed to create admin user record:', userError);
+      }
+    }
+    
+    // Ensure admin_users record exists
+    const { data: existingAdmin } = await supabase
+      .from('admin_users')
+      .select('*')
+      .eq('user_id', adminUserId)
+      .single();
+    
+    if (!existingAdmin) {
+      logAuthEvent('Creating admin_users record');
+      const { error: adminError } = await supabase
+        .from('admin_users')
+        .insert({
+          user_id: adminUserId,
+          role: 'admin',
+          permissions: ['view_tickets', 'manage_users', 'view_stats', 'full_admin']
+        });
+      
+      if (adminError) {
+        console.error('❌ Failed to create admin_users record:', adminError);
+      }
+    }
+    
+    logAuthEvent('Admin user setup completed');
+    return true;
   } catch (error) {
     console.error('💥 Error setting up admin user:', error);
     return false;
@@ -32,13 +113,12 @@ const verifyAdminExists = async (): Promise<boolean> => {
     });
     
     if (!error && data.user) {
-      // Admin exists, sign out immediately to prevent session creation
+      // Admin exists, sign out immediately
       await supabase.auth.signOut();
       logAuthEvent('Admin user verified via authentication test');
       return true;
     }
     
-    logAuthEvent('Admin verification failed', { error: error?.message });
     return false;
   } catch (error) {
     console.error('❌ Admin verification failed:', error);
@@ -46,19 +126,33 @@ const verifyAdminExists = async (): Promise<boolean> => {
   }
 };
 
-export const adminDirectLogin = async (email: string, password: string): Promise<AuthResult> => {
+export const adminDirectLogin = async (email: string, password: string, captchaToken?: string): Promise<AuthResult> => {
   try {
     logAuthEvent('Attempting admin direct login', { email });
     
-    // For hardcoded admin, allow direct login without captcha
+    // Require captcha token for admin login
+    if (!captchaToken) {
+      return { success: false, error: 'Security verification required' };
+    }
+    
+    // For hardcoded admin, allow direct login
     if (email === authConfig.adminEmail && password === authConfig.adminPassword) {
       logAuthEvent('Admin credentials detected, processing login');
       
-      // Sign in with Supabase - no captcha required for admin
-      const { data: session, error } = await supabase.auth.signInWithPassword({
+      // Ensure admin user exists
+      const adminSetup = await createAdminUserIfNeeded();
+      if (!adminSetup) {
+        console.warn('⚠️ Admin setup check completed, attempting login anyway');
+      }
+      
+      // Sign in with Supabase - always include captcha token
+      const signInOptions: any = {
         email,
-        password
-      });
+        password,
+        options: { captchaToken }
+      };
+
+      const { data: session, error } = await supabase.auth.signInWithPassword(signInOptions);
       
       logAuthEvent('Admin sign-in session result', { 
         success: !!session?.session, 
@@ -85,22 +179,30 @@ export const adminDirectLogin = async (email: string, password: string): Promise
   }
 };
 
-export const regularUserLogin = async (email: string, password: string): Promise<AuthResult> => {
+export const regularUserLogin = async (email: string, password: string, captchaToken?: string): Promise<AuthResult> => {
   try {
     logAuthEvent('Regular user login with MFA', { email });
     
-    // First, validate credentials by attempting to sign in WITHOUT captcha
-    const { data: testAuth, error: testError } = await supabase.auth.signInWithPassword({
+    // Require captcha token for all logins
+    if (!captchaToken) {
+      return { success: false, error: 'Security verification required' };
+    }
+    
+    // First, validate credentials by attempting to sign in
+    const signInOptions: any = {
       email,
-      password
-    });
+      password,
+      options: { captchaToken }
+    };
+
+    const { data: testAuth, error: testError } = await supabase.auth.signInWithPassword(signInOptions);
     
     if (testError) {
       console.error('❌ Credential validation failed:', testError);
       return { success: false, error: testError.message };
     }
     
-    // Immediately sign out to prevent session creation before MFA
+    // Immediately sign out to prevent session creation
     await supabase.auth.signOut();
     
     // Always send MFA code for regular users
@@ -124,7 +226,7 @@ export const completeMFALogin = async (email: string, password: string, mfaCode:
   try {
     logAuthEvent('Completing MFA login', { email });
     
-    // Require captcha token for MFA completion
+    // Require captcha token
     if (!captchaToken) {
       return { success: false, error: 'Security verification required' };
     }
@@ -137,13 +239,13 @@ export const completeMFALogin = async (email: string, password: string, mfaCode:
     }
     
     // Complete login with captcha token
-    const { data, error } = await supabase.auth.signInWithPassword({
+    const signInOptions: any = {
       email,
       password,
-      options: { 
-        captchaToken 
-      }
-    });
+      options: { captchaToken }
+    };
+
+    const { data, error } = await supabase.auth.signInWithPassword(signInOptions);
 
     if (error || !data.user) {
       return { success: false, error: error?.message || 'Login failed' };
