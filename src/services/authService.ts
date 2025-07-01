@@ -15,113 +15,76 @@ export const createAdminUserIfNeeded = async () => {
   try {
     logAuthEvent('Checking/creating admin user');
     
-    // Check if admin exists in auth.users using service role
-    const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
-    
-    if (listError) {
-      console.warn('⚠️ Cannot list users with current permissions, trying alternative approach');
-      // Alternative: Check if we can sign in as admin
-      return await verifyAdminExists();
-    }
-    
-    const adminAuthUser = users?.find((user: any) => user.email === authConfig.adminEmail);
-    
-    let adminUserId = adminAuthUser?.id;
-    
-    if (!adminAuthUser) {
-      logAuthEvent('Creating admin auth user');
-      const { data: newAdmin, error: authError } = await supabase.auth.admin.createUser({
-        email: authConfig.adminEmail,
-        password: authConfig.adminPassword,
-        email_confirm: true
-      });
-      
-      if (authError) {
-        console.warn('⚠️ Cannot create admin user with current permissions:', authError);
-        return await verifyAdminExists();
-      }
-      
-      if (!newAdmin.user) {
-        return false;
-      }
-      
-      adminUserId = newAdmin.user.id;
-    }
-    
-    if (!adminUserId) return false;
-    
-    // Check if admin exists in users table
-    const { data: existingUser } = await supabase
-      .from('users')
-      .select('*')
-      .eq('email', authConfig.adminEmail)
-      .single();
-    
-    if (!existingUser) {
-      logAuthEvent('Creating admin user record');
-      const { error: userError } = await supabase
-        .from('users')
-        .insert({
-          id: adminUserId,
-          user_id: authConfig.adminUserId,
-          name: 'Admin User',
-          email: authConfig.adminEmail,
-          password_hash: 'handled_by_supabase'
-        });
-      
-      if (userError) {
-        console.error('❌ Failed to create admin user record:', userError);
-      }
-    }
-    
-    // Ensure admin_users record exists
-    const { data: existingAdmin } = await supabase
-      .from('admin_users')
-      .select('*')
-      .eq('user_id', adminUserId)
-      .single();
-    
-    if (!existingAdmin) {
-      logAuthEvent('Creating admin_users record');
-      const { error: adminError } = await supabase
-        .from('admin_users')
-        .insert({
-          user_id: adminUserId,
-          role: 'admin',
-          permissions: ['view_tickets', 'manage_users', 'view_stats', 'full_admin']
-        });
-      
-      if (adminError) {
-        console.error('❌ Failed to create admin_users record:', adminError);
-      }
-    }
-    
-    logAuthEvent('Admin user setup completed');
-    return true;
-  } catch (error) {
-    console.error('💥 Error setting up admin user:', error);
-    return false;
-  }
-};
-
-const verifyAdminExists = async (): Promise<boolean> => {
-  try {
-    // Try to authenticate as admin to verify existence
-    const { data, error } = await supabase.auth.signInWithPassword({
+    // For hardcoded admin, try direct sign-in first to check if user exists
+    const { data: testSignIn, error: testError } = await supabase.auth.signInWithPassword({
       email: authConfig.adminEmail,
       password: authConfig.adminPassword,
     });
     
-    if (!error && data.user) {
-      // Admin exists, sign out immediately
+    if (!testError && testSignIn.user) {
+      // Admin exists and can sign in, sign out immediately
       await supabase.auth.signOut();
-      logAuthEvent('Admin user verified via authentication test');
+      logAuthEvent('Admin user verified via test login');
       return true;
+    }
+    
+    // If admin doesn't exist, try to create via auth
+    if (testError?.message?.includes('Invalid login credentials')) {
+      logAuthEvent('Admin user does not exist, attempting to create');
+      
+      const { data: newAdmin, error: createError } = await supabase.auth.signUp({
+        email: authConfig.adminEmail,
+        password: authConfig.adminPassword,
+        options: {
+          emailRedirectTo: `${window.location.origin}/signin`,
+          data: {
+            name: 'Admin User'
+          }
+        }
+      });
+      
+      if (createError) {
+        console.warn('⚠️ Could not create admin via signup:', createError);
+        return false;
+      }
+      
+      if (newAdmin.user) {
+        // Try to create user profile
+        const { error: profileError } = await supabase
+          .from('users')
+          .insert({
+            id: newAdmin.user.id,
+            user_id: authConfig.adminUserId,
+            name: 'Admin User',
+            email: authConfig.adminEmail,
+            password_hash: 'handled_by_supabase'
+          });
+        
+        if (profileError) {
+          console.warn('⚠️ Could not create admin profile:', profileError);
+        }
+        
+        // Try to create admin_users record
+        const { error: adminError } = await supabase
+          .from('admin_users')
+          .insert({
+            user_id: newAdmin.user.id,
+            role: 'admin',
+            permissions: ['view_tickets', 'manage_users', 'view_stats', 'full_admin']
+          });
+        
+        if (adminError) {
+          console.warn('⚠️ Could not create admin_users record:', adminError);
+        }
+        
+        logAuthEvent('Admin user created successfully');
+        return true;
+      }
     }
     
     return false;
   } catch (error) {
-    console.error('❌ Admin verification failed:', error);
+    console.error('💥 Error in admin setup:', error);
     return false;
   }
 };
@@ -139,13 +102,10 @@ export const adminDirectLogin = async (email: string, password: string, captchaT
     if (email === authConfig.adminEmail && password === authConfig.adminPassword) {
       logAuthEvent('Admin credentials detected, processing login');
       
-      // Ensure admin user exists
-      const adminSetup = await createAdminUserIfNeeded();
-      if (!adminSetup) {
-        console.warn('⚠️ Admin setup check completed, attempting login anyway');
-      }
+      // Ensure admin user exists (but don't fail if it doesn't work)
+      await createAdminUserIfNeeded();
       
-      // Sign in with Supabase - always include captcha token
+      // Sign in with Supabase
       const signInOptions: any = {
         email,
         password,
@@ -154,11 +114,6 @@ export const adminDirectLogin = async (email: string, password: string, captchaT
 
       const { data: session, error } = await supabase.auth.signInWithPassword(signInOptions);
       
-      logAuthEvent('Admin sign-in session result', { 
-        success: !!session?.session, 
-        error: error?.message || 'none' 
-      });
-
       if (error) {
         console.error('❌ Admin auth failed:', error);
         return { success: false, error: error.message };
@@ -205,7 +160,7 @@ export const regularUserLogin = async (email: string, password: string, captchaT
     // Immediately sign out to prevent session creation
     await supabase.auth.signOut();
     
-    // Always send MFA code for regular users
+    // Send MFA code for regular users
     logAuthEvent('Sending MFA code');
     const mfaResult = await sendMFACode(email);
     
@@ -231,7 +186,7 @@ export const completeMFALogin = async (email: string, password: string, mfaCode:
       return { success: false, error: 'Security verification required' };
     }
     
-    // Verify MFA code using updated service
+    // Verify MFA code
     const verifyResult = await verifyMFACode(email, mfaCode);
     
     if (!verifyResult.success) {

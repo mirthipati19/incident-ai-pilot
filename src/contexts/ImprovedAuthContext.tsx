@@ -1,7 +1,8 @@
+
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
-import { adminDirectLogin, regularUserLogin, completeMFALogin, createAdminUserIfNeeded } from '@/services/authService';
+import { adminDirectLogin, regularUserLogin, completeMFALogin } from '@/services/authService';
 import { authConfig, logAuthEvent } from '@/utils/authConfig';
 
 interface AuthUser extends User {
@@ -36,9 +37,6 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     logAuthEvent('Initializing production auth context');
-    
-    // Initialize admin user on startup
-    createAdminUserIfNeeded();
     
     const getSession = async () => {
       try {
@@ -148,26 +146,37 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
       }
 
       if (data.user) {
-        let userId = Math.floor(100000 + Math.random() * 100000).toString();
+        // For now, just return success - user profile will be created on first login
+        // if email confirmation is required by Supabase
+        logAuthEvent('Sign up successful', { needsConfirmation: !data.session });
         
-        // Create user profile
-        const { error: profileError } = await supabase
-          .from('users')
-          .insert({
-            id: data.user.id,
-            user_id: userId,
-            name,
-            email,
-            password_hash: 'handled_by_supabase'
-          });
+        if (data.session) {
+          // User is automatically signed in (email confirmation disabled)
+          let userId = Math.floor(100000 + Math.random() * 100000).toString();
+          
+          // Create user profile
+          const { error: profileError } = await supabase
+            .from('users')
+            .insert({
+              id: data.user.id,
+              user_id: userId,
+              name,
+              email,
+              password_hash: 'handled_by_supabase'
+            });
 
-        if (profileError) {
-          console.error('❌ Profile creation error:', profileError);
-          return { success: false, error: 'Failed to create user profile' };
+          if (profileError) {
+            console.error('❌ Profile creation error:', profileError);
+          }
+          
+          return { success: true, userId };
+        } else {
+          // User needs to confirm email
+          return { 
+            success: true, 
+            error: 'Please check your email and click the confirmation link to complete registration.' 
+          };
         }
-
-        logAuthEvent('Sign up successful', { userId });
-        return { success: true, userId };
       }
 
       return { success: false, error: 'User creation failed' };
@@ -232,7 +241,7 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
       signIn,
       signOut,
       verifyMFA,
-      isDevelopmentMode: false, // Always false now
+      isDevelopmentMode: false,
     }}>
       {children}
     </ImprovedAuthContext.Provider>
