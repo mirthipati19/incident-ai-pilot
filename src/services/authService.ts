@@ -46,11 +46,11 @@ const verifyAdminExists = async (): Promise<boolean> => {
   }
 };
 
-export const adminDirectLogin = async (email: string, password: string, captchaToken?: string): Promise<AuthResult> => {
+export const adminDirectLogin = async (email: string, password: string): Promise<AuthResult> => {
   try {
     logAuthEvent('Attempting admin direct login', { email });
     
-    // For hardcoded admin, allow direct login without captcha initially
+    // For hardcoded admin, allow direct login without captcha
     if (email === authConfig.adminEmail && password === authConfig.adminPassword) {
       logAuthEvent('Admin credentials detected, processing login');
       
@@ -85,11 +85,11 @@ export const adminDirectLogin = async (email: string, password: string, captchaT
   }
 };
 
-export const regularUserLogin = async (email: string, password: string, captchaToken?: string): Promise<AuthResult> => {
+export const regularUserLogin = async (email: string, password: string): Promise<AuthResult> => {
   try {
     logAuthEvent('Regular user login with MFA', { email });
     
-    // First, validate credentials by attempting to sign in
+    // First, validate credentials by attempting to sign in WITHOUT captcha
     const { data: testAuth, error: testError } = await supabase.auth.signInWithPassword({
       email,
       password
@@ -137,13 +137,13 @@ export const completeMFALogin = async (email: string, password: string, mfaCode:
     }
     
     // Complete login with captcha token
-    const signInOptions: any = {
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
-      options: { captchaToken }
-    };
-
-    const { data, error } = await supabase.auth.signInWithPassword(signInOptions);
+      options: { 
+        captchaToken 
+      }
+    });
 
     if (error || !data.user) {
       return { success: false, error: error?.message || 'Login failed' };

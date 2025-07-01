@@ -15,7 +15,7 @@ interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
   signUp: (email: string, password: string, name: string, captchaToken?: string) => Promise<{ success: boolean; error?: string; userId?: string }>;
-  signIn: (email: string, password: string, isAdmin?: boolean, captchaToken?: string) => Promise<{ success: boolean; error?: string; requiresMFA?: boolean; isAdmin?: boolean }>;
+  signIn: (email: string, password: string, isAdmin?: boolean) => Promise<{ success: boolean; error?: string; requiresMFA?: boolean; isAdmin?: boolean }>;
   signOut: () => Promise<void>;
   verifyMFA: (email: string, code: string, password: string, captchaToken?: string) => Promise<{ success: boolean; error?: string; isAdmin?: boolean }>;
   isDevelopmentMode: boolean;
@@ -178,16 +178,16 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
     }
   };
 
-  const signIn = async (email: string, password: string, isAdmin = false, captchaToken?: string) => {
+  const signIn = async (email: string, password: string, isAdmin = false) => {
     try {
       logAuthEvent('Sign in attempt', { email, isAdmin: isAdmin ? '(Admin)' : '(User)' });
       
       if (isAdmin) {
-        // Use direct admin login (no captcha required initially)
+        // Use direct admin login (no captcha required)
         const result = await adminDirectLogin(email, password);
         return result;
       } else {
-        // Use regular user login with MFA (no captcha required initially)
+        // Use regular user login with MFA (no captcha required for initial login)
         const result = await regularUserLogin(email, password);
         return result;
       }
