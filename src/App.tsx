@@ -1,3 +1,4 @@
+
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,7 +16,6 @@ import AdminPortal from "./pages/AdminPortal";
 import NotFound from "./pages/NotFound";
 import ProtectedRoute from "./components/ProtectedRoute";
 import AdminRoute from "./components/AdminRoute";
-import EmailConfirmation from "./pages/EmailConfirmation";
 
 const queryClient = new QueryClient();
 
@@ -57,7 +57,6 @@ function App() {
                     </AdminRoute>
                   }
                 />
-                <Route path="/email-confirmation" element={<EmailConfirmation />} />
                 <Route path="*" element={<NotFound />} />
               </Routes>
             </BrowserRouter>

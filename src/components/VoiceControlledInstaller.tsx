@@ -1,10 +1,10 @@
-
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { Mic, MicOff, Download, Loader2, RefreshCw } from 'lucide-react';
+import { Mic, MicOff, Download, MessageSquare, Send, Loader2, RefreshCw } from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // Initialize Gemini AI
@@ -50,9 +50,12 @@ interface SpeechRecognitionInstance {
 const VoiceControlledInstaller = () => {
   const [isListening, setIsListening] = useState(false);
   const [transcript, setTranscript] = useState('');
-  const [textInput, setTextInput] = useState('');
+  const [chatInput, setChatInput] = useState('');
   const [generatedScript, setGeneratedScript] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
+  const [chatMessages, setChatMessages] = useState([
+    { id: 1, text: "Hi! I can help you generate Windows batch files for software installation. Just tell me what software you need!", isBot: true }
+  ]);
   const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
 
   const softwareLibrary = {
@@ -102,7 +105,7 @@ const VoiceControlledInstaller = () => {
         if (finalTranscript) {
           console.log('🗣️ Speech recognized:', finalTranscript);
           setTranscript(finalTranscript.trim());
-          setTextInput(finalTranscript.trim());
+          setChatInput(finalTranscript.trim());
         }
       };
 
@@ -230,21 +233,39 @@ Software request: ${input}`;
   };
 
   const handleGenerate = async () => {
-    const inputText = textInput || transcript;
+    const inputText = chatInput || transcript;
     if (!inputText.trim()) return;
 
     console.log('🚀 Generating script for input:', inputText);
     setIsGenerating(true);
     
+    // Add user message to chat
+    const userMessage = { id: Date.now(), text: inputText, isBot: false };
+    setChatMessages(prev => [...prev, userMessage]);
+
     try {
       // Generate batch script with Gemini AI
       const script = await generateWithGemini(inputText);
       setGeneratedScript(script);
+
+      // Add bot response to chat
+      const botMessage = { 
+        id: Date.now() + 1, 
+        text: `I've generated a Windows batch file using AI for "${inputText}". The script includes error handling and verification steps. You can download it below and run it as administrator.`, 
+        isBot: true 
+      };
+      setChatMessages(prev => [...prev, botMessage]);
     } catch (error) {
       console.error('❌ Script generation failed:', error);
+      const errorMessage = { 
+        id: Date.now() + 1, 
+        text: `Sorry, I encountered an error generating the script for "${inputText}". Please try again or contact support.`, 
+        isBot: true 
+      };
+      setChatMessages(prev => [...prev, errorMessage]);
     }
 
-    setTextInput('');
+    setChatInput('');
     setTranscript('');
     setIsGenerating(false);
     console.log('✅ Script generation completed');
@@ -264,6 +285,11 @@ Software request: ${input}`;
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     console.log('✅ Batch file downloaded successfully');
+  };
+
+  const handleChatSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleGenerate();
   };
 
   const refreshCaptcha = () => {
@@ -291,10 +317,14 @@ Software request: ${input}`;
         </CardHeader>
         <CardContent>
           <Tabs defaultValue="voice" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 bg-slate-700/50">
+            <TabsList className="grid w-full grid-cols-3 bg-slate-700/50">
               <TabsTrigger value="voice" className="data-[state=active]:bg-slate-600/50">
                 <Mic className="w-4 h-4 mr-2" />
                 Voice Input
+              </TabsTrigger>
+              <TabsTrigger value="chat" className="data-[state=active]:bg-slate-600/50">
+                <MessageSquare className="w-4 h-4 mr-2" />
+                AI Chat
               </TabsTrigger>
               <TabsTrigger value="text" className="data-[state=active]:bg-slate-600/50">
                 Text Input
@@ -345,12 +375,53 @@ Software request: ${input}`;
               </div>
             </TabsContent>
 
+            <TabsContent value="chat" className="space-y-4">
+              <div className="bg-slate-700/50 rounded-lg p-4 h-64 overflow-y-auto">
+                {chatMessages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={`mb-4 ${message.isBot ? 'text-left' : 'text-right'}`}
+                  >
+                    <div
+                      className={`inline-block max-w-[80%] p-3 rounded-lg ${
+                        message.isBot
+                          ? 'bg-blue-600/20 text-blue-100'
+                          : 'bg-slate-600/50 text-white'
+                      }`}
+                    >
+                      {message.text}
+                    </div>
+                  </div>
+                ))}
+                {isGenerating && (
+                  <div className="text-left mb-4">
+                    <div className="inline-block bg-green-600/20 text-green-100 p-3 rounded-lg">
+                      <Loader2 className="w-4 h-4 animate-spin inline mr-2" />
+                      🤖 Gemini AI is generating your batch file...
+                    </div>
+                  </div>
+                )}
+              </div>
+              <form onSubmit={handleChatSubmit} className="flex space-x-2">
+                <Input
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
+                  placeholder="Ask AI to install any software..."
+                  className="bg-slate-700/50 border-slate-600/50 text-white"
+                  disabled={isGenerating}
+                />
+                <Button type="submit" disabled={!chatInput.trim() || isGenerating}>
+                  <Send className="w-4 h-4" />
+                </Button>
+              </form>
+            </TabsContent>
+
             <TabsContent value="text" className="space-y-4">
               <div>
                 <label className="block text-white mb-2">Software Installation Request</label>
                 <Textarea
-                  value={textInput}
-                  onChange={(e) => setTextInput(e.target.value)}
+                  value={chatInput}
+                  onChange={(e) => setChatInput(e.target.value)}
                   placeholder="Type your software installation request (e.g., 'Install Visual Studio Code', 'Download Chrome and Firefox')"
                   className="bg-slate-700/50 border-slate-600/50 text-white min-h-[100px]"
                 />
@@ -361,7 +432,7 @@ Software request: ${input}`;
           <div className="mt-6 text-center">
             <Button
               onClick={handleGenerate}
-              disabled={!textInput.trim() && !transcript.trim() || isGenerating}
+              disabled={!chatInput.trim() && !transcript.trim() || isGenerating}
               className="bg-green-600 hover:bg-green-700 text-white px-8 py-2"
             >
               {isGenerating ? (
@@ -398,7 +469,7 @@ Software request: ${input}`;
           <div className="mt-6 bg-slate-700/50 p-4 rounded-lg">
             <h4 className="text-white font-semibold mb-2">🤖 AI-Enhanced Instructions:</h4>
             <ul className="text-slate-300 text-sm space-y-1">
-              <li>• Use voice input or type your software installation request</li>
+              <li>• Use voice input, chat with AI, or type your software installation request</li>
               <li>• Google Gemini AI generates intelligent batch scripts with error handling</li>
               <li>• Scripts include verification, fallbacks, and user-friendly feedback</li>
               <li>• Download the generated .bat file and run it as administrator</li>

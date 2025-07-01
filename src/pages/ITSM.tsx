@@ -1,15 +1,15 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PromptAnimator from '@/components/Assistant/PromptAnimator';
 import CallSupport from '@/components/Assistant/CallSupport';
 import ChatSupport from '@/components/Assistant/ChatSupport';
+import ConnectPermissionPrompt from '@/components/Assistant/ConnectPermissionPrompt';
 import IncidentList from '@/components/Incidents/IncidentList';
 import IncidentDetails from '@/components/Incidents/IncidentDetails';
 import IncidentResolutionPopup from '@/components/IncidentResolutionPopup';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { HeadphonesIcon, List, CheckCircle, XCircle, Clock, MessageCircle, Phone, AlertTriangle, Settings, LogOut, Shield } from 'lucide-react';
+import { HeadphonesIcon, List, CheckCircle, XCircle, Clock, MessageCircle, Phone, Shield, AlertTriangle, Settings, LogOut } from 'lucide-react';
 import { useImprovedAuth } from '@/contexts/ImprovedAuthContext';
 import { incidentService, type Incident } from '@/services/incidentService';
 import { useToast } from '@/hooks/use-toast';
@@ -20,6 +20,7 @@ const ITSMPage = () => {
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
   const [currentPrompt, setCurrentPrompt] = useState("Welcome to Authexa Support! How can I assist you today?");
   const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [showConnectPrompt, setShowConnectPrompt] = useState(false);
   const [resolutionPopup, setResolutionPopup] = useState<{
     incident: Incident;
     suggestedResolution: string;
@@ -209,10 +210,13 @@ const ITSMPage = () => {
       if (incident) {
         setCurrentPrompt(`I've created incident #${incident.id.slice(0, 8)} for your issue. AI is analyzing the problem and preparing a solution...`);
       }
+    } else if (text.toLowerCase().includes('install') || text.toLowerCase().includes('software')) {
+      setCurrentPrompt('I can help you install software. Would you like me to connect to your device?');
+      setShowConnectPrompt(true);
     } else if (text.toLowerCase().includes('status') || text.toLowerCase().includes('check')) {
       setCurrentPrompt('Let me show you the current incident status dashboard.');
     } else {
-      setCurrentPrompt('I can help you with incident management, status checks, or creating new tickets. Please describe your issue.');
+      setCurrentPrompt('I can help you with incident management, software installation, status checks, or creating new tickets. Please describe your issue.');
     }
   };
 
@@ -491,15 +495,20 @@ const ITSMPage = () => {
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-center py-8">
-                <Shield className="w-12 h-12 mx-auto mb-4 text-white/60" />
-                <p className="text-white/80 text-sm">Ready to connect when needed</p>
-                <button 
-                  className="mt-3 bg-blue-600/80 hover:bg-blue-700/80 text-white px-4 py-2 rounded-lg text-sm"
-                >
-                  Request Connection
-                </button>
-              </div>
+              {showConnectPrompt ? (
+                <ConnectPermissionPrompt onApproval={() => setShowConnectPrompt(false)} />
+              ) : (
+                <div className="text-center py-8">
+                  <Shield className="w-12 h-12 mx-auto mb-4 text-white/60" />
+                  <p className="text-white/80 text-sm">Ready to connect when needed</p>
+                  <button 
+                    onClick={() => setShowConnectPrompt(true)}
+                    className="mt-3 bg-blue-600/80 hover:bg-blue-700/80 text-white px-4 py-2 rounded-lg text-sm"
+                  >
+                    Request Connection
+                  </button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
