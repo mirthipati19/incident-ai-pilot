@@ -3,66 +3,101 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { ImprovedAuthProvider } from "@/contexts/ImprovedAuthContext";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "@/contexts/ImprovedAuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
-import DevModeIndicator from "@/components/DevModeIndicator";
-import Index from "./pages/Index";
-import ITSM from "./pages/ITSM";
-import SignIn from "./pages/SignIn";
-import SignUp from "./pages/SignUp";
-import AdminDashboard from "./pages/AdminDashboard";
-import AdminPortal from "./pages/AdminPortal";
-import NotFound from "./pages/NotFound";
-import ProtectedRoute from "./components/ProtectedRoute";
-import AdminRoute from "./components/AdminRoute";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import AdminRoute from "@/components/AdminRoute";
+import { MainNavigation } from "@/components/Navigation/MainNavigation";
+import Index from "@/pages/Index";
+import SignIn from "@/pages/SignIn";
+import SignUp from "@/pages/SignUp";
+import ITSM from "@/pages/ITSM";
+import AdminDashboard from "@/pages/AdminDashboard";
+import AdminPortal from "@/pages/AdminPortal";
+import ServiceCatalogPage from "@/pages/ServiceCatalog";
+import KnowledgeBasePage from "@/pages/KnowledgeBase";
+import AssetManagementPage from "@/pages/AssetManagement";
+import NotFound from "@/pages/NotFound";
+import "./App.css";
 
 const queryClient = new QueryClient();
 
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider>
-        <ImprovedAuthProvider>
-          <TooltipProvider>
+      <TooltipProvider>
+        <ThemeProvider>
+          <AuthProvider>
             <Toaster />
             <Sonner />
-            <DevModeIndicator />
             <BrowserRouter>
-              <Routes>
-                <Route path="/" element={<Index />} />
-                <Route path="/signin" element={<SignIn />} />
-                <Route path="/signup" element={<SignUp />} />
-                <Route
-                  path="/itsm"
-                  element={
+              <div className="min-h-screen bg-gray-50">
+                <Routes>
+                  {/* Public routes */}
+                  <Route path="/signin" element={<SignIn />} />
+                  <Route path="/signup" element={<SignUp />} />
+                  
+                  {/* Protected routes with navigation */}
+                  <Route path="/" element={
                     <ProtectedRoute>
+                      <MainNavigation />
+                      <Index />
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="/itsm" element={
+                    <ProtectedRoute>
+                      <MainNavigation />
                       <ITSM />
                     </ProtectedRoute>
-                  }
-                />
-                <Route
-                  path="/admin"
-                  element={
+                  } />
+                  
+                  <Route path="/service-catalog" element={
+                    <ProtectedRoute>
+                      <MainNavigation />
+                      <ServiceCatalogPage />
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="/knowledge-base" element={
+                    <ProtectedRoute>
+                      <MainNavigation />
+                      <KnowledgeBasePage />
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="/asset-management" element={
+                    <ProtectedRoute>
+                      <MainNavigation />
+                      <AssetManagementPage />
+                    </ProtectedRoute>
+                  } />
+                  
+                  {/* Admin routes */}
+                  <Route path="/admin" element={
                     <AdminRoute>
-                      <AdminDashboard />
-                    </AdminRoute>
-                  }
-                />
-                <Route
-                  path="/admin-portal"
-                  element={
-                    <AdminRoute>
+                      <MainNavigation />
                       <AdminPortal />
                     </AdminRoute>
-                  }
-                />
-                <Route path="*" element={<NotFound />} />
-              </Routes>
+                  } />
+                  
+                  <Route path="/admin/dashboard" element={
+                    <AdminRoute>
+                      <MainNavigation />
+                      <AdminDashboard />
+                    </AdminRoute>
+                  } />
+                  
+                  {/* Fallback routes */}
+                  <Route path="/404" element={<NotFound />} />
+                  <Route path="*" element={<Navigate to="/404" replace />} />
+                </Routes>
+              </div>
             </BrowserRouter>
-          </TooltipProvider>
-        </ImprovedAuthProvider>
-      </ThemeProvider>
+          </AuthProvider>
+        </ThemeProvider>
+      </TooltipProvider>
     </QueryClientProvider>
   );
 }

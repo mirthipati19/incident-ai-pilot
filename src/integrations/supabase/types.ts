@@ -80,6 +80,218 @@ export type Database = {
           },
         ]
       }
+      approval_workflows: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          updated_at: string
+          workflow_steps: Json
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          updated_at?: string
+          workflow_steps?: Json
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          updated_at?: string
+          workflow_steps?: Json
+        }
+        Relationships: []
+      }
+      article_feedback: {
+        Row: {
+          article_id: string
+          created_at: string
+          feedback_text: string | null
+          id: string
+          is_helpful: boolean
+          user_id: string
+        }
+        Insert: {
+          article_id: string
+          created_at?: string
+          feedback_text?: string | null
+          id?: string
+          is_helpful: boolean
+          user_id: string
+        }
+        Update: {
+          article_id?: string
+          created_at?: string
+          feedback_text?: string | null
+          id?: string
+          is_helpful?: boolean
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "article_feedback_article_id_fkey"
+            columns: ["article_id"]
+            isOneToOne: false
+            referencedRelation: "knowledge_articles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      asset_license_assignments: {
+        Row: {
+          asset_id: string
+          assigned_at: string
+          assigned_by: string
+          id: string
+          license_id: string
+        }
+        Insert: {
+          asset_id: string
+          assigned_at?: string
+          assigned_by: string
+          id?: string
+          license_id: string
+        }
+        Update: {
+          asset_id?: string
+          assigned_at?: string
+          assigned_by?: string
+          id?: string
+          license_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_license_assignments_asset_id_fkey"
+            columns: ["asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_license_assignments_license_id_fkey"
+            columns: ["license_id"]
+            isOneToOne: false
+            referencedRelation: "software_licenses"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      asset_relationships: {
+        Row: {
+          child_asset_id: string
+          created_at: string
+          description: string | null
+          id: string
+          parent_asset_id: string
+          relationship_type: string
+        }
+        Insert: {
+          child_asset_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          parent_asset_id: string
+          relationship_type: string
+        }
+        Update: {
+          child_asset_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          parent_asset_id?: string
+          relationship_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "asset_relationships_child_asset_id_fkey"
+            columns: ["child_asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "asset_relationships_parent_asset_id_fkey"
+            columns: ["parent_asset_id"]
+            isOneToOne: false
+            referencedRelation: "assets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assets: {
+        Row: {
+          asset_tag: string
+          asset_type: string
+          assigned_to: string | null
+          category: string
+          cost: number | null
+          created_at: string
+          current_value: number | null
+          depreciation_rate: number | null
+          id: string
+          location: string | null
+          manufacturer: string | null
+          model: string | null
+          name: string
+          purchase_date: string | null
+          serial_number: string | null
+          specifications: Json | null
+          status: string
+          updated_at: string
+          warranty_expiry: string | null
+        }
+        Insert: {
+          asset_tag: string
+          asset_type: string
+          assigned_to?: string | null
+          category: string
+          cost?: number | null
+          created_at?: string
+          current_value?: number | null
+          depreciation_rate?: number | null
+          id?: string
+          location?: string | null
+          manufacturer?: string | null
+          model?: string | null
+          name: string
+          purchase_date?: string | null
+          serial_number?: string | null
+          specifications?: Json | null
+          status?: string
+          updated_at?: string
+          warranty_expiry?: string | null
+        }
+        Update: {
+          asset_tag?: string
+          asset_type?: string
+          assigned_to?: string | null
+          category?: string
+          cost?: number | null
+          created_at?: string
+          current_value?: number | null
+          depreciation_rate?: number | null
+          id?: string
+          location?: string | null
+          manufacturer?: string | null
+          model?: string | null
+          name?: string
+          purchase_date?: string | null
+          serial_number?: string | null
+          specifications?: Json | null
+          status?: string
+          updated_at?: string
+          warranty_expiry?: string | null
+        }
+        Relationships: []
+      }
       captcha_verifications: {
         Row: {
           attempts: number | null
@@ -110,6 +322,95 @@ export type Database = {
           session_id?: string
           solution?: string
           verified?: boolean | null
+        }
+        Relationships: []
+      }
+      community_answers: {
+        Row: {
+          author_id: string
+          content: string
+          created_at: string
+          downvotes: number | null
+          id: string
+          is_accepted: boolean | null
+          question_id: string
+          updated_at: string
+          upvotes: number | null
+        }
+        Insert: {
+          author_id: string
+          content: string
+          created_at?: string
+          downvotes?: number | null
+          id?: string
+          is_accepted?: boolean | null
+          question_id: string
+          updated_at?: string
+          upvotes?: number | null
+        }
+        Update: {
+          author_id?: string
+          content?: string
+          created_at?: string
+          downvotes?: number | null
+          id?: string
+          is_accepted?: boolean | null
+          question_id?: string
+          updated_at?: string
+          upvotes?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_answers_question_id_fkey"
+            columns: ["question_id"]
+            isOneToOne: false
+            referencedRelation: "community_questions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_questions: {
+        Row: {
+          accepted_answer_id: string | null
+          author_id: string
+          content: string
+          created_at: string
+          downvotes: number | null
+          id: string
+          status: string
+          tags: string[] | null
+          title: string
+          updated_at: string
+          upvotes: number | null
+          view_count: number | null
+        }
+        Insert: {
+          accepted_answer_id?: string | null
+          author_id: string
+          content: string
+          created_at?: string
+          downvotes?: number | null
+          id?: string
+          status?: string
+          tags?: string[] | null
+          title: string
+          updated_at?: string
+          upvotes?: number | null
+          view_count?: number | null
+        }
+        Update: {
+          accepted_answer_id?: string | null
+          author_id?: string
+          content?: string
+          created_at?: string
+          downvotes?: number | null
+          id?: string
+          status?: string
+          tags?: string[] | null
+          title?: string
+          updated_at?: string
+          upvotes?: number | null
+          view_count?: number | null
         }
         Relationships: []
       }
@@ -182,6 +483,66 @@ export type Database = {
           },
         ]
       }
+      knowledge_articles: {
+        Row: {
+          author_id: string
+          category: string
+          content: string
+          created_at: string
+          helpful_votes: number | null
+          id: string
+          is_auto_generated: boolean | null
+          search_vector: unknown | null
+          source_incident_id: string | null
+          status: string
+          summary: string | null
+          tags: string[] | null
+          title: string
+          unhelpful_votes: number | null
+          updated_at: string
+          version: number | null
+          view_count: number | null
+        }
+        Insert: {
+          author_id: string
+          category: string
+          content: string
+          created_at?: string
+          helpful_votes?: number | null
+          id?: string
+          is_auto_generated?: boolean | null
+          search_vector?: unknown | null
+          source_incident_id?: string | null
+          status?: string
+          summary?: string | null
+          tags?: string[] | null
+          title: string
+          unhelpful_votes?: number | null
+          updated_at?: string
+          version?: number | null
+          view_count?: number | null
+        }
+        Update: {
+          author_id?: string
+          category?: string
+          content?: string
+          created_at?: string
+          helpful_votes?: number | null
+          id?: string
+          is_auto_generated?: boolean | null
+          search_vector?: unknown | null
+          source_incident_id?: string | null
+          status?: string
+          summary?: string | null
+          tags?: string[] | null
+          title?: string
+          unhelpful_votes?: number | null
+          updated_at?: string
+          version?: number | null
+          view_count?: number | null
+        }
+        Relationships: []
+      }
       mfa_tokens: {
         Row: {
           created_at: string
@@ -233,6 +594,206 @@ export type Database = {
           logo_url?: string | null
           name?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      service_catalog: {
+        Row: {
+          approval_workflow_id: string | null
+          category: string
+          created_at: string
+          created_by: string
+          description: string | null
+          estimated_fulfillment_hours: number | null
+          icon: string | null
+          id: string
+          is_active: boolean
+          name: string
+          requires_approval: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          approval_workflow_id?: string | null
+          category: string
+          created_at?: string
+          created_by: string
+          description?: string | null
+          estimated_fulfillment_hours?: number | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          requires_approval?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          approval_workflow_id?: string | null
+          category?: string
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          estimated_fulfillment_hours?: number | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          requires_approval?: boolean | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      service_requests: {
+        Row: {
+          approval_status: string | null
+          approved_at: string | null
+          approver_id: string | null
+          created_at: string
+          description: string | null
+          fulfilled_at: string | null
+          id: string
+          priority: string
+          requested_data: Json | null
+          service_catalog_id: string
+          sla_due_date: string | null
+          status: string
+          title: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          approval_status?: string | null
+          approved_at?: string | null
+          approver_id?: string | null
+          created_at?: string
+          description?: string | null
+          fulfilled_at?: string | null
+          id?: string
+          priority?: string
+          requested_data?: Json | null
+          service_catalog_id: string
+          sla_due_date?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          approval_status?: string | null
+          approved_at?: string | null
+          approver_id?: string | null
+          created_at?: string
+          description?: string | null
+          fulfilled_at?: string | null
+          id?: string
+          priority?: string
+          requested_data?: Json | null
+          service_catalog_id?: string
+          sla_due_date?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_requests_service_catalog_id_fkey"
+            columns: ["service_catalog_id"]
+            isOneToOne: false
+            referencedRelation: "service_catalog"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sla_policies: {
+        Row: {
+          created_at: string
+          description: string | null
+          escalation_rules: Json | null
+          id: string
+          is_active: boolean | null
+          name: string
+          priority: string
+          resolution_time_hours: number
+          response_time_hours: number
+          service_category: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          escalation_rules?: Json | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          priority: string
+          resolution_time_hours: number
+          response_time_hours: number
+          service_category: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          escalation_rules?: Json | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          priority?: string
+          resolution_time_hours?: number
+          response_time_hours?: number
+          service_category?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      software_licenses: {
+        Row: {
+          compliance_status: string | null
+          cost: number | null
+          created_at: string
+          expiry_date: string | null
+          id: string
+          license_key: string | null
+          license_type: string
+          maintenance_expiry: string | null
+          purchase_date: string | null
+          software_name: string
+          total_licenses: number
+          updated_at: string
+          used_licenses: number | null
+          vendor: string | null
+        }
+        Insert: {
+          compliance_status?: string | null
+          cost?: number | null
+          created_at?: string
+          expiry_date?: string | null
+          id?: string
+          license_key?: string | null
+          license_type: string
+          maintenance_expiry?: string | null
+          purchase_date?: string | null
+          software_name: string
+          total_licenses: number
+          updated_at?: string
+          used_licenses?: number | null
+          vendor?: string | null
+        }
+        Update: {
+          compliance_status?: string | null
+          cost?: number | null
+          created_at?: string
+          expiry_date?: string | null
+          id?: string
+          license_key?: string | null
+          license_type?: string
+          maintenance_expiry?: string | null
+          purchase_date?: string | null
+          software_name?: string
+          total_licenses?: number
+          updated_at?: string
+          used_licenses?: number | null
+          vendor?: string | null
         }
         Relationships: []
       }
