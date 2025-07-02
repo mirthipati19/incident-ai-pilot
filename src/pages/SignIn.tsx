@@ -1,150 +1,63 @@
 
-import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { useToast } from "@/hooks/use-toast";
-import { useImprovedAuth } from "@/contexts/ImprovedAuthContext";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Eye, EyeOff, Mail, Lock, Shield, Bot, Zap, Users, BarChart3, RefreshCw } from "lucide-react";
-import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import ImprovedHCaptcha from "@/components/ImprovedHCaptcha";
-import { sendMFACode } from "@/services/mfaService";
-import { supabase } from "@/integrations/supabase/client";
+import { useState, useEffect } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { useToast } from '@/hooks/use-toast';
+import { Eye, EyeOff, Mail, Lock, Shield, RefreshCw } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { ImprovedHCaptcha } from '@/components/ImprovedHCaptcha';
+import { mfaService } from '@/services/mfaService';
 
 const SignIn = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [formData, setFormData] = useState({
+    email: '',
+    password: ''
+  });
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
-  const [requiresMFA, setRequiresMFA] = useState(false);
-  const [mfaCode, setMfaCode] = useState("");
+  const [showMFA, setShowMFA] = useState(false);
+  const [mfaCode, setMfaCode] = useState('');
   const [isMfaLoading, setIsMfaLoading] = useState(false);
-  const [mfaCaptchaToken, setMfaCaptchaToken] = useState<string | null>(null);
-  const [otpAttempts, setOtpAttempts] = useState(0);
-  const [isResending, setIsResending] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(0);
-  const [showResetPassword, setShowResetPassword] = useState(false);
-  const [resetEmail, setResetEmail] = useState("");
-  const [isResettingPassword, setIsResettingPassword] = useState(false);
-  
-  const { signIn, verifyMFA } = useImprovedAuth();
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaKey, setCaptchaKey] = useState(0);
+  const [resetEmail, setResetEmail] = useState('');
+  const [showResetForm, setShowResetForm] = useState(false);
+  const [isResetLoading, setIsResetLoading] = useState(false);
+
   const { toast } = useToast();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
 
-  const handleCaptchaVerify = (token: string) => {
-    setCaptchaToken(token);
-  };
-
-  const handleMfaCaptchaVerify = (token: string) => {
-    setMfaCaptchaToken(token);
-  };
-
-  const handleCaptchaError = (error: string) => {
-    toast({
-      title: "Security Verification Failed",
-      description: "Please try the security verification again.",
-      variant: "destructive",
-    });
-  };
-
-  const handlePasswordReset = async () => {
-    if (!resetEmail) {
+  useEffect(() => {
+    if (searchParams.get('registered') === 'true') {
       toast({
-        title: "Email Required",
-        description: "Please enter your email address.",
-        variant: "destructive",
+        title: 'Registration Successful!',
+        description: 'Please check your email to verify your account before signing in.',
       });
-      return;
     }
+  }, [searchParams, toast]);
 
-    setIsResettingPassword(true);
-    try {
-      // Use Supabase's built-in password reset without captcha
-      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
-        redirectTo: `${window.location.origin}/signin`,
-      });
-
-      if (error) {
-        toast({
-          title: "Reset Failed",
-          description: error.message,
-          variant: "destructive",
-        });
-      } else {
-        toast({
-          title: "Reset Email Sent",
-          description: "Check your email for password reset instructions.",
-        });
-        setShowResetPassword(false);
-        setResetEmail("");
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to send reset email.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsResettingPassword(false);
-    }
+  const refreshCaptcha = () => {
+    setCaptchaToken(null);
+    setCaptchaKey(prev => prev + 1);
   };
 
-  const handleResendMFA = async () => {
-    if (resendCooldown > 0) return;
-    
-    setIsResending(true);
-    try {
-      const result = await sendMFACode(email);
-      if (result.success) {
-        toast({
-          title: "Code Resent",
-          description: "A new verification code has been sent to your email.",
-        });
-        
-        setOtpAttempts(0);
-        setMfaCode("");
-        setResendCooldown(60);
-        
-        const timer = setInterval(() => {
-          setResendCooldown((prev) => {
-            if (prev <= 1) {
-              clearInterval(timer);
-              return 0;
-            }
-            return prev - 1;
-          });
-        }, 1000);
-      } else {
-        toast({
-          title: "Resend Failed",
-          description: result.error || "Failed to resend verification code.",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to resend verification code.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsResending(false);
-    }
+  const resetForm = () => {
+    setFormData({ email: '', password: '' });
+    refreshCaptcha();
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!captchaToken) {
       toast({
-        title: "Security Verification Required",
-        description: "Please complete the security verification.",
-        variant: "destructive",
+        title: 'Captcha Required',
+        description: 'Please complete the captcha verification.',
+        variant: 'destructive',
       });
       return;
     }
@@ -152,417 +65,394 @@ const SignIn = () => {
     setIsLoading(true);
 
     try {
-      console.log('🔐 Starting sign-in process for:', email);
-      const result = await signIn(email, password, isAdmin, captchaToken);
-      console.log('🔐 Sign-in result:', result);
+      console.log('🔐 Starting sign in process');
       
-      if (result.success) {
-        if (result.requiresMFA) {
-          console.log('🔐 MFA required, switching to MFA view');
-          setRequiresMFA(true);
-          setCaptchaToken(null);
-          setOtpAttempts(0);
-          toast({
-            title: "Verification Required",
-            description: "We've sent a verification code to your email.",
-          });
-        } else {
-          console.log('🔐 Sign-in successful, navigating to dashboard');
-          toast({
-            title: "Welcome Back!",
-            description: `Successfully signed in${isAdmin ? " as Administrator" : ""}.`,
-          });
-          navigate(isAdmin ? "/admin/dashboard" : "/dashboard");
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          captchaToken: captchaToken
         }
-      } else {
-        console.error('🔐 Sign-in failed:', result.error);
-        toast({
-          title: "Sign In Failed",
-          description: result.error || "Invalid credentials. Please check your email and password.",
-          variant: "destructive",
-        });
+      });
+
+      if (authError) {
+        console.error('🔐 Auth error:', authError);
+        if (authError.message.includes('captcha')) {
+          refreshCaptcha();
+        } else {
+          resetForm();
+        }
+        throw authError;
       }
-    } catch (error) {
-      console.error('🔐 Sign-in error:', error);
+
+      if (!authData.user) {
+        throw new Error('No user data returned');
+      }
+
+      console.log('🔐 Auth successful, sending MFA code');
+      
+      // Send MFA code
+      const mfaResult = await mfaService.sendMFACode(formData.email);
+      if (!mfaResult.success) {
+        throw new Error(mfaResult.error || 'Failed to send MFA code');
+      }
+
+      console.log('🔐 MFA code sent, showing MFA form');
+      setShowMFA(true);
+
       toast({
-        title: "Error",
-        description: "An unexpected error occurred. Please try again.",
-        variant: "destructive",
+        title: 'MFA Code Sent',
+        description: 'Please check your email for the verification code.',
+      });
+
+    } catch (error: any) {
+      console.error('🔐 Sign in error:', error);
+      toast({
+        title: 'Sign In Failed',
+        description: error.message || 'Invalid email or password. Please try again.',
+        variant: 'destructive',
       });
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleMFASubmit = async (e: React.FormEvent) => {
+  const handleMFAVerification = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (mfaCode.length !== 6) {
+    if (!mfaCode.trim()) {
       toast({
-        title: "Invalid Code",
-        description: "Please enter the complete 6-digit verification code.",
-        variant: "destructive",
+        title: 'MFA Code Required',
+        description: 'Please enter the verification code.',
+        variant: 'destructive',
       });
-      return;
-    }
-
-    if (!mfaCaptchaToken) {
-      toast({
-        title: "Security Verification Required",
-        description: "Please complete the security verification for MFA.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (otpAttempts >= 3) {
-      toast({
-        title: "Too Many Attempts",
-        description: "You have exceeded the maximum number of attempts. A new code will be sent.",
-        variant: "destructive",
-      });
-      await handleResendMFA();
       return;
     }
 
     setIsMfaLoading(true);
 
     try {
-      console.log('🔐 Verifying MFA code:', mfaCode);
-      const result = await verifyMFA(email, mfaCode, password, mfaCaptchaToken);
-      console.log('🔐 MFA verification result:', result);
+      console.log('🔐 Verifying MFA code');
       
-      if (result.success) {
-        toast({
-          title: "Access Granted",
-          description: "Welcome to your ITSM portal!",
-        });
-        navigate(result.isAdmin ? "/admin/dashboard" : "/dashboard");
-      } else {
-        const newAttempts = otpAttempts + 1;
-        setOtpAttempts(newAttempts);
-        
-        if (newAttempts >= 3) {
-          toast({
-            title: "Too Many Failed Attempts",
-            description: "Maximum attempts exceeded. A new verification code will be sent.",
-            variant: "destructive",
-          });
-          await handleResendMFA();
-        } else {
-          toast({
-            title: "Verification Failed",
-            description: `${result.error || "Invalid verification code."} Attempts remaining: ${3 - newAttempts}`,
-            variant: "destructive",
-          });
-        }
-        
-        setMfaCode("");
-        setMfaCaptchaToken(null);
+      const result = await mfaService.verifyMFACode(formData.email, mfaCode);
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Invalid verification code');
       }
-    } catch (error) {
+
+      console.log('🔐 MFA verified successfully, redirecting to dashboard');
+      
+      toast({
+        title: 'Sign In Successful',
+        description: 'Welcome back!',
+      });
+
+      navigate('/dashboard');
+
+    } catch (error: any) {
       console.error('🔐 MFA verification error:', error);
       toast({
-        title: "Error",
-        description: "An unexpected error occurred. Please try again.",
-        variant: "destructive",
+        title: 'Verification Failed',
+        description: error.message || 'Invalid verification code. Please try again.',
+        variant: 'destructive',
       });
     } finally {
       setIsMfaLoading(false);
     }
   };
 
-  const resetForm = () => {
-    setRequiresMFA(false);
-    setMfaCode("");
-    setCaptchaToken(null);
-    setMfaCaptchaToken(null);
-    setOtpAttempts(0);
-    setResendCooldown(0);
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!resetEmail.trim()) {
+      toast({
+        title: 'Email Required',
+        description: 'Please enter your email address.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsResetLoading(true);
+
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/signin`
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Reset Email Sent',
+        description: 'Please check your email for password reset instructions.',
+      });
+
+      setShowResetForm(false);
+      setResetEmail('');
+
+    } catch (error: any) {
+      console.error('Password reset error:', error);
+      toast({
+        title: 'Reset Failed',
+        description: error.message || 'Failed to send reset email. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsResetLoading(false);
+    }
   };
 
-  if (requiresMFA) {
+  if (showMFA) {
     return (
-      <div className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center p-4">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDM0di00aC0ydjRoLTR2Mmg0djRoMnYtNGg0di0yaC00em0wLTMwVjBoLTJ2NGgtNHYyaDR2NGgyVjZoNFY0aC00ek02IDM0di00SDR2NEgwdjJoNHY0aDJ2LTRoNHYtMkg2ek02IDRWMEg0djRIMHYyaDR2NEgyVjZoNFY0SDZ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDM0di00aC0ydjRoLTR2Mmg0djRoMnYtNGg0di0yaC00em0wLTMwVjBoLTJ2NGgtNHYyaDR2NGgyVjZoNFY0aC00ek02IDM0di00SDR2NEgwdjJoNHY0aDJ2LTRoNHYtMkg2ek02IDRWMEg0djRIMHYyaDR2NEgyVjZoNFY0SDZ6Ci8+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
         
-        <Card className="w-full max-w-md bg-white/95 backdrop-blur-sm border-0 shadow-2xl">
-          <CardHeader className="text-center pb-8">
-            <div className="mx-auto w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mb-6 shadow-lg">
-              <Shield className="w-8 h-8 text-white" />
-            </div>
-            <CardTitle className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
-              Security Verification
-            </CardTitle>
-            <CardDescription className="text-gray-600 mt-2">
-              Enter the 6-digit code sent to your email
-            </CardDescription>
-            
-            <div className="mt-4">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={handleResendMFA}
-                disabled={isResending || resendCooldown > 0}
-                className="text-sm"
-              >
-                {isResending ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
-                    Sending...
-                  </>
-                ) : resendCooldown > 0 ? (
-                  `Resend in ${resendCooldown}s`
-                ) : (
-                  "Resend Code"
-                )}
-              </Button>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleMFASubmit} className="space-y-6">
-              <div className="flex justify-center">
-                <InputOTP 
-                  maxLength={6} 
-                  value={mfaCode} 
-                  onChange={(value) => setMfaCode(value)}
-                  className="gap-2"
-                >
-                  <InputOTPGroup>
-                    <InputOTPSlot index={0} />
-                    <InputOTPSlot index={1} />
-                    <InputOTPSlot index={2} />
-                    <InputOTPSlot index={3} />
-                    <InputOTPSlot index={4} />
-                    <InputOTPSlot index={5} />
-                  </InputOTPGroup>
-                </InputOTP>
-              </div>
-
-              {otpAttempts > 0 && (
-                <div className="text-center text-sm text-orange-600">
-                  Attempts remaining: {3 - otpAttempts}
+        <div className="relative z-10 w-full max-w-md">
+          <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white shadow-2xl">
+            <CardHeader className="text-center pb-8">
+              <div className="flex items-center justify-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-xl flex items-center justify-center">
+                  <Shield className="w-6 h-6 text-white" />
                 </div>
-              )}
-
-              <ImprovedHCaptcha 
-                onVerify={handleMfaCaptchaVerify}
-                onError={handleCaptchaError}
-              />
+                <div>
+                  <h1 className="text-2xl font-bold">Verify Your Identity</h1>
+                  <p className="text-sm text-blue-200">Authexa ITSM</p>
+                </div>
+              </div>
               
-              <div className="space-y-3">
+              <CardTitle className="text-xl font-bold text-white">Enter Verification Code</CardTitle>
+              <CardDescription className="text-blue-200">
+                We've sent a 6-digit code to your email
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent>
+              <form onSubmit={handleMFAVerification} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="mfaCode" className="text-white font-medium">Verification Code</Label>
+                  <Input
+                    id="mfaCode"
+                    type="text"
+                    placeholder="Enter 6-digit code"
+                    value={mfaCode}
+                    onChange={(e) => setMfaCode(e.target.value)}
+                    className="h-12 bg-white/10 border-white/20 text-white placeholder:text-gray-400 text-center text-lg tracking-widest"
+                    maxLength={6}
+                    required
+                  />
+                </div>
+
                 <Button 
                   type="submit" 
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 text-lg shadow-lg"
-                  disabled={isMfaLoading || mfaCode.length !== 6 || !mfaCaptchaToken}
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 text-lg shadow-lg h-12"
+                  disabled={isMfaLoading}
                 >
-                  {isMfaLoading ? "Verifying..." : "Verify & Continue"}
+                  {isMfaLoading ? "Verifying..." : "Verify & Sign In"}
                 </Button>
-                
-                <Button 
-                  type="button" 
-                  variant="outline" 
-                  className="w-full border-2 hover:bg-gray-50"
-                  onClick={resetForm}
+              </form>
+
+              <div className="mt-6 text-center">
+                <Button
+                  variant="link"
+                  onClick={() => setShowMFA(false)}
+                  className="text-blue-200 hover:text-white"
                 >
                   Back to Sign In
                 </Button>
               </div>
-            </form>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+    );
+  }
+
+  if (showResetForm) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDM0di00aC0ydjRoLTR2Mmg0djRoMnYtNGg0di0yaC00em0wLTMwVjBoLTJ2NGgtNHYyaDR2NGgyVjZoNFY0aC00ek02IDM0di00SDR2NEgwdjJoNHY0aDJ2LTRoNHYtMkg2ek02IDRWMEg0djRIMHYyaDR2NEgyVjZoNFY0SDZ6Ci8+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
+        
+        <div className="relative z-10 w-full max-w-md">
+          <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white shadow-2xl">
+            <CardHeader className="text-center pb-8">
+              <div className="flex items-center justify-center gap-3 mb-6">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-xl flex items-center justify-center">
+                  <Shield className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                  <h1 className="text-2xl font-bold">Reset Password</h1>
+                  <p className="text-sm text-blue-200">Authexa ITSM</p>
+                </div>
+              </div>
+              
+              <CardTitle className="text-xl font-bold text-white">Forgot Your Password?</CardTitle>
+              <CardDescription className="text-blue-200">
+                Enter your email to receive reset instructions
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent>
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="resetEmail" className="text-white font-medium">Email Address</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="resetEmail"
+                      type="email"
+                      placeholder="Enter your email"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      className="pl-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <Button 
+                  type="submit" 
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 text-lg shadow-lg h-12"
+                  disabled={isResetLoading}
+                >
+                  {isResetLoading ? "Sending..." : "Send Reset Instructions"}
+                </Button>
+              </form>
+
+              <div className="mt-6 text-center">
+                <Button
+                  variant="link"
+                  onClick={() => setShowResetForm(false)}
+                  className="text-blue-200 hover:text-white"
+                >
+                  Back to Sign In
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex">
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDM0di00aC0ydjRoLTR2Mmg0djRoMnYtNGg0di0yaC00em0wLTMwVjBoLTJ2NGgtNHYyaDR2NGgyVjZoNFY0aC00ek02IDM0di00SDR2NEgwdjJoNHY0aDJ2LTRoNHYtMkg2ek02IDRWMEg0djRIMHYyaDR2NEgyVjZoNFY0SDZ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDM0di00aC0ydjRoLTR2Mmg0djRoMnYtNGg0di0yaC00em0wLTMwVjBoLTJ2NGgtNHYyaDR2NGgyVjZoNFY0aC00ek02IDM0di00SDR2NEgwdjJoNHY0aDJ2LTRoNHYtMkg2ek02IDRWMEg0djRIMHYyaDR2NEgyVjZoNFY0SDZ6Ci8+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
       
-      {/* Left Side - Branding */}
-      <div className="hidden lg:flex lg:flex-1 items-center justify-center p-12 relative">
-        <div className="max-w-md text-center">
-          <div className="mb-8">
-            <div className="inline-flex items-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-xl flex items-center justify-center">
-                <Bot className="w-6 h-6 text-white" />
-              </div>
-              <h1 className="text-3xl font-bold text-white">Authexa ITSM</h1>
-            </div>
-            <h2 className="text-4xl font-bold text-white mb-4">
-              AI-Powered IT Service Management
-            </h2>
-            <p className="text-blue-200 text-lg mb-8">
-              Transform your IT operations with intelligent automation and streamlined workflows
-            </p>
-          </div>
-          
-          <div className="space-y-4">
-            <div className="flex items-center gap-3 text-blue-100">
-              <Zap className="w-5 h-5 text-blue-400" />
-              <span>Intelligent Ticket Routing</span>
-            </div>
-            <div className="flex items-center gap-3 text-blue-100">
-              <Users className="w-5 h-5 text-purple-400" />
-              <span>Team Collaboration</span>
-            </div>
-            <div className="flex items-center gap-3 text-blue-100">
-              <BarChart3 className="w-5 h-5 text-green-400" />
-              <span>Advanced Analytics</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Right Side - Sign In Form */}
-      <div className="flex-1 flex items-center justify-center p-4 lg:p-12">
-        <Card className="w-full max-w-md bg-white/95 backdrop-blur-sm border-0 shadow-2xl">
+      <div className="relative z-10 w-full max-w-md">
+        <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white shadow-2xl">
           <CardHeader className="text-center pb-8">
-            <div className="lg:hidden mb-6">
-              <div className="inline-flex items-center gap-2 mb-4">
-                <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-500 rounded-lg flex items-center justify-center">
-                  <Bot className="w-4 h-4 text-white" />
-                </div>
-                <span className="text-xl font-bold text-gray-800">Authexa ITSM</span>
+            <div className="flex items-center justify-center gap-3 mb-6">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-xl flex items-center justify-center">
+                <Shield className="w-6 h-6 text-white" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold">Welcome Back</h1>
+                <p className="text-sm text-blue-200">Authexa ITSM</p>
               </div>
             </div>
-            <CardTitle className="text-2xl font-bold text-gray-800">Welcome Back</CardTitle>
-            <CardDescription className="text-gray-600 mt-2">
-              Sign in to your ITSM portal
+            
+            <CardTitle className="text-xl font-bold text-white">Sign In to Your Account</CardTitle>
+            <CardDescription className="text-blue-200">
+              Enter your credentials to access the portal
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            {!showResetPassword ? (
-              <form onSubmit={handleSubmit} className="space-y-6">
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-gray-700 font-medium">Email Address</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="Enter your email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="pl-10 h-12 border-2 focus:border-blue-500"
-                      required
-                    />
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="password" className="text-gray-700 font-medium">Password</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                    <Input
-                      id="password"
-                      type={showPassword ? "text" : "password"}
-                      placeholder="Enter your password"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      className="pl-10 pr-10 h-12 border-2 focus:border-blue-500"
-                      required
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
-                    >
-                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                </div>
 
+          <CardContent>
+            <form onSubmit={handleSignIn} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email" className="text-white font-medium">Email</Label>
+                <div className="relative">
+                  <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="Enter your email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="pl-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-gray-400 focus:border-blue-400"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="password" className="text-white font-medium">Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter your password"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                    className="pl-10 pr-10 h-12 bg-white/10 border-white/20 text-white placeholder:text-gray-400 focus:border-blue-400"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 top-3 text-gray-400 hover:text-white"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+              </div>
+
+              <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="admin"
-                      checked={isAdmin}
-                      onCheckedChange={(checked) => setIsAdmin(checked as boolean)}
-                    />
-                    <Label htmlFor="admin" className="text-sm text-gray-600">
-                      Sign in as Administrator
-                    </Label>
-                  </div>
-                  
+                  <div></div>
                   <Button
                     type="button"
                     variant="link"
-                    onClick={() => setShowResetPassword(true)}
-                    className="text-sm text-blue-600 hover:text-blue-700 p-0"
+                    onClick={() => setShowResetForm(true)}
+                    className="text-blue-200 hover:text-white text-sm p-0"
                   >
-                    Forgot password?
+                    Forgot Password?
                   </Button>
                 </div>
 
-                <ImprovedHCaptcha 
-                  onVerify={handleCaptchaVerify}
-                  onError={handleCaptchaError}
-                />
-
-                <Button 
-                  type="submit" 
-                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 text-lg shadow-lg h-12"
-                  disabled={isLoading || !captchaToken}
-                >
-                  {isLoading ? "Signing In..." : "Sign In"}
-                </Button>
-              </form>
-            ) : (
-              <div className="space-y-6">
-                <div className="text-center">
-                  <h3 className="text-lg font-semibold text-gray-800 mb-2">Reset Your Password</h3>
-                  <p className="text-sm text-gray-600">Enter your email to receive reset instructions</p>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="reset-email" className="text-gray-700 font-medium">Email Address</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                    <Input
-                      id="reset-email"
-                      type="email"
-                      placeholder="Enter your email"
-                      value={resetEmail}
-                      onChange={(e) => setResetEmail(e.target.value)}
-                      className="pl-10 h-12 border-2 focus:border-blue-500"
-                      required
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <ImprovedHCaptcha 
+                      key={captchaKey}
+                      onVerify={setCaptchaToken} 
+                      onError={() => setCaptchaToken(null)}
                     />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={refreshCaptcha}
+                      className="text-blue-200 hover:text-white"
+                    >
+                      <RefreshCw className="w-4 h-4" />
+                    </Button>
                   </div>
                 </div>
-
-                <div className="space-y-3">
-                  <Button 
-                    onClick={handlePasswordReset}
-                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 text-lg shadow-lg h-12"
-                    disabled={isResettingPassword || !resetEmail}
-                  >
-                    {isResettingPassword ? "Sending..." : "Send Reset Email"}
-                  </Button>
-                  
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    className="w-full border-2 hover:bg-gray-50"
-                    onClick={() => {
-                      setShowResetPassword(false);
-                      setResetEmail("");
-                    }}
-                  >
-                    Back to Sign In
-                  </Button>
-                </div>
               </div>
-            )}
+
+              <Button 
+                type="submit" 
+                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 text-lg shadow-lg h-12"
+                disabled={isLoading || !captchaToken}
+              >
+                {isLoading ? "Signing In..." : "Sign In"}
+              </Button>
+            </form>
 
             <div className="mt-8 text-center">
-              <p className="text-sm text-gray-600">
-                Don't have an account?{" "}
-                <Link to="/signup" className="text-blue-600 hover:text-blue-700 font-medium hover:underline">
-                  Create one here
+              <div className="text-sm text-blue-200">
+                Need an account?{" "}
+                <Link to="/signup" className="text-white hover:text-blue-200 font-medium hover:underline">
+                  Sign Up Here
                 </Link>
-              </p>
+              </div>
+              <div className="text-sm text-blue-200 mt-2">
+                Admin?{" "}
+                <Link to="/admin/register" className="text-white hover:text-blue-200 font-medium hover:underline">
+                  Register Organization
+                </Link>
+              </div>
             </div>
           </CardContent>
         </Card>

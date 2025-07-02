@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
-import { Eye, EyeOff, Mail, Lock, User, Building2, Globe, Shield } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, User, Building2, Globe, Shield, Upload, Image } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 
 const AdminRegister = () => {
@@ -22,6 +22,8 @@ const AdminRegister = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [passwordValidation, setPasswordValidation] = useState<string[]>([]);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -43,6 +45,66 @@ const AdminRegister = () => {
       validatePassword(password);
     } else {
       setPasswordValidation([]);
+    }
+  };
+
+  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        toast({
+          title: 'File Too Large',
+          description: 'Logo file must be less than 5MB.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      if (!file.type.startsWith('image/')) {
+        toast({
+          title: 'Invalid File Type',
+          description: 'Please upload an image file.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      setLogoFile(file);
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setLogoPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const uploadLogo = async (organizationId: string) => {
+    if (!logoFile) return null;
+
+    try {
+      const fileExt = logoFile.name.split('.').pop();
+      const fileName = `${organizationId}-logo.${fileExt}`;
+      
+      const { data, error } = await supabase.storage
+        .from('companylogos')
+        .upload(fileName, logoFile, {
+          cacheControl: '3600',
+          upsert: true
+        });
+
+      if (error) {
+        console.error('Logo upload error:', error);
+        throw error;
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('companylogos')
+        .getPublicUrl(fileName);
+
+      return urlData.publicUrl;
+    } catch (error) {
+      console.error('Error uploading logo:', error);
+      return null;
     }
   };
 
@@ -141,6 +203,18 @@ const AdminRegister = () => {
 
       console.log('🏢 Organization created:', orgData);
 
+      // Upload logo if provided
+      let logoUrl = null;
+      if (logoFile) {
+        logoUrl = await uploadLogo(orgData.id);
+        if (logoUrl) {
+          await supabase
+            .from('organizations')
+            .update({ logo_url: logoUrl })
+            .eq('id', orgData.id);
+        }
+      }
+
       // Then create the admin user with Supabase Auth
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
@@ -188,7 +262,7 @@ const AdminRegister = () => {
 
       toast({
         title: 'Registration Successful!',
-        description: 'Your organization and admin account have been created. Please check your email to verify your account.',
+        description: `Your organization "${formData.organizationName}" and admin account have been created. Please check your email to verify your account.`,
       });
 
       // Redirect to admin login with a success message
@@ -230,6 +304,29 @@ const AdminRegister = () => {
 
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Organization Logo */}
+              <div className="space-y-4">
+                <Label className="text-white font-medium">Organization Logo (Optional)</Label>
+                <div className="flex items-center gap-4">
+                  <div className="w-16 h-16 bg-white/10 border border-white/20 rounded-lg flex items-center justify-center overflow-hidden">
+                    {logoPreview ? (
+                      <img src={logoPreview} alt="Logo preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <Image className="w-6 h-6 text-gray-400" />
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <Input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoUpload}
+                      className="bg-white/10 border-white/20 text-white file:bg-blue-600 file:text-white file:border-0 file:rounded file:px-3 file:py-1"
+                    />
+                    <p className="text-xs text-blue-200 mt-1">Max 5MB, PNG/JPG/JPEG</p>
+                  </div>
+                </div>
+              </div>
+
               {/* Organization Details */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">

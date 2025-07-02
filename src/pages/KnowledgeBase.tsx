@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Search, BookOpen, ThumbsUp, ThumbsDown, Eye, Plus, Filter } from 'lucide-react';
 import { ArticleCard } from '@/components/KnowledgeBase/ArticleCard';
 import { ArticleViewer } from '@/components/KnowledgeBase/ArticleViewer';
+import { ArticleForm } from '@/components/KnowledgeBase/ArticleForm';
 import { knowledgeBaseService, KnowledgeArticle } from '@/services/knowledgeBaseService';
 import { useToast } from '@/hooks/use-toast';
 import { useImprovedAuth } from '@/contexts/ImprovedAuthContext';
@@ -19,12 +20,32 @@ const KnowledgeBase = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [selectedArticle, setSelectedArticle] = useState<KnowledgeArticle | null>(null);
+  const [showForm, setShowForm] = useState(false);
+  const [editingArticle, setEditingArticle] = useState<KnowledgeArticle | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
 
   const categories = ['All', 'Hardware', 'Software', 'Network', 'Security', 'General'];
 
   useEffect(() => {
     loadArticles();
-  }, []);
+    checkAdminStatus();
+  }, [user]);
+
+  const checkAdminStatus = async () => {
+    if (!user) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('admin_users')
+        .select('role')
+        .eq('user_id', user.id)
+        .single();
+      
+      setIsAdmin(!!data && data.role === 'admin');
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+    }
+  };
 
   const loadArticles = async () => {
     try {
@@ -112,6 +133,53 @@ const KnowledgeBase = () => {
     }
   };
 
+  const handleCreateArticle = async (articleData: any) => {
+    try {
+      await knowledgeBaseService.createArticle({
+        ...articleData,
+        author_id: user?.id
+      });
+      toast({
+        title: 'Success',
+        description: 'Article created successfully.',
+      });
+      setShowForm(false);
+      loadArticles();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: 'Failed to create article.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleUpdateArticle = async (articleData: any) => {
+    if (!editingArticle) return;
+
+    try {
+      await knowledgeBaseService.updateArticle(editingArticle.id, articleData);
+      toast({
+        title: 'Success',
+        description: 'Article updated successfully.',
+      });
+      setEditingArticle(null);
+      setShowForm(false);
+      loadArticles();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: 'Failed to update article.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleEditArticle = (article: KnowledgeArticle) => {
+    setEditingArticle(article);
+    setShowForm(true);
+  };
+
   const filteredArticles = articles.filter(article => {
     const matchesSearch = article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          article.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -120,15 +188,34 @@ const KnowledgeBase = () => {
     return matchesSearch && matchesCategory;
   });
 
-  if (selectedArticle) {
+  if (showForm) {
     return (
       <div className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 p-4">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDM0di00aC0ydjRoLTR2Mmg0djRoMnYtNGg0di0yaC00em0wLTMwVjBoLTJ2NGgtNHYyaDR2NGgyVjZoNFY0aC00ek02IDM0di00SDR2NEgwdjJoNHY0aDJ2LTRoNHYtMkg2ek02IDRWMEg0djRIMHYyaDR2NEgyVjZoNFY0SDZ6Ci8+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
+        <div className="relative z-10 container mx-auto px-4 py-8">
+          <ArticleForm
+            article={editingArticle}
+            onSubmit={editingArticle ? handleUpdateArticle : handleCreateArticle}
+            onCancel={() => {
+              setShowForm(false);
+              setEditingArticle(null);
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  if (selectedArticle) {
+    return (
+      <div className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 p-4">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWwsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDM0di00aC0ydjRoLTR2Mmg0djRoMnYtNGg0di0yaC00em0wLTMwVjBoLTJ2NGgtNHYyaDR2NEgyVjZoNFY0aC00ek02IDM0di00SDR2NEgwdjJoNHY0aDJ2LTRoNHYtMkg2ek02IDRWMEg0djRIMHYyaDR2NEgyVjZoNFY0SDZ6Ci8+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
         <div className="relative z-10">
           <ArticleViewer
             article={selectedArticle}
             isOpen={true}
             onClose={() => setSelectedArticle(null)}
+            onBack={() => setSelectedArticle(null)}
             onVote={handleFeedback}
           />
         </div>
@@ -138,7 +225,7 @@ const KnowledgeBase = () => {
 
   return (
     <div className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 p-4">
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDM0di00aC0ydjRoLTR2Mmg0djRoMnYtNGg0di0yaC00em0wLTMwVjBoLTJ2NGgtNHYyaDR2NGgyVjZoNFY0aC00ek02IDM0di00SDR2NEgwdjJoNHY0aDJ2LTRoNHYtMkg2ek02IDRWMEg0djRIMHYyaDR2NEgyVjZoNFY0SDZ6Ci8+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDM0di00aC0ydjRoLTR2Mmg0djRoMnYtNGg0di0yaC00em0wLTMwVjBoLTJ2NGgtNHYyaDR2NEgyVjZoNFY0aC00ek02IDM0di00SDR2NEgwdjJoNHY0aDJ2LTRoNHYtMkg2ek02IDRWMEg0djRIMHYyaDR2NEgyVjZoNFY0SDZ6Ci8+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
       
       <div className="relative z-10 container mx-auto px-4 py-8">
         <div className="mb-8">
@@ -149,10 +236,18 @@ const KnowledgeBase = () => {
         {/* Search and Filters */}
         <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white mb-8">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Search className="h-5 w-5" />
-              Search Knowledge Base
-            </CardTitle>
+            <div className="flex justify-between items-center">
+              <CardTitle className="flex items-center gap-2">
+                <Search className="h-5 w-5" />
+                Search Knowledge Base
+              </CardTitle>
+              {isAdmin && (
+                <Button onClick={() => setShowForm(true)} className="bg-blue-600 hover:bg-blue-700">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Article
+                </Button>
+              )}
+            </div>
           </CardHeader>
           <CardContent>
             <div className="flex flex-col md:flex-row gap-4">
@@ -200,6 +295,12 @@ const KnowledgeBase = () => {
               <p className="text-blue-200">
                 {searchTerm ? 'Try adjusting your search terms or filters.' : 'No articles available at the moment.'}
               </p>
+              {isAdmin && (
+                <Button onClick={() => setShowForm(true)} className="mt-4 bg-blue-600 hover:bg-blue-700">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Create First Article
+                </Button>
+              )}
             </CardContent>
           </Card>
         ) : (
@@ -210,6 +311,7 @@ const KnowledgeBase = () => {
                 article={article}
                 onClick={() => handleArticleClick(article)}
                 onVote={handleFeedback}
+                onEdit={isAdmin ? handleEditArticle : undefined}
                 showVoting={true}
               />
             ))}

@@ -10,7 +10,8 @@ import {
   BookOpen,
   Monitor,
   BarChart3,
-  LogOut
+  LogOut,
+  Shield
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -48,8 +49,11 @@ export const MainNavigation: React.FC = () => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center space-x-8">
-            <Link to="/dashboard" className="text-xl font-bold text-gray-900 hover:text-blue-600 transition-colors">
-              Self Service Portal
+            <Link to="/dashboard" className="flex items-center space-x-3 text-xl font-bold text-gray-900 hover:text-blue-600 transition-colors">
+              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                <Shield className="w-5 h-5 text-white" />
+              </div>
+              <span>Self Service Portal</span>
             </Link>
             
             <div className="hidden md:flex items-center space-x-4">
