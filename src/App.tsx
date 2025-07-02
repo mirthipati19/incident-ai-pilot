@@ -4,7 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { AuthProvider } from "@/contexts/ImprovedAuthContext";
+import { ImprovedAuthProvider } from "@/contexts/ImprovedAuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AdminRoute from "@/components/AdminRoute";
@@ -28,7 +28,7 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
         <ThemeProvider>
-          <AuthProvider>
+          <ImprovedAuthProvider>
             <Toaster />
             <Sonner />
             <BrowserRouter>
@@ -95,7 +95,7 @@ function App() {
                 </Routes>
               </div>
             </BrowserRouter>
-          </AuthProvider>
+          </ImprovedAuthProvider>
         </ThemeProvider>
       </TooltipProvider>
     </QueryClientProvider>
