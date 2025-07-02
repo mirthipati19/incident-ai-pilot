@@ -41,7 +41,7 @@ function App() {
             <Sonner />
             <BrowserRouter>
               <SessionManager />
-              <div className="min-h-screen bg-gray-50">
+              <div className="min-h-screen w-full bg-gray-50">
                 <Routes>
                   {/* Public routes - accessible to everyone */}
                   <Route path="/" element={<Index />} />
@@ -52,7 +52,7 @@ function App() {
                   <Route path="/dashboard" element={
                     <ProtectedRoute>
                       <MainNavigation />
-                      <main className="pt-16">
+                      <main className="pt-16 w-full">
                         <Dashboard />
                       </main>
                     </ProtectedRoute>
@@ -61,7 +61,7 @@ function App() {
                   <Route path="/itsm" element={
                     <ProtectedRoute>
                       <MainNavigation />
-                      <main className="pt-16">
+                      <main className="pt-16 w-full">
                         <ITSM />
                       </main>
                     </ProtectedRoute>
@@ -70,7 +70,7 @@ function App() {
                   <Route path="/service-catalog" element={
                     <ProtectedRoute>
                       <MainNavigation />
-                      <main className="pt-16">
+                      <main className="pt-16 w-full">
                         <ServiceCatalogPage />
                       </main>
                     </ProtectedRoute>
@@ -79,7 +79,7 @@ function App() {
                   <Route path="/knowledge-base" element={
                     <ProtectedRoute>
                       <MainNavigation />
-                      <main className="pt-16">
+                      <main className="pt-16 w-full">
                         <KnowledgeBasePage />
                       </main>
                     </ProtectedRoute>
@@ -88,7 +88,7 @@ function App() {
                   <Route path="/asset-management" element={
                     <ProtectedRoute>
                       <MainNavigation />
-                      <main className="pt-16">
+                      <main className="pt-16 w-full">
                         <AssetManagementPage />
                       </main>
                     </ProtectedRoute>
@@ -98,7 +98,7 @@ function App() {
                   <Route path="/admin/dashboard" element={
                     <AdminRoute>
                       <MainNavigation />
-                      <main className="pt-16">
+                      <main className="pt-16 w-full">
                         <AdminDashboard />
                       </main>
                     </AdminRoute>

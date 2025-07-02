@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PromptAnimator from '@/components/Assistant/PromptAnimator';
@@ -7,6 +8,7 @@ import IncidentList from '@/components/Incidents/IncidentList';
 import IncidentDetails from '@/components/Incidents/IncidentDetails';
 import IncidentResolutionPopup from '@/components/IncidentResolutionPopup';
 import ImprovedVoiceInstaller from '@/components/ImprovedVoiceInstaller';
+import SimranAssistant from '@/components/SimranAssistant';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { List, CheckCircle, XCircle, Clock, MessageCircle, Phone, AlertTriangle } from 'lucide-react';
@@ -344,7 +346,7 @@ const ITSMPage = () => {
   ];
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
+    <div className="min-h-screen w-full relative overflow-hidden">
       {/* Enhanced Animated Background */}
       <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900">
         {/* Animated gradient orbs */}
@@ -385,14 +387,14 @@ const ITSMPage = () => {
         }}></div>
       </div>
       
-      <div className="relative z-10 max-w-7xl mx-auto space-y-6 p-4">
+      <div className="relative z-10 max-w-7xl mx-auto space-y-6 p-4 w-full">
         {/* Header */}
         <div className="text-center space-y-4">
           <div className="flex items-center justify-center gap-3">
             <img 
               src="/lovable-uploads/c94935e4-6231-41ae-993c-155a820c9885.png" 
               alt="Authexa Logo" 
-              className="w-12 h-12 drop-shadow-lg"
+              className="w-16 h-16 object-contain drop-shadow-lg"
             />
             <h1 className="text-4xl font-bold bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent">
               Self Service Portal
@@ -406,9 +408,9 @@ const ITSMPage = () => {
         </div>
 
         {/* Statistics Dashboard */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
           {statCards.map((stat) => (
-            <Card key={stat.label} className="bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/15 transition-all shadow-xl hover:shadow-2xl">
+            <Card key={stat.label} className="bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/15 transition-all shadow-xl hover:shadow-2xl w-full">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
@@ -423,13 +425,18 @@ const ITSMPage = () => {
         </div>
 
         {/* AI Assistant Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 w-full">
           {/* Call Support */}
-          <Card className="bg-white/10 backdrop-blur-md border border-white/20 shadow-xl">
+          <Card className="bg-white/10 backdrop-blur-md border border-white/20 shadow-xl w-full">
             <CardHeader>
               <CardTitle className="text-center text-white flex items-center justify-center gap-2">
                 <Phone className="w-5 h-5" />
                 Call Support
+                <img 
+                  src="/lovable-uploads/c94935e4-6231-41ae-993c-155a820c9885.png" 
+                  alt="Authexa" 
+                  className="w-6 h-6 object-contain ml-2"
+                />
               </CardTitle>
             </CardHeader>
             <CardContent className="text-center space-y-4">
@@ -439,11 +446,16 @@ const ITSMPage = () => {
           </Card>
 
           {/* Chat Support */}
-          <Card className="bg-white/10 backdrop-blur-md border border-white/20 shadow-xl">
+          <Card className="bg-white/10 backdrop-blur-md border border-white/20 shadow-xl w-full">
             <CardHeader>
               <CardTitle className="text-center text-white flex items-center justify-center gap-2">
                 <MessageCircle className="w-5 h-5" />
                 Chat Support
+                <img 
+                  src="/lovable-uploads/c94935e4-6231-41ae-993c-155a820c9885.png" 
+                  alt="Authexa" 
+                  className="w-6 h-6 object-contain ml-2"
+                />
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
@@ -452,7 +464,7 @@ const ITSMPage = () => {
           </Card>
 
           {/* Download and Install Software */}
-          <Card className="bg-gradient-to-br from-white/15 to-white/5 backdrop-blur-md border border-white/20 shadow-xl">
+          <Card className="bg-gradient-to-br from-white/15 to-white/5 backdrop-blur-md border border-white/20 shadow-xl w-full">
             <CardContent className="p-4">
               <ImprovedVoiceInstaller />
             </CardContent>
@@ -468,7 +480,7 @@ const ITSMPage = () => {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="incidents" className="mt-6">
+          <TabsContent value="incidents" className="mt-6 w-full">
             <IncidentList 
               userId={user?.id || ''}
               refreshTrigger={refreshTrigger}
@@ -501,6 +513,9 @@ const ITSMPage = () => {
           />
         )}
       </div>
+
+      {/* Simran Assistant */}
+      <SimranAssistant />
       
       <style>{`
         @keyframes float {
