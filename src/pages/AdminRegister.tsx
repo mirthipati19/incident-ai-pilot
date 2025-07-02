@@ -128,14 +128,15 @@ const AdminRegister = () => {
         .from('organizations')
         .insert({
           name: formData.organizationName,
-          domain: formData.domain
+          domain: formData.domain,
+          created_by: null // Will be updated after user creation
         })
         .select()
         .single();
 
       if (orgError) {
         console.error('🏢 Organization creation error:', orgError);
-        throw new Error(orgError.message);
+        throw new Error(`Failed to create organization: ${orgError.message}`);
       }
 
       console.log('🏢 Organization created:', orgData);
@@ -149,19 +150,28 @@ const AdminRegister = () => {
             name: formData.adminName,
             role: 'admin',
             organization_id: orgData.id
-          }
+          },
+          emailRedirectTo: `${window.location.origin}/admin/login`
         }
       });
 
       if (authError) {
         console.error('🏢 Auth user creation error:', authError);
-        throw new Error(authError.message);
+        // Clean up organization if user creation fails
+        await supabase.from('organizations').delete().eq('id', orgData.id);
+        throw new Error(`Failed to create admin user: ${authError.message}`);
       }
 
       console.log('🏢 Auth user created:', authData);
 
-      // Create admin user record
+      // Update organization with created_by
       if (authData.user) {
+        await supabase
+          .from('organizations')
+          .update({ created_by: authData.user.id })
+          .eq('id', orgData.id);
+
+        // Create admin user record
         const { error: adminError } = await supabase
           .from('admin_users')
           .insert({
@@ -181,7 +191,8 @@ const AdminRegister = () => {
         description: 'Your organization and admin account have been created. Please check your email to verify your account.',
       });
 
-      navigate('/signin');
+      // Redirect to admin login with a success message
+      navigate('/admin/login?registered=true');
     } catch (error: any) {
       console.error('🏢 Registration error:', error);
       toast({
@@ -365,7 +376,7 @@ const AdminRegister = () => {
             <div className="mt-8 text-center">
               <div className="text-sm text-blue-200">
                 Already have an admin account?{" "}
-                <Link to="/signin" className="text-white hover:text-blue-200 font-medium hover:underline">
+                <Link to="/admin/login" className="text-white hover:text-blue-200 font-medium hover:underline">
                   Sign In Here
                 </Link>
               </div>

@@ -17,7 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 
 const navigationItems = [
   { path: "/dashboard", label: "Dashboard", icon: BarChart3 },
-  { path: "/itsm", label: "ITSM Portal", icon: Ticket },
+  { path: "/itsm", label: "Self Service Portal", icon: Ticket },
   { path: "/service-catalog", label: "Service Catalog", icon: ShoppingCart },
   { path: "/knowledge-base", label: "Knowledge Base", icon: BookOpen },
   { path: "/asset-management", label: "Asset Management", icon: Monitor },
@@ -44,12 +44,12 @@ export const MainNavigation: React.FC = () => {
   };
 
   return (
-    <nav className="bg-white shadow-sm border-b border-gray-200">
+    <nav className="bg-white shadow-sm border-b border-gray-200 relative z-50">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center space-x-8">
-            <Link to="/dashboard" className="text-xl font-bold text-gray-900">
-              ITSM Portal
+            <Link to="/dashboard" className="text-xl font-bold text-gray-900 hover:text-blue-600 transition-colors">
+              Self Service Portal
             </Link>
             
             <div className="hidden md:flex items-center space-x-4">
@@ -61,11 +61,12 @@ export const MainNavigation: React.FC = () => {
                   <Link
                     key={item.path}
                     to={item.path}
-                    className={`flex items-center space-x-2 px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                    className={`flex items-center space-x-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors relative z-10 ${
                       isActive
-                        ? "bg-blue-100 text-blue-700"
-                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
+                        ? "bg-blue-100 text-blue-700 shadow-sm"
+                        : "text-gray-600 hover:text-gray-900 hover:bg-gray-50"
                     }`}
+                    style={{ pointerEvents: 'auto' }}
                   >
                     <Icon className="h-4 w-4" />
                     <span>{item.label}</span>
@@ -80,7 +81,8 @@ export const MainNavigation: React.FC = () => {
               variant="outline"
               size="sm"
               onClick={handleSignOut}
-              className="flex items-center space-x-2"
+              className="flex items-center space-x-2 relative z-10"
+              style={{ pointerEvents: 'auto' }}
             >
               <LogOut className="h-4 w-4" />
               <span>Sign Out</span>

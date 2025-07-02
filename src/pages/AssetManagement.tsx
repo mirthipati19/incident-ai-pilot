@@ -1,229 +1,301 @@
 
-import React, { useEffect, useState } from "react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Monitor, Plus, Search, Edit, Eye, AlertTriangle } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Badge } from '@/components/ui/badge';
+import { Plus, Search, Filter, Monitor, Smartphone, Laptop, HardDrive, Printer, Wifi } from 'lucide-react';
+import { AssetCard } from '@/components/AssetManagement/AssetCard';
+import { AssetForm } from '@/components/AssetManagement/AssetForm';
+import { assetManagementService } from '@/services/assetManagementService';
+import { useToast } from '@/hooks/use-toast';
+import { useImprovedAuth } from '@/contexts/ImprovedAuthContext';
 
-// Mock data for assets
-const mockAssets = [
-  {
-    id: "1",
-    name: "Dell OptiPlex 7090",
-    asset_tag: "AST001",
-    asset_type: "Desktop",
-    category: "Hardware",
-    status: "active",
-    assigned_to: "john.doe@company.com",
-    location: "Office Floor 1",
-    manufacturer: "Dell",
-    model: "OptiPlex 7090",
-    serial_number: "DL7090001",
-    purchase_date: "2023-01-15",
-    warranty_expiry: "2026-01-15",
-    cost: 1200,
-    current_value: 900
-  },
-  {
-    id: "2",
-    name: "MacBook Pro 16-inch",
-    asset_tag: "AST002",
-    asset_type: "Laptop",
-    category: "Hardware",
-    status: "active",
-    assigned_to: "jane.smith@company.com",
-    location: "Remote",
-    manufacturer: "Apple",
-    model: "MacBook Pro 16-inch",
-    serial_number: "MBP16002",
-    purchase_date: "2023-03-20",
-    warranty_expiry: "2026-03-20",
-    cost: 2500,
-    current_value: 2000
-  },
-  {
-    id: "3",
-    name: "Adobe Creative Suite License",
-    asset_tag: "LIC001",
-    asset_type: "Software",
-    category: "Software",
-    status: "active",
-    assigned_to: "design.team@company.com",
-    location: "Cloud",
-    manufacturer: "Adobe",
-    model: "Creative Suite 2023",
-    serial_number: "ACS2023001",
-    purchase_date: "2023-02-01",
-    warranty_expiry: "2024-02-01",
-    cost: 600,
-    current_value: 300
-  }
-];
+interface Asset {
+  id: string;
+  name: string;
+  asset_tag: string;
+  asset_type: string;
+  category: string;
+  status: string;
+  assigned_to: string | null;
+  location: string | null;
+  manufacturer: string | null;
+  model: string | null;
+  serial_number: string | null;
+  purchase_date: string | null;
+  warranty_expiry: string | null;
+  cost: number | null;
+  created_at: string;
+  updated_at: string;
+}
 
-const AssetManagementPage = () => {
-  const [assets, setAssets] = useState(mockAssets);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [selectedStatus, setSelectedStatus] = useState("All");
+const AssetManagement = () => {
+  const { user } = useImprovedAuth();
   const { toast } = useToast();
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [selectedStatus, setSelectedStatus] = useState('All');
+  const [showForm, setShowForm] = useState(false);
+  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
 
-  const statuses = ["All", "active", "inactive", "maintenance", "retired"];
+  const categories = ['All', 'Hardware', 'Software', 'Network', 'Mobile', 'Peripherals'];
+  const statuses = ['All', 'Active', 'Inactive', 'In Repair', 'Disposed', 'Reserved'];
+
+  const getAssetIcon = (type: string) => {
+    switch (type.toLowerCase()) {
+      case 'laptop':
+      case 'computer':
+        return Laptop;
+      case 'monitor':
+      case 'display':
+        return Monitor;
+      case 'mobile':
+      case 'phone':
+        return Smartphone;
+      case 'storage':
+      case 'drive':
+        return HardDrive;
+      case 'printer':
+        return Printer;
+      case 'network':
+        return Wifi;
+      default:
+        return Monitor;
+    }
+  };
+
+  useEffect(() => {
+    loadAssets();
+  }, []);
+
+  const loadAssets = async () => {
+    try {
+      setLoading(true);
+      const data = await assetManagementService.getAssets();
+      setAssets(data);
+    } catch (error: any) {
+      console.error('Failed to load assets:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load assets.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateAsset = async (assetData: any) => {
+    try {
+      if (!user?.id) {
+        toast({
+          title: 'Authentication Error',
+          description: 'You must be logged in to create assets.',
+          variant: 'destructive',
+        });
+        return;
+      }
+
+      await assetManagementService.createAsset({
+        ...assetData,
+        created_by: user.id
+      });
+      
+      toast({
+        title: 'Success',
+        description: 'Asset created successfully.',
+      });
+      
+      setShowForm(false);
+      loadAssets();
+    } catch (error: any) {
+      console.error('Failed to create asset:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to create asset.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleUpdateAsset = async (assetData: any) => {
+    if (!selectedAsset) return;
+
+    try {
+      await assetManagementService.updateAsset(selectedAsset.id, assetData);
+      
+      toast({
+        title: 'Success',
+        description: 'Asset updated successfully.',
+      });
+      
+      setShowForm(false);
+      setSelectedAsset(null);
+      loadAssets();
+    } catch (error: any) {
+      console.error('Failed to update asset:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to update asset.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const handleDeleteAsset = async (assetId: string) => {
+    try {
+      await assetManagementService.deleteAsset(assetId);
+      
+      toast({
+        title: 'Success',
+        description: 'Asset deleted successfully.',
+      });
+      
+      loadAssets();
+    } catch (error: any) {
+      console.error('Failed to delete asset:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete asset.',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const filteredAssets = assets.filter(asset => {
     const matchesSearch = asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          asset.asset_tag.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         asset.assigned_to?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = selectedStatus === "All" || asset.status === selectedStatus;
-    return matchesSearch && matchesStatus;
+                         (asset.manufacturer && asset.manufacturer.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                         (asset.model && asset.model.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesCategory = selectedCategory === 'All' || asset.category === selectedCategory;
+    const matchesStatus = selectedStatus === 'All' || asset.status === selectedStatus;
+    return matchesSearch && matchesCategory && matchesStatus;
   });
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'bg-green-100 text-green-800';
-      case 'inactive': return 'bg-yellow-100 text-yellow-800';
-      case 'maintenance': return 'bg-orange-100 text-orange-800';
-      case 'retired': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const handleEdit = (asset: any) => {
-    toast({
-      title: "Edit Asset",
-      description: `Editing ${asset.name} - Feature coming soon!`,
-    });
-  };
-
-  const handleViewDetails = (asset: any) => {
-    toast({
-      title: "Asset Details",
-      description: `Viewing details for ${asset.name}`,
-    });
-  };
+  if (showForm) {
+    return (
+      <div className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 p-4">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDM0di00aC0ydjRoLTR2Mmg0djRoMnYtNGg0di0yaC00em0wLTMwVjBoLTJ2NGgtNHYyaDR2NGgyVjZoNFY0aC00ek02IDM0di00SDR2NEgwdjJoNHY0aDJ2LTRoNHYtMkg2ek02IDRWMEg0djRIMHYyaDR2NEgyVjZoNFY0SDZ6Ci8+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
+        <div className="relative z-10">
+          <AssetForm
+            asset={selectedAsset}
+            onSubmit={selectedAsset ? handleUpdateAsset : handleCreateAsset}
+            onCancel={() => {
+              setShowForm(false);
+              setSelectedAsset(null);
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 to-blue-50 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
-        <div className="text-center space-y-4">
-          <div className="flex items-center justify-center gap-3">
-            <Monitor className="w-10 h-10 text-blue-600" />
-            <h1 className="text-4xl font-bold text-gray-900">Asset Management</h1>
+    <div className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 p-4">
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDM0di00aC0ydjRoLTR2Mmg0djRoMnYtNGg0di0yaC00em0wLTMwVjBoLTJ2NGgtNHYyaDR2NGgyVjZoNFY0aC00ek02IDM0di00SDR2NEgwdjJoNHY0aDJ2LTRoNHYtMkg2ek02IDRWMEg0djRIMHYyaDR2NEgyVjZoNFY0SDZ6Ci8+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
+      
+      <div className="relative z-10 container mx-auto px-4 py-8">
+        <div className="flex justify-between items-center mb-8">
+          <div>
+            <h1 className="text-3xl font-bold mb-2 text-white">Asset Management</h1>
+            <p className="text-blue-200">Track and manage your organization's IT assets and equipment.</p>
           </div>
-          <p className="text-lg text-gray-600">Track and manage your organization's hardware and software assets</p>
+          <Button 
+            onClick={() => setShowForm(true)}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Add Asset
+          </Button>
         </div>
 
-        {/* Search and Actions */}
-        <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
-          <div className="flex-1 max-w-md">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <Input
-                placeholder="Search assets..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10"
-              />
-            </div>
-          </div>
-          
-          <div className="flex gap-2 flex-wrap items-center">
-            {statuses.map(status => (
-              <Button
-                key={status}
-                variant={selectedStatus === status ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedStatus(status)}
-                className="whitespace-nowrap capitalize"
+        {/* Search and Filters */}
+        <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white mb-8">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Search className="h-5 w-5" />
+              Search & Filter Assets
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="md:col-span-2">
+                <Input
+                  placeholder="Search by name, tag, manufacturer, or model..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                />
+              </div>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="px-3 py-2 rounded-md bg-white/10 border border-white/20 text-white"
               >
-                {status}
-              </Button>
-            ))}
-            <Button className="flex items-center gap-2">
-              <Plus className="w-4 h-4" />
-              Add Asset
-            </Button>
-          </div>
-        </div>
+                {categories.map(category => (
+                  <option key={category} value={category} className="bg-gray-800">
+                    {category}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className="px-3 py-2 rounded-md bg-white/10 border border-white/20 text-white"
+              >
+                {statuses.map(status => (
+                  <option key={status} value={status} className="bg-gray-800">
+                    {status}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </CardContent>
+        </Card>
 
         {/* Assets Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredAssets.map((asset) => (
-            <Card key={asset.id} className="hover:shadow-lg transition-shadow h-full">
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <Badge className={getStatusColor(asset.status)}>
-                    {asset.status}
-                  </Badge>
-                  <Badge variant="outline">
-                    {asset.asset_tag}
-                  </Badge>
-                </div>
-                <CardTitle className="text-lg">{asset.name}</CardTitle>
-                <CardDescription>
-                  {asset.manufacturer} {asset.model}
-                </CardDescription>
-              </CardHeader>
-              
-              <CardContent className="space-y-4">
-                <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Type:</span>
-                    <span className="font-medium">{asset.asset_type}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Location:</span>
-                    <span className="font-medium">{asset.location}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Assigned to:</span>
-                    <span className="font-medium text-xs">{asset.assigned_to}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Value:</span>
-                    <span className="font-medium">${asset.current_value}</span>
-                  </div>
-                </div>
-
-                {/* Warranty Warning */}
-                {new Date(asset.warranty_expiry) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) && (
-                  <div className="flex items-center gap-2 text-orange-600 text-sm">
-                    <AlertTriangle className="w-4 h-4" />
-                    <span>Warranty expires soon</span>
-                  </div>
-                )}
-                
-                <div className="flex items-center justify-between pt-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => handleViewDetails(asset)}
-                    className="flex items-center gap-1"
-                  >
-                    <Eye className="w-4 h-4" />
-                    View
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => handleEdit(asset)}
-                    className="flex items-center gap-1"
-                  >
-                    <Edit className="w-4 h-4" />
-                    Edit
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-
-        {filteredAssets.length === 0 && (
+        {loading ? (
           <div className="text-center py-12">
-            <Monitor className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">No assets found</h3>
-            <p className="text-gray-500">Try adjusting your search terms or status filter.</p>
+            <div className="inline-block w-8 h-8 border-4 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+            <p className="text-white mt-4">Loading assets...</p>
+          </div>
+        ) : filteredAssets.length === 0 ? (
+          <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white">
+            <CardContent className="text-center py-12">
+              <Monitor className="h-16 w-16 mx-auto mb-4 text-blue-400" />
+              <h3 className="text-xl font-semibold mb-2">No Assets Found</h3>
+              <p className="text-blue-200 mb-4">
+                {searchTerm || selectedCategory !== 'All' || selectedStatus !== 'All' 
+                  ? 'Try adjusting your search terms or filters.' 
+                  : 'Start by adding your first asset to the system.'}
+              </p>
+              {!searchTerm && selectedCategory === 'All' && selectedStatus === 'All' && (
+                <Button 
+                  onClick={() => setShowForm(true)}
+                  className="bg-blue-600 hover:bg-blue-700"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Add Your First Asset
+                </Button>
+              )}
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredAssets.map((asset) => (
+              <AssetCard
+                key={asset.id}
+                asset={asset}
+                onEdit={(asset) => {
+                  setSelectedAsset(asset);
+                  setShowForm(true);
+                }}
+                onDelete={handleDeleteAsset}
+              />
+            ))}
           </div>
         )}
       </div>
@@ -231,4 +303,4 @@ const AssetManagementPage = () => {
   );
 };
 
-export default AssetManagementPage;
+export default AssetManagement;
