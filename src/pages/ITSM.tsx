@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PromptAnimator from '@/components/Assistant/PromptAnimator';
@@ -7,15 +6,15 @@ import ChatSupport from '@/components/Assistant/ChatSupport';
 import IncidentList from '@/components/Incidents/IncidentList';
 import IncidentDetails from '@/components/Incidents/IncidentDetails';
 import IncidentResolutionPopup from '@/components/IncidentResolutionPopup';
-import VoiceControlledInstaller from '@/components/VoiceControlledInstaller';
+import ImprovedVoiceInstaller from '@/components/ImprovedVoiceInstaller';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { HeadphonesIcon, List, CheckCircle, XCircle, Clock, MessageCircle, Phone, Settings, LogOut, AlertTriangle } from 'lucide-react';
+import { List, CheckCircle, XCircle, Clock, MessageCircle, Phone, LogOut, AlertTriangle } from 'lucide-react';
 import { useImprovedAuth } from '@/contexts/ImprovedAuthContext';
 import { incidentService, type Incident } from '@/services/incidentService';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 const ITSMPage = () => {
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
@@ -25,7 +24,6 @@ const ITSMPage = () => {
     incident: Incident;
     suggestedResolution: string;
   } | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
   const [stats, setStats] = useState({
     open: 0,
     inProgress: 0,
@@ -44,25 +42,8 @@ const ITSMPage = () => {
     if (user?.id) {
       loadIncidents();
       loadStats();
-      checkAdminStatus();
     }
   }, [user?.id]);
-
-  const checkAdminStatus = async () => {
-    if (!user?.id) return;
-    
-    try {
-      const { data } = await supabase
-        .from('admin_users')
-        .select('role')
-        .eq('user_id', user.id)
-        .single();
-      
-      setIsAdmin(!!data);
-    } catch (error) {
-      console.log('Not an admin user');
-    }
-  };
 
   const loadIncidents = async () => {
     if (!user?.id) return;
@@ -397,14 +378,6 @@ const ITSMPage = () => {
               Authexa Support
             </h1>
             <div className="flex gap-2">
-              {isAdmin && (
-                <Link to="/admin">
-                  <Button variant="outline" size="sm" className="bg-white/80 text-slate-700 border-slate-300 hover:bg-white">
-                    <Settings className="w-4 h-4 mr-2" />
-                    Admin
-                  </Button>
-                </Link>
-              )}
               <Button 
                 variant="outline" 
                 size="sm" 
@@ -472,18 +445,10 @@ const ITSMPage = () => {
             </CardContent>
           </Card>
 
-          {/* Windows Batch Script Generator */}
+          {/* Improved Batch Script Generator */}
           <Card className="bg-white/80 backdrop-blur-sm border border-slate-200 shadow-sm">
-            <CardHeader>
-              <CardTitle className="text-center text-slate-800 flex items-center justify-center gap-2">
-                <HeadphonesIcon className="w-5 h-5" />
-                Batch Script Generator
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="p-4" style={{ height: '400px' }}>
-              <div className="h-full overflow-y-auto">
-                <VoiceControlledInstaller />
-              </div>
+            <CardContent className="p-4">
+              <ImprovedVoiceInstaller />
             </CardContent>
           </Card>
         </div>

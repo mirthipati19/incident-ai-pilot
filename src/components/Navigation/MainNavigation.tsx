@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { 
   Home, 
   Ticket, 
-  Settings, 
   User, 
   ShoppingCart,
   BookOpen,
@@ -17,12 +16,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 const navigationItems = [
-  { path: "/", label: "Dashboard", icon: Home },
+  { path: "/dashboard", label: "Dashboard", icon: BarChart3 },
   { path: "/itsm", label: "ITSM Portal", icon: Ticket },
   { path: "/service-catalog", label: "Service Catalog", icon: ShoppingCart },
   { path: "/knowledge-base", label: "Knowledge Base", icon: BookOpen },
   { path: "/asset-management", label: "Asset Management", icon: Monitor },
-  { path: "/admin", label: "Admin Portal", icon: Settings },
 ];
 
 export const MainNavigation: React.FC = () => {
@@ -50,7 +48,7 @@ export const MainNavigation: React.FC = () => {
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           <div className="flex items-center space-x-8">
-            <Link to="/" className="text-xl font-bold text-gray-900">
+            <Link to="/dashboard" className="text-xl font-bold text-gray-900">
               ITSM Portal
             </Link>
             

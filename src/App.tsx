@@ -10,11 +10,11 @@ import ProtectedRoute from "@/components/ProtectedRoute";
 import AdminRoute from "@/components/AdminRoute";
 import { MainNavigation } from "@/components/Navigation/MainNavigation";
 import Index from "@/pages/Index";
+import Dashboard from "@/pages/Dashboard";
 import SignIn from "@/pages/SignIn";
 import SignUp from "@/pages/SignUp";
 import ITSM from "@/pages/ITSM";
 import AdminDashboard from "@/pages/AdminDashboard";
-import AdminPortal from "@/pages/AdminPortal";
 import ServiceCatalogPage from "@/pages/ServiceCatalog";
 import KnowledgeBasePage from "@/pages/KnowledgeBase";
 import AssetManagementPage from "@/pages/AssetManagement";
@@ -43,6 +43,13 @@ function App() {
                     <ProtectedRoute>
                       <MainNavigation />
                       <Index />
+                    </ProtectedRoute>
+                  } />
+                  
+                  <Route path="/dashboard" element={
+                    <ProtectedRoute>
+                      <MainNavigation />
+                      <Dashboard />
                     </ProtectedRoute>
                   } />
                   
@@ -75,13 +82,6 @@ function App() {
                   } />
                   
                   {/* Admin routes */}
-                  <Route path="/admin" element={
-                    <AdminRoute>
-                      <MainNavigation />
-                      <AdminPortal />
-                    </AdminRoute>
-                  } />
-                  
                   <Route path="/admin/dashboard" element={
                     <AdminRoute>
                       <MainNavigation />
