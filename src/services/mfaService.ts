@@ -1,153 +1,167 @@
+
 import { supabase } from '@/integrations/supabase/client';
 
-export const sendMFACode = async (email: string): Promise<{ success: boolean; error?: string }> => {
+export interface MFAResult {
+  success: boolean;
+  error?: string;
+}
+
+let currentMFACode: string | null = null;
+let mfaResendCount = 0;
+let lastResendTime = 0;
+
+const generateMFACode = (): string => {
+  return Math.floor(100000 + Math.random() * 900000).toString();
+};
+
+export const sendMFACode = async (email: string): Promise<MFAResult> => {
   try {
-    console.log('📧 Sending MFA code for:', email);
-    
-    // Generate 6-digit OTP
-    const token = Math.floor(100000 + Math.random() * 900000).toString();
-    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes
-
-    console.log('🔑 Generated MFA token for production use');
-    console.log('⏰ Token expires at:', expiresAt);
-
-    // Delete any existing tokens for this email
-    const { error: deleteError } = await supabase
-      .from('mfa_tokens')
-      .delete()
-      .eq('email', email);
-
-    if (deleteError) {
-      console.warn('⚠️ Failed to delete existing tokens:', deleteError);
-    } else {
-      console.log('🗑️ Cleaned up existing tokens');
+    // Rate limiting for resend
+    const now = Date.now();
+    if (now - lastResendTime < 30000) { // 30 seconds between resends
+      return { success: false, error: 'Please wait 30 seconds before requesting another code' };
     }
 
-    // Store new token in database
-    const { error: insertError } = await supabase
+    // Generate new code
+    currentMFACode = generateMFACode();
+    mfaResendCount = 0;
+    lastResendTime = now;
+
+    // Store in database with expiration
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 10); // 10 minutes expiry
+
+    const { error } = await supabase
       .from('mfa_tokens')
       .insert({
-        email,
-        token,
+        email: email,
+        token: currentMFACode,
         expires_at: expiresAt.toISOString()
       });
 
-    if (insertError) {
-      console.error('❌ MFA token insert error:', insertError);
+    if (error) {
+      console.error('MFA token storage error:', error);
       return { success: false, error: 'Failed to generate MFA code' };
     }
 
-    console.log('✅ MFA token stored successfully in database');
-    
-    // Always send email via edge function
-    const { data, error: emailError } = await supabase.functions.invoke('send-mfa-email', {
-      body: { email, code: token }
+    // Call edge function to send email
+    const { error: emailError } = await supabase.functions.invoke('send-mfa-email', {
+      body: {
+        email: email,
+        mfaCode: currentMFACode
+      }
     });
 
     if (emailError) {
-      console.error('❌ Failed to send MFA email:', emailError);
+      console.error('MFA email send error:', emailError);
       return { success: false, error: 'Failed to send MFA code via email' };
     }
 
-    if (!data?.success) {
-      console.error('❌ Email service returned error:', data?.error);
-      return { success: false, error: data?.error || 'Failed to send MFA code' };
-    }
-
-    console.log('✅ MFA email sent successfully');
     return { success: true };
   } catch (error) {
-    console.error('💥 MFA send error:', error);
+    console.error('MFA send error:', error);
     return { success: false, error: 'Failed to send MFA code' };
   }
 };
 
-export const verifyMFACode = async (email: string, token: string): Promise<{ success: boolean; error?: string }> => {
+export const resendMFACode = async (email: string): Promise<MFAResult> => {
   try {
-    console.log('🔍 MFA VERIFICATION ATTEMPT:', { email, token });
+    const now = Date.now();
     
-    // First try the bypass RLS function for secure verification
-    try {
-      const { data: bypassData, error: bypassError } = await supabase
-        .rpc('verify_mfa_token_bypass', { 
-          email_arg: email, 
-          token_arg: token 
-        });
-
-      console.log('🔐 Bypass RLS result:', { 
-        foundToken: !!bypassData?.[0], 
-        error: bypassError?.message || 'none' 
-      });
-
-      if (!bypassError && bypassData && bypassData.length > 0) {
-        const tokenData = bypassData[0];
-        console.log('✅ Token found via bypass:', tokenData.token, 'Exp:', tokenData.expires_at);
-        
-        // Delete used token
-        await supabase
-          .from('mfa_tokens')
-          .delete()
-          .eq('id', tokenData.id);
-        
-        console.log('✅ MFA verification successful via bypass');
-        return { success: true };
-      }
-    } catch (bypassError) {
-      console.warn('⚠️ Bypass RLS failed, falling back to direct query:', bypassError);
-    }
-    
-    // Fallback to direct query
-    const { data, error } = await supabase
-      .from('mfa_tokens')
-      .select('*')
-      .eq('email', email)
-      .eq('token', token)
-      .gte('expires_at', new Date().toISOString())
-      .order('created_at', { ascending: false })
-      .limit(1)
-      .single();
-
-    console.log('📊 Direct MFA verification query result:', { 
-      foundToken: !!data, 
-      error: error?.message || 'none',
-      tokenExpiry: data?.expires_at 
-    });
-
-    if (error || !data) {
-      console.error('❌ MFA verification failed:', error);
-      
-      // Check if token exists but is expired
-      const { data: expiredToken } = await supabase
-        .from('mfa_tokens')
-        .select('*')
-        .eq('email', email)
-        .eq('token', token)
-        .single();
-
-      if (expiredToken) {
-        console.log('⏰ Token found but expired');
-        return { success: false, error: 'MFA code has expired. Please request a new one.' };
-      }
-
-      return { success: false, error: 'Invalid MFA code. Please check and try again.' };
+    // Check resend rate limiting
+    if (now - lastResendTime < 30000) {
+      const remainingTime = Math.ceil((30000 - (now - lastResendTime)) / 1000);
+      return { 
+        success: false, 
+        error: `Please wait ${remainingTime} seconds before requesting another code` 
+      };
     }
 
-    // Delete used token
-    const { error: deleteError } = await supabase
+    // Limit total resends
+    if (mfaResendCount >= 3) {
+      return { success: false, error: 'Maximum resend attempts reached. Please try again later.' };
+    }
+
+    // Generate new code
+    currentMFACode = generateMFACode();
+    mfaResendCount += 1;
+    lastResendTime = now;
+
+    // Store new code in database
+    const expiresAt = new Date();
+    expiresAt.setMinutes(expiresAt.getMinutes() + 10);
+
+    // Delete old tokens for this email first
+    await supabase
       .from('mfa_tokens')
       .delete()
-      .eq('id', data.id);
+      .eq('email', email);
 
-    if (deleteError) {
-      console.error('⚠️ Failed to delete used MFA token:', deleteError);
-    } else {
-      console.log('🗑️ Used MFA token deleted successfully');
+    const { error } = await supabase
+      .from('mfa_tokens')
+      .insert({
+        email: email,
+        token: currentMFACode,
+        expires_at: expiresAt.toISOString()
+      });
+
+    if (error) {
+      console.error('MFA token resend storage error:', error);
+      return { success: false, error: 'Failed to generate new MFA code' };
     }
 
-    console.log('✅ MFA verification successful');
+    // Send new code via email
+    const { error: emailError } = await supabase.functions.invoke('send-mfa-email', {
+      body: {
+        email: email,
+        mfaCode: currentMFACode
+      }
+    });
+
+    if (emailError) {
+      console.error('MFA email resend error:', emailError);
+      return { success: false, error: 'Failed to send new MFA code via email' };
+    }
+
     return { success: true };
   } catch (error) {
-    console.error('💥 MFA verify error:', error);
-    return { success: false, error: 'Failed to verify MFA code' };
+    console.error('MFA resend error:', error);
+    return { success: false, error: 'Failed to resend MFA code' };
+  }
+};
+
+export const verifyMFACode = async (email: string, code: string): Promise<MFAResult> => {
+  try {
+    // Use the database function to verify the token
+    const { data, error } = await supabase.rpc('verify_mfa_token_bypass', {
+      email_arg: email,
+      token_arg: code
+    });
+
+    if (error) {
+      console.error('MFA verification error:', error);
+      return { success: false, error: 'Verification failed' };
+    }
+
+    if (!data || data.length === 0) {
+      return { success: false, error: 'Invalid or expired MFA code' };
+    }
+
+    // Clear the used token
+    await supabase
+      .from('mfa_tokens')
+      .delete()
+      .eq('email', email)
+      .eq('token', code);
+
+    // Reset tracking variables
+    currentMFACode = null;
+    mfaResendCount = 0;
+    lastResendTime = 0;
+
+    return { success: true };
+  } catch (error) {
+    console.error('MFA verification error:', error);
+    return { success: false, error: 'Verification failed' };
   }
 };
