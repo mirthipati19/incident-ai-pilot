@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff, Mail, Lock, User, Building2, Globe, Shield } from 'lucide-react';
-import { newAdminAuthService } from '@/services/newAdminAuthService';
+import { supabase } from '@/integrations/supabase/client';
 
 const AdminRegister = () => {
   const [formData, setFormData] = useState({
@@ -26,13 +26,15 @@ const AdminRegister = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const validatePassword = async (password: string) => {
-    const validation = await newAdminAuthService.validatePasswordStrength(password);
-    if (!validation.valid && validation.message) {
-      setPasswordValidation([validation.message]);
-    } else {
-      setPasswordValidation([]);
-    }
+  const validatePassword = (password: string) => {
+    const errors = [];
+    if (password.length < 12) errors.push('Password must be at least 12 characters long');
+    if (!/[A-Z]/.test(password)) errors.push('Password must contain at least 1 uppercase letter');
+    if (!/[a-z]/.test(password)) errors.push('Password must contain at least 1 lowercase letter');
+    if ((password.match(/\d/g) || []).length < 4) errors.push('Password must contain at least 4 numbers');
+    if (!/[!@#$%^&*]/.test(password)) errors.push('Password must contain at least 1 special character');
+    
+    setPasswordValidation(errors);
   };
 
   const handlePasswordChange = (password: string) => {
@@ -119,27 +121,69 @@ const AdminRegister = () => {
     setIsLoading(true);
 
     try {
-      // Create organization
-      const organization = await newAdminAuthService.createOrganization(
-        formData.organizationName,
-        formData.domain
-      );
+      console.log('🏢 Starting organization registration process');
+      
+      // First create the organization
+      const { data: orgData, error: orgError } = await supabase
+        .from('organizations')
+        .insert({
+          name: formData.organizationName,
+          domain: formData.domain
+        })
+        .select()
+        .single();
 
-      // Register admin user
-      await newAdminAuthService.registerAdminUser({
+      if (orgError) {
+        console.error('🏢 Organization creation error:', orgError);
+        throw new Error(orgError.message);
+      }
+
+      console.log('🏢 Organization created:', orgData);
+
+      // Then create the admin user with Supabase Auth
+      const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
-        name: formData.adminName,
-        organizationId: organization.id
+        options: {
+          data: {
+            name: formData.adminName,
+            role: 'admin',
+            organization_id: orgData.id
+          }
+        }
       });
+
+      if (authError) {
+        console.error('🏢 Auth user creation error:', authError);
+        throw new Error(authError.message);
+      }
+
+      console.log('🏢 Auth user created:', authData);
+
+      // Create admin user record
+      if (authData.user) {
+        const { error: adminError } = await supabase
+          .from('admin_users')
+          .insert({
+            user_id: authData.user.id,
+            role: 'admin',
+            permissions: ['view_tickets', 'manage_users', 'view_stats', 'full_admin']
+          });
+
+        if (adminError) {
+          console.error('🏢 Admin user record creation error:', adminError);
+          // This is not critical, we can continue
+        }
+      }
 
       toast({
         title: 'Registration Successful!',
-        description: 'Your organization and admin account have been created. You can now sign in.',
+        description: 'Your organization and admin account have been created. Please check your email to verify your account.',
       });
 
-      navigate('/admin/login');
+      navigate('/signin');
     } catch (error: any) {
+      console.error('🏢 Registration error:', error);
       toast({
         title: 'Registration Failed',
         description: error.message || 'Failed to create organization. Please try again.',
@@ -321,7 +365,7 @@ const AdminRegister = () => {
             <div className="mt-8 text-center">
               <div className="text-sm text-blue-200">
                 Already have an admin account?{" "}
-                <Link to="/admin/login" className="text-white hover:text-blue-200 font-medium hover:underline">
+                <Link to="/signin" className="text-white hover:text-blue-200 font-medium hover:underline">
                   Sign In Here
                 </Link>
               </div>

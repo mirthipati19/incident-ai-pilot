@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -63,6 +64,7 @@ const SignIn = () => {
 
     setIsResettingPassword(true);
     try {
+      // Use Supabase's built-in password reset without captcha
       const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
         redirectTo: `${window.location.origin}/signin`,
       });
@@ -150,10 +152,13 @@ const SignIn = () => {
     setIsLoading(true);
 
     try {
+      console.log('🔐 Starting sign-in process for:', email);
       const result = await signIn(email, password, isAdmin, captchaToken);
+      console.log('🔐 Sign-in result:', result);
       
       if (result.success) {
         if (result.requiresMFA) {
+          console.log('🔐 MFA required, switching to MFA view');
           setRequiresMFA(true);
           setCaptchaToken(null);
           setOtpAttempts(0);
@@ -162,6 +167,7 @@ const SignIn = () => {
             description: "We've sent a verification code to your email.",
           });
         } else {
+          console.log('🔐 Sign-in successful, navigating to dashboard');
           toast({
             title: "Welcome Back!",
             description: `Successfully signed in${isAdmin ? " as Administrator" : ""}.`,
@@ -169,13 +175,15 @@ const SignIn = () => {
           navigate(isAdmin ? "/admin/dashboard" : "/dashboard");
         }
       } else {
+        console.error('🔐 Sign-in failed:', result.error);
         toast({
           title: "Sign In Failed",
-          description: result.error || "User doesn't exist or invalid credentials",
+          description: result.error || "Invalid credentials. Please check your email and password.",
           variant: "destructive",
         });
       }
     } catch (error) {
+      console.error('🔐 Sign-in error:', error);
       toast({
         title: "Error",
         description: "An unexpected error occurred. Please try again.",
@@ -220,7 +228,9 @@ const SignIn = () => {
     setIsMfaLoading(true);
 
     try {
+      console.log('🔐 Verifying MFA code:', mfaCode);
       const result = await verifyMFA(email, mfaCode, password, mfaCaptchaToken);
+      console.log('🔐 MFA verification result:', result);
       
       if (result.success) {
         toast({
@@ -251,6 +261,7 @@ const SignIn = () => {
         setMfaCaptchaToken(null);
       }
     } catch (error) {
+      console.error('🔐 MFA verification error:', error);
       toast({
         title: "Error",
         description: "An unexpected error occurred. Please try again.",

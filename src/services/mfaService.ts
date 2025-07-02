@@ -27,11 +27,17 @@ export const sendMFACode = async (email: string): Promise<MFAResult> => {
     mfaResendCount = 0;
     lastResendTime = now;
 
-    console.log('🔐 Generated MFA code:', currentMFACode); // Debug log
+    console.log('🔐 Generated MFA code:', currentMFACode);
 
     // Store in database with expiration
     const expiresAt = new Date();
     expiresAt.setMinutes(expiresAt.getMinutes() + 10); // 10 minutes expiry
+
+    // Delete old tokens for this email first
+    await supabase
+      .from('mfa_tokens')
+      .delete()
+      .eq('email', email);
 
     const { error } = await supabase
       .from('mfa_tokens')
@@ -50,7 +56,8 @@ export const sendMFACode = async (email: string): Promise<MFAResult> => {
     const { error: emailError } = await supabase.functions.invoke('send-mfa-email', {
       body: {
         email: email,
-        code: currentMFACode // Pass the actual code, not 'mfaCode'
+        code: currentMFACode,
+        isWelcome: false
       }
     });
 
@@ -90,7 +97,7 @@ export const resendMFACode = async (email: string): Promise<MFAResult> => {
     mfaResendCount += 1;
     lastResendTime = now;
 
-    console.log('🔐 Resending MFA code:', currentMFACode); // Debug log
+    console.log('🔐 Resending MFA code:', currentMFACode);
 
     // Store new code in database
     const expiresAt = new Date();
@@ -119,7 +126,8 @@ export const resendMFACode = async (email: string): Promise<MFAResult> => {
     const { error: emailError } = await supabase.functions.invoke('send-mfa-email', {
       body: {
         email: email,
-        code: currentMFACode // Pass the actual code
+        code: currentMFACode,
+        isWelcome: false
       }
     });
 
@@ -138,7 +146,11 @@ export const resendMFACode = async (email: string): Promise<MFAResult> => {
 
 export const verifyMFACode = async (email: string, code: string): Promise<MFAResult> => {
   try {
-    console.log('🔍 Verifying MFA code:', code, 'for email:', email); // Debug log
+    console.log('🔍 Verifying MFA code:', code, 'for email:', email);
+
+    if (!code || code.length !== 6) {
+      return { success: false, error: 'Invalid code format' };
+    }
 
     // Use the database function to verify the token
     const { data, error } = await supabase.rpc('verify_mfa_token_bypass', {
