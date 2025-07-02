@@ -126,37 +126,53 @@ const verifyAdminExists = async (): Promise<boolean> => {
   }
 };
 
-export const adminDirectLogin = async (email: string, password: string, captchaToken?: string): Promise<AuthResult> => {
+export const adminDirectLogin = async (
+  email: string,
+  password: string,
+  captchaToken?: string
+): Promise<AuthResult> => {
   try {
+    // 🔍 DEBUG: Log when function is invoked
     logAuthEvent('Attempting admin direct login', { email });
-    
-    // Require captcha token for admin login
+
+    // 🔍 DEBUG: Check for missing CAPTCHA
     if (!captchaToken) {
+      console.warn('❌ Missing CAPTCHA token');
       return { success: false, error: 'Security verification required' };
     }
-    
-    // For hardcoded admin, allow direct login
+
+    // 🔍 DEBUG: Log the input values (email, password, captchaToken)
+    console.log('🔐 Incoming admin login values:', { email, password, captchaToken });
+
+    // 🔍 DEBUG: Match hardcoded admin credentials
     if (email === authConfig.adminEmail && password === authConfig.adminPassword) {
       logAuthEvent('Admin credentials detected, processing login');
-      
-      // Ensure admin user exists
+
+      // 🔍 DEBUG: Ensure admin user is provisioned
       const adminSetup = await createAdminUserIfNeeded();
       if (!adminSetup) {
         console.warn('⚠️ Admin setup check completed, attempting login anyway');
       }
-      
-      // Sign in with Supabase - always include captcha token
+
+      // 🔍 DEBUG: Prepare sign-in options
       const signInOptions: any = {
         email,
         password,
         options: { captchaToken }
       };
 
+      // 🔍 DEBUG: Log the actual sign-in attempt
+      console.log('🚀 Attempting Supabase signInWithPassword with:', signInOptions);
+
       const { data: session, error } = await supabase.auth.signInWithPassword(signInOptions);
-      
-      logAuthEvent('Admin sign-in session result', { 
-        success: !!session?.session, 
-        error: error?.message || 'none' 
+
+      // 🔍 DEBUG: Log Supabase response
+      console.log('📥 Supabase sign-in response:', { session, error });
+
+      // 🔍 DEBUG: Log auth event result
+      logAuthEvent('Admin sign-in session result', {
+        success: !!session?.session,
+        error: error?.message || 'none'
       });
 
       if (error) {
@@ -164,16 +180,22 @@ export const adminDirectLogin = async (email: string, password: string, captchaT
         return { success: false, error: error.message };
       }
 
+      // 🔍 DEBUG: Handle case where no user is returned even if session exists
       if (!session.user) {
+        console.warn('⚠️ Admin sign-in succeeded but no user returned');
         return { success: false, error: 'No user data received' };
       }
 
+      // 🔍 DEBUG: Log success with user ID
       logAuthEvent('Admin login successful', { userId: session.user.id });
       return { success: true, isAdmin: true, userId: session.user.id };
     }
-    
+
+    // 🔍 DEBUG: If credentials don’t match hardcoded admin
+    console.warn('❌ Provided admin credentials do not match configured admin');
     return { success: false, error: 'Invalid admin credentials' };
   } catch (error) {
+    // 🔍 DEBUG: Catch and log any unexpected errors
     console.error('💥 Admin login error:', error);
     return { success: false, error: 'Admin login failed' };
   }
