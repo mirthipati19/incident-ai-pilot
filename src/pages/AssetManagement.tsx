@@ -1,335 +1,232 @@
 
-import React, { useState, useEffect } from "react";
-import { format } from "date-fns";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus, Search, BarChart3 } from "lucide-react";
-import { AssetCard } from "@/components/AssetManagement/AssetCard";
-import { AssetForm } from "@/components/AssetManagement/AssetForm";
-import { assetManagementService, Asset, SoftwareLicense } from "@/services/assetManagementService";
+import { Badge } from "@/components/ui/badge";
+import { Monitor, Plus, Search, Edit, Eye, AlertTriangle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { supabase } from "@/integrations/supabase/client";
 
-export const AssetManagementPage: React.FC = () => {
-  const [assets, setAssets] = useState<Asset[]>([]);
-  const [licenses, setLicenses] = useState<SoftwareLicense[]>([]);
-  const [selectedAsset, setSelectedAsset] = useState<Asset | null>(null);
-  const [isAssetFormOpen, setIsAssetFormOpen] = useState(false);
+// Mock data for assets
+const mockAssets = [
+  {
+    id: "1",
+    name: "Dell OptiPlex 7090",
+    asset_tag: "AST001",
+    asset_type: "Desktop",
+    category: "Hardware",
+    status: "active",
+    assigned_to: "john.doe@company.com",
+    location: "Office Floor 1",
+    manufacturer: "Dell",
+    model: "OptiPlex 7090",
+    serial_number: "DL7090001",
+    purchase_date: "2023-01-15",
+    warranty_expiry: "2026-01-15",
+    cost: 1200,
+    current_value: 900
+  },
+  {
+    id: "2",
+    name: "MacBook Pro 16-inch",
+    asset_tag: "AST002",
+    asset_type: "Laptop",
+    category: "Hardware",
+    status: "active",
+    assigned_to: "jane.smith@company.com",
+    location: "Remote",
+    manufacturer: "Apple",
+    model: "MacBook Pro 16-inch",
+    serial_number: "MBP16002",
+    purchase_date: "2023-03-20",
+    warranty_expiry: "2026-03-20",
+    cost: 2500,
+    current_value: 2000
+  },
+  {
+    id: "3",
+    name: "Adobe Creative Suite License",
+    asset_tag: "LIC001",
+    asset_type: "Software",
+    category: "Software",
+    status: "active",
+    assigned_to: "design.team@company.com",
+    location: "Cloud",
+    manufacturer: "Adobe",
+    model: "Creative Suite 2023",
+    serial_number: "ACS2023001",
+    purchase_date: "2023-02-01",
+    warranty_expiry: "2024-02-01",
+    cost: 600,
+    current_value: 300
+  }
+];
+
+const AssetManagementPage = () => {
+  const [assets, setAssets] = useState(mockAssets);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("");
-  const [isLoading, setIsLoading] = useState(true);
-  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [selectedStatus, setSelectedStatus] = useState("All");
   const { toast } = useToast();
 
-  useEffect(() => {
-    const getCurrentUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setCurrentUser(user);
-      loadData();
-    };
-    getCurrentUser();
-  }, [statusFilter, categoryFilter]);
+  const statuses = ["All", "active", "inactive", "maintenance", "retired"];
 
-  const loadData = async () => {
-    try {
-      setIsLoading(true);
-      const [assetsData, licensesData] = await Promise.all([
-        assetManagementService.getAssets({
-          status: statusFilter || undefined,
-          category: categoryFilter || undefined
-        }),
-        assetManagementService.getLicenses()
-      ]);
-      
-      setAssets(assetsData);
-      setLicenses(licensesData);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to load asset management data.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
+  const filteredAssets = assets.filter(asset => {
+    const matchesSearch = asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         asset.asset_tag.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         asset.assigned_to?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = selectedStatus === "All" || asset.status === selectedStatus;
+    return matchesSearch && matchesStatus;
+  });
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'active': return 'bg-green-100 text-green-800';
+      case 'inactive': return 'bg-yellow-100 text-yellow-800';
+      case 'maintenance': return 'bg-orange-100 text-orange-800';
+      case 'retired': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
     }
   };
 
-  const handleCreateAsset = () => {
-    setSelectedAsset(null);
-    setIsAssetFormOpen(true);
+  const handleEdit = (asset: any) => {
+    toast({
+      title: "Edit Asset",
+      description: `Editing ${asset.name} - Feature coming soon!`,
+    });
   };
 
-  const handleEditAsset = (asset: Asset) => {
-    setSelectedAsset(asset);
-    setIsAssetFormOpen(true);
+  const handleViewDetails = (asset: any) => {
+    toast({
+      title: "Asset Details",
+      description: `Viewing details for ${asset.name}`,
+    });
   };
-
-  const handleViewAssetDetails = (asset: Asset) => {
-    // This could open a detailed asset view
-    console.log("View asset details:", asset);
-  };
-
-  const handleAssetSubmit = async (assetData: any) => {
-    if (!currentUser) return;
-    
-    if (selectedAsset) {
-      const updatedAsset = await assetManagementService.updateAsset(selectedAsset.id, assetData);
-      setAssets(assets.map(asset => 
-        asset.id === selectedAsset.id ? updatedAsset : asset
-      ));
-    } else {
-      const newAsset = await assetManagementService.createAsset(assetData);
-      setAssets([newAsset, ...assets]);
-    }
-  };
-
-  const filteredAssets = assets.filter(asset =>
-    asset.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    asset.asset_tag.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    asset.category.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const assetStats = {
-    total: assets.length,
-    active: assets.filter(a => a.status === 'active').length,
-    maintenance: assets.filter(a => a.status === 'maintenance').length,
-    retired: assets.filter(a => a.status === 'retired').length
-  };
-
-  const licenseStats = {
-    total: licenses.reduce((sum, l) => sum + l.total_licenses, 0),
-    used: licenses.reduce((sum, l) => sum + (l.used_licenses || 0), 0),
-    expiring: licenses.filter(l => l.expiry_date && new Date(l.expiry_date) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)).length
-  };
-
-  if (isLoading) {
-    return <div className="flex justify-center items-center h-64">Loading...</div>;
-  }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Asset Management</h1>
-        <p className="text-gray-600">Manage your IT assets, licenses, and configurations</p>
-      </div>
+    <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 to-blue-50 p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="text-center space-y-4">
+          <div className="flex items-center justify-center gap-3">
+            <Monitor className="w-10 h-10 text-blue-600" />
+            <h1 className="text-4xl font-bold text-gray-900">Asset Management</h1>
+          </div>
+          <p className="text-lg text-gray-600">Track and manage your organization's hardware and software assets</p>
+        </div>
 
-      {/* Statistics Dashboard */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Assets</CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{assetStats.total}</div>
-            <div className="text-xs text-muted-foreground">
-              {assetStats.active} active, {assetStats.maintenance} in maintenance
+        {/* Search and Actions */}
+        <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
+          <div className="flex-1 max-w-md">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <Input
+                placeholder="Search assets..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="pl-10"
+              />
             </div>
-          </CardContent>
-        </Card>
+          </div>
+          
+          <div className="flex gap-2 flex-wrap items-center">
+            {statuses.map(status => (
+              <Button
+                key={status}
+                variant={selectedStatus === status ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedStatus(status)}
+                className="whitespace-nowrap capitalize"
+              >
+                {status}
+              </Button>
+            ))}
+            <Button className="flex items-center gap-2">
+              <Plus className="w-4 h-4" />
+              Add Asset
+            </Button>
+          </div>
+        </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">License Usage</CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{licenseStats.used}/{licenseStats.total}</div>
-            <div className="text-xs text-muted-foreground">
-              {Math.round((licenseStats.used / licenseStats.total) * 100)}% utilized
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Expiring Licenses</CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{licenseStats.expiring}</div>
-            <div className="text-xs text-muted-foreground">
-              Expiring in next 30 days
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Asset Value</CardTitle>
-            <BarChart3 className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              ${assets.reduce((sum, a) => sum + (a.cost || 0), 0).toLocaleString()}
-            </div>
-            <div className="text-xs text-muted-foreground">
-              Total asset value
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Tabs defaultValue="assets" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="assets">Assets</TabsTrigger>
-          <TabsTrigger value="licenses">Licenses</TabsTrigger>
-          <TabsTrigger value="relationships">Dependencies</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="assets">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>IT Assets</CardTitle>
-                  <CardDescription>
-                    Manage your hardware, software, and virtual assets
-                  </CardDescription>
+        {/* Assets Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredAssets.map((asset) => (
+            <Card key={asset.id} className="hover:shadow-lg transition-shadow h-full">
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <Badge className={getStatusColor(asset.status)}>
+                    {asset.status}
+                  </Badge>
+                  <Badge variant="outline">
+                    {asset.asset_tag}
+                  </Badge>
                 </div>
-                <Button onClick={handleCreateAsset}>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add Asset
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {/* Search and Filter */}
-              <div className="flex flex-col md:flex-row gap-4 mb-6">
-                <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    placeholder="Search assets..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10"
-                  />
+                <CardTitle className="text-lg">{asset.name}</CardTitle>
+                <CardDescription>
+                  {asset.manufacturer} {asset.model}
+                </CardDescription>
+              </CardHeader>
+              
+              <CardContent className="space-y-4">
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Type:</span>
+                    <span className="font-medium">{asset.asset_type}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Location:</span>
+                    <span className="font-medium">{asset.location}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Assigned to:</span>
+                    <span className="font-medium text-xs">{asset.assigned_to}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-gray-600">Value:</span>
+                    <span className="font-medium">${asset.current_value}</span>
+                  </div>
                 </div>
-                <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-full md:w-48">
-                    <SelectValue placeholder="All Statuses" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="">All Statuses</SelectItem>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                    <SelectItem value="maintenance">Maintenance</SelectItem>
-                    <SelectItem value="retired">Retired</SelectItem>
-                  </SelectContent>
-                </Select>
-                <Input
-                  placeholder="Filter by category..."
-                  value={categoryFilter}
-                  onChange={(e) => setCategoryFilter(e.target.value)}
-                  className="w-full md:w-48"
-                />
-              </div>
 
-              {/* Assets Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredAssets.map((asset) => (
-                  <AssetCard
-                    key={asset.id}
-                    asset={asset}
-                    onEdit={handleEditAsset}
-                    onViewDetails={handleViewAssetDetails}
-                  />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+                {/* Warranty Warning */}
+                {new Date(asset.warranty_expiry) < new Date(Date.now() + 30 * 24 * 60 * 60 * 1000) && (
+                  <div className="flex items-center gap-2 text-orange-600 text-sm">
+                    <AlertTriangle className="w-4 h-4" />
+                    <span>Warranty expires soon</span>
+                  </div>
+                )}
+                
+                <div className="flex items-center justify-between pt-2">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => handleViewDetails(asset)}
+                    className="flex items-center gap-1"
+                  >
+                    <Eye className="w-4 h-4" />
+                    View
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleEdit(asset)}
+                    className="flex items-center gap-1"
+                  >
+                    <Edit className="w-4 h-4" />
+                    Edit
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
-        <TabsContent value="licenses">
-          <Card>
-            <CardHeader>
-              <CardTitle>Software Licenses</CardTitle>
-              <CardDescription>
-                Track and manage software license compliance
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {licenses.map((license) => (
-                  <Card key={license.id}>
-                    <CardHeader>
-                      <div className="flex items-center justify-between">
-                        <CardTitle className="text-lg">{license.software_name}</CardTitle>
-                        <div className="flex space-x-2">
-                          <span className={`px-2 py-1 rounded text-sm ${
-                            license.compliance_status === 'compliant' 
-                              ? 'bg-green-100 text-green-800'
-                              : license.compliance_status === 'expired'
-                              ? 'bg-red-100 text-red-800'
-                              : 'bg-yellow-100 text-yellow-800'
-                          }`}>
-                            {license.compliance_status}
-                          </span>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                        <div>
-                          <span className="text-gray-500">Type:</span>
-                          <div className="font-medium">{license.license_type}</div>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Usage:</span>
-                          <div className="font-medium">
-                            {license.used_licenses || 0}/{license.total_licenses}
-                          </div>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Vendor:</span>
-                          <div className="font-medium">{license.vendor || 'N/A'}</div>
-                        </div>
-                        <div>
-                          <span className="text-gray-500">Expires:</span>
-                          <div className="font-medium">
-                            {license.expiry_date 
-                              ? format(new Date(license.expiry_date), 'MMM d, yyyy')
-                              : 'Never'
-                            }
-                          </div>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="relationships">
-          <Card>
-            <CardHeader>
-              <CardTitle>Asset Dependencies</CardTitle>
-              <CardDescription>
-                View and manage relationships between assets
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="text-center py-12 text-gray-500">
-                <p>Asset dependency visualization coming soon...</p>
-                <p className="text-sm mt-2">This will show relationships and impact analysis between assets.</p>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      <AssetForm
-        asset={selectedAsset}
-        isOpen={isAssetFormOpen}
-        onClose={() => setIsAssetFormOpen(false)}
-        onSubmit={handleAssetSubmit}
-      />
+        {filteredAssets.length === 0 && (
+          <div className="text-center py-12">
+            <Monitor className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No assets found</h3>
+            <p className="text-gray-500">Try adjusting your search terms or status filter.</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

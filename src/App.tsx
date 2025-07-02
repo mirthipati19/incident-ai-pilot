@@ -9,7 +9,8 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import AdminRoute from "@/components/AdminRoute";
 import SessionManager from "@/components/SessionManager";
-import { MainNavigation } from "@/components/Navigation/MainNavigation";
+import ProtectedLayout from "@/components/Layout/ProtectedLayout";
+import AdminLayout from "@/components/Layout/AdminLayout";
 import Index from "@/pages/Index";
 import Dashboard from "@/pages/Dashboard";
 import SignIn from "@/pages/SignIn";
@@ -37,7 +38,6 @@ function App() {
       <TooltipProvider>
         <ThemeProvider>
           <ImprovedAuthProvider>
-            <Toaster />
             <Sonner />
             <BrowserRouter>
               <SessionManager />
@@ -48,61 +48,19 @@ function App() {
                   <Route path="/signin" element={<SignIn />} />
                   <Route path="/signup" element={<SignUp />} />
                   
-                  {/* Protected routes with navigation */}
-                  <Route path="/dashboard" element={
-                    <ProtectedRoute>
-                      <MainNavigation />
-                      <main className="pt-16 w-full">
-                        <Dashboard />
-                      </main>
-                    </ProtectedRoute>
-                  } />
+                  {/* Protected routes with shared layout */}
+                  <Route element={<ProtectedRoute><ProtectedLayout /></ProtectedRoute>}>
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/itsm" element={<ITSM />} />
+                    <Route path="/service-catalog" element={<ServiceCatalogPage />} />
+                    <Route path="/knowledge-base" element={<KnowledgeBasePage />} />
+                    <Route path="/asset-management" element={<AssetManagementPage />} />
+                  </Route>
                   
-                  <Route path="/itsm" element={
-                    <ProtectedRoute>
-                      <MainNavigation />
-                      <main className="pt-16 w-full">
-                        <ITSM />
-                      </main>
-                    </ProtectedRoute>
-                  } />
-                  
-                  <Route path="/service-catalog" element={
-                    <ProtectedRoute>
-                      <MainNavigation />
-                      <main className="pt-16 w-full">
-                        <ServiceCatalogPage />
-                      </main>
-                    </ProtectedRoute>
-                  } />
-                  
-                  <Route path="/knowledge-base" element={
-                    <ProtectedRoute>
-                      <MainNavigation />
-                      <main className="pt-16 w-full">
-                        <KnowledgeBasePage />
-                      </main>
-                    </ProtectedRoute>
-                  } />
-                  
-                  <Route path="/asset-management" element={
-                    <ProtectedRoute>
-                      <MainNavigation />
-                      <main className="pt-16 w-full">
-                        <AssetManagementPage />
-                      </main>
-                    </ProtectedRoute>
-                  } />
-                  
-                  {/* Admin routes */}
-                  <Route path="/admin/dashboard" element={
-                    <AdminRoute>
-                      <MainNavigation />
-                      <main className="pt-16 w-full">
-                        <AdminDashboard />
-                      </main>
-                    </AdminRoute>
-                  } />
+                  {/* Admin routes with shared layout */}
+                  <Route element={<AdminRoute><AdminLayout /></AdminRoute>}>
+                    <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                  </Route>
                   
                   {/* Fallback routes */}
                   <Route path="/404" element={<NotFound />} />

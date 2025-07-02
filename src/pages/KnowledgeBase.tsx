@@ -1,200 +1,192 @@
 
-import React, { useState, useEffect } from "react";
-import { format } from "date-fns";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import React, { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Plus } from "lucide-react";
-import { ArticleCard } from "@/components/KnowledgeBase/ArticleCard";
-import { ArticleViewer } from "@/components/KnowledgeBase/ArticleViewer";
-import { knowledgeBaseService, KnowledgeArticle, CommunityQuestion } from "@/services/knowledgeBaseService";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { BookOpen, Search, ThumbsUp, ThumbsDown, Eye } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
-export const KnowledgeBasePage: React.FC = () => {
-  const [articles, setArticles] = useState<KnowledgeArticle[]>([]);
-  const [questions, setQuestions] = useState<CommunityQuestion[]>([]);
-  const [selectedArticle, setSelectedArticle] = useState<KnowledgeArticle | null>(null);
-  const [isArticleViewerOpen, setIsArticleViewerOpen] = useState(false);
+// Mock data for knowledge articles
+const mockArticles = [
+  {
+    id: "1",
+    title: "How to Reset Your Password",
+    summary: "Step-by-step guide to reset your account password",
+    category: "Account Management",
+    tags: ["password", "account", "security"],
+    view_count: 245,
+    helpful_votes: 18,
+    unhelpful_votes: 2,
+    content: "To reset your password: 1. Go to the sign-in page, 2. Click 'Forgot Password', 3. Enter your email address, 4. Check your email for reset instructions..."
+  },
+  {
+    id: "2",
+    title: "Installing Software with Voice Commands",
+    summary: "Learn how to use voice commands to install software",
+    category: "Software Installation",
+    tags: ["voice", "software", "installation"],
+    view_count: 189,
+    helpful_votes: 25,
+    unhelpful_votes: 1,
+    content: "You can install software using voice commands by: 1. Clicking the microphone button, 2. Speaking clearly, 3. Confirming the installation..."
+  },
+  {
+    id: "3",
+    title: "Troubleshooting Network Issues",
+    summary: "Common network problems and their solutions",
+    category: "Network & Connectivity",
+    tags: ["network", "troubleshooting", "connectivity"],
+    view_count: 156,
+    helpful_votes: 12,
+    unhelpful_votes: 3,
+    content: "Network troubleshooting steps: 1. Check physical connections, 2. Restart your router, 3. Run network diagnostics..."
+  }
+];
+
+const KnowledgeBasePage = () => {
+  const [articles, setArticles] = useState(mockArticles);
   const [searchTerm, setSearchTerm] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState<string>("");
-  const [isLoading, setIsLoading] = useState(true);
+  const [selectedCategory, setSelectedCategory] = useState("All");
   const { toast } = useToast();
 
-  const categories = ["Technical", "Hardware", "Software", "Network", "Security", "General"];
+  const categories = ["All", "Account Management", "Software Installation", "Network & Connectivity"];
 
-  useEffect(() => {
-    loadData();
-  }, [searchTerm, selectedCategory]);
+  const filteredArticles = articles.filter(article => {
+    const matchesSearch = article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         article.summary.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         article.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesCategory = selectedCategory === "All" || article.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
 
-  const loadData = async () => {
-    try {
-      setIsLoading(true);
-      const [articlesData, questionsData] = await Promise.all([
-        knowledgeBaseService.getArticles(selectedCategory || undefined, searchTerm || undefined),
-        knowledgeBaseService.getQuestions(searchTerm || undefined)
-      ]);
-      
-      setArticles(articlesData);
-      setQuestions(questionsData);
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to load knowledge base data.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+  const handleVote = (articleId: string, isHelpful: boolean) => {
+    setArticles(prev => prev.map(article => {
+      if (article.id === articleId) {
+        return {
+          ...article,
+          helpful_votes: isHelpful ? article.helpful_votes + 1 : article.helpful_votes,
+          unhelpful_votes: !isHelpful ? article.unhelpful_votes + 1 : article.unhelpful_votes
+        };
+      }
+      return article;
+    }));
+    
+    toast({
+      title: "Thank you!",
+      description: "Your feedback has been recorded.",
+    });
   };
-
-  const handleArticleClick = (article: KnowledgeArticle) => {
-    setSelectedArticle(article);
-    setIsArticleViewerOpen(true);
-  };
-
-  const handleVoteArticle = async (id: string, isHelpful: boolean) => {
-    try {
-      await knowledgeBaseService.voteArticle(id, isHelpful);
-      await loadData(); // Reload to get updated vote counts
-      toast({
-        title: "Vote Recorded",
-        description: "Thank you for your feedback!",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Failed to record vote.",
-        variant: "destructive",
-      });
-    }
-  };
-
-  if (isLoading) {
-    return <div className="flex justify-center items-center h-64">Loading...</div>;
-  }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Knowledge Base</h1>
-        <p className="text-gray-600">Find answers to common questions and browse our knowledge articles</p>
-      </div>
+    <div className="min-h-screen w-full bg-gradient-to-br from-slate-50 to-blue-50 p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="text-center space-y-4">
+          <div className="flex items-center justify-center gap-3">
+            <BookOpen className="w-10 h-10 text-blue-600" />
+            <h1 className="text-4xl font-bold text-gray-900">Knowledge Base</h1>
+          </div>
+          <p className="text-lg text-gray-600">Find answers to common questions and learn how to use our platform</p>
+        </div>
 
-      {/* Search and Filter Section */}
-      <Card className="mb-8">
-        <CardContent className="pt-6">
-          <div className="flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+        {/* Search and Filters */}
+        <div className="flex flex-col lg:flex-row gap-4 items-center justify-between">
+          <div className="flex-1 max-w-md">
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <Input
-                placeholder="Search articles and questions..."
+                placeholder="Search articles..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="pl-10"
               />
             </div>
-            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-              <SelectTrigger className="w-full md:w-48">
-                <SelectValue placeholder="All Categories" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="">All Categories</SelectItem>
-                {categories.map((category) => (
-                  <SelectItem key={category} value={category.toLowerCase()}>
-                    {category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
           </div>
-        </CardContent>
-      </Card>
+          
+          <div className="flex gap-2 flex-wrap">
+            {categories.map(category => (
+              <Button
+                key={category}
+                variant={selectedCategory === category ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedCategory(category)}
+                className="whitespace-nowrap"
+              >
+                {category}
+              </Button>
+            ))}
+          </div>
+        </div>
 
-      <Tabs defaultValue="articles" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="articles">Knowledge Articles</TabsTrigger>
-          <TabsTrigger value="community">Community Q&A</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="articles">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Knowledge Articles</CardTitle>
-                  <CardDescription>
-                    Browse our comprehensive knowledge base
-                  </CardDescription>
+        {/* Articles Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {filteredArticles.map((article) => (
+            <Card key={article.id} className="hover:shadow-lg transition-shadow cursor-pointer h-full">
+              <CardHeader>
+                <div className="flex items-start justify-between">
+                  <Badge variant="secondary" className="mb-2">
+                    {article.category}
+                  </Badge>
+                  <div className="flex items-center gap-1 text-sm text-gray-500">
+                    <Eye className="w-4 h-4" />
+                    {article.view_count}
+                  </div>
                 </div>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  New Article
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {articles.map((article) => (
-                  <ArticleCard
-                    key={article.id}
-                    article={article}
-                    onClick={handleArticleClick}
-                    onVote={handleVoteArticle}
-                    showVoting={true}
-                  />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="community">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Community Q&A</CardTitle>
-                  <CardDescription>
-                    Ask questions and get answers from the community
-                  </CardDescription>
+                <CardTitle className="text-lg">{article.title}</CardTitle>
+                <CardDescription>{article.summary}</CardDescription>
+              </CardHeader>
+              
+              <CardContent className="flex-1">
+                <div className="space-y-4">
+                  <div className="flex flex-wrap gap-1">
+                    {article.tags.map(tag => (
+                      <Badge key={tag} variant="outline" className="text-xs">
+                        {tag}
+                      </Badge>
+                    ))}
+                  </div>
+                  
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-4">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleVote(article.id, true)}
+                        className="flex items-center gap-1 text-green-600 hover:text-green-700"
+                      >
+                        <ThumbsUp className="w-4 h-4" />
+                        {article.helpful_votes}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleVote(article.id, false)}
+                        className="flex items-center gap-1 text-red-600 hover:text-red-700"
+                      >
+                        <ThumbsDown className="w-4 h-4" />
+                        {article.unhelpful_votes}
+                      </Button>
+                    </div>
+                    
+                    <Button variant="outline" size="sm">
+                      Read More
+                    </Button>
+                  </div>
                 </div>
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Ask Question
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {questions.map((question) => (
-                  <Card key={question.id} className="hover:shadow-lg transition-shadow cursor-pointer">
-                    <CardHeader>
-                      <CardTitle className="text-lg">{question.title}</CardTitle>
-                      <div className="flex items-center space-x-4 text-sm text-gray-500">
-                        <span>{question.view_count || 0} views</span>
-                        <span>{question.upvotes || 0} upvotes</span>
-                        <span>{format(new Date(question.created_at), 'MMM d, yyyy')}</span>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-gray-600 line-clamp-3">{question.content}</p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
-      <ArticleViewer
-        article={selectedArticle}
-        isOpen={isArticleViewerOpen}
-        onClose={() => setIsArticleViewerOpen(false)}
-        onVote={handleVoteArticle}
-      />
+        {filteredArticles.length === 0 && (
+          <div className="text-center py-12">
+            <BookOpen className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">No articles found</h3>
+            <p className="text-gray-500">Try adjusting your search terms or category filter.</p>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

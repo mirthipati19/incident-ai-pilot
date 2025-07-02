@@ -4,21 +4,31 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Bot, Shield, Zap, Users, BarChart3, ArrowRight, CheckCircle, Star, Sparkles } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useImprovedAuth } from "@/contexts/ImprovedAuthContext";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 
 const Index = () => {
   const { user, loading } = useImprovedAuth();
   const navigate = useNavigate();
+  const [authCheckComplete, setAuthCheckComplete] = useState(false);
 
-  // Redirect authenticated users to dashboard
+  // Redirect authenticated users to dashboard with timeout
   useEffect(() => {
-    if (!loading && user) {
-      navigate('/dashboard');
-    }
+    const checkAuth = async () => {
+      // Wait a bit to ensure auth state is properly initialized
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      if (!loading && user) {
+        navigate('/dashboard', { replace: true });
+      } else {
+        setAuthCheckComplete(true);
+      }
+    };
+
+    checkAuth();
   }, [user, loading, navigate]);
 
-  // Show loading state while checking authentication - improved with timeout
-  if (loading) {
+  // Show loading state while checking authentication
+  if (loading || (!authCheckComplete && !user)) {
     return (
       <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
         <div className="text-center space-y-4">

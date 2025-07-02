@@ -51,6 +51,7 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
             logAuthEvent('Invalid session token detected, signing out');
             await supabase.auth.signOut();
             localStorage.removeItem('auth_session_token');
+            setLoading(false);
             return;
           }
           
@@ -105,7 +106,7 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
         .eq('id', authUser.id)
         .single();
       
-      // Check admin status
+      // Check admin status - FIXED: More comprehensive admin check
       const isAdmin = await checkAdminStatus(authUser.id, authUser.email);
       
       setUser({ 
@@ -121,15 +122,41 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
       });
     } catch (error) {
       console.error('❌ Error updating user session:', error);
-      setUser({ ...authUser, isAdmin: false });
+      // Set basic user data with admin check fallback
+      const isAdmin = authUser.email === authConfig.adminEmail;
+      setUser({ ...authUser, isAdmin });
     }
   };
 
   const checkAdminStatus = async (userId: string, email?: string): Promise<boolean> => {
     try {
-      // First check for hardcoded admin email
-      if (email === authConfig.adminEmail) {
+      // First check for hardcoded admin email - PRIORITY CHECK
+      if (email && email.toLowerCase() === authConfig.adminEmail.toLowerCase()) {
         logAuthEvent('Admin detected by email', { email });
+        
+        // Ensure admin user exists in admin_users table
+        try {
+          const { data: existingAdmin } = await supabase
+            .from('admin_users')
+            .select('id')
+            .eq('user_id', userId)
+            .single();
+            
+          if (!existingAdmin) {
+            // Create admin record if it doesn't exist
+            await supabase
+              .from('admin_users')
+              .insert({
+                user_id: userId,
+                role: 'admin',
+                permissions: ['view_tickets', 'manage_users', 'view_stats', 'manage_system']
+              });
+            logAuthEvent('Admin user record created');
+          }
+        } catch (adminTableError) {
+          console.log('Admin table operation:', adminTableError);
+        }
+        
         return true;
       }
 
@@ -140,10 +167,14 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
         .eq('user_id', userId)
         .single();
 
-      return adminData?.role === 'admin';
+      const isAdminFromTable = adminData?.role === 'admin';
+      logAuthEvent('Admin check from table', { isAdmin: isAdminFromTable });
+      
+      return isAdminFromTable;
     } catch (error) {
       console.error('❌ Admin check error:', error);
-      return email === authConfig.adminEmail;
+      // Fallback to email check
+      return email?.toLowerCase() === authConfig.adminEmail.toLowerCase();
     }
   };
 
