@@ -26,6 +26,7 @@ const handler = async (req: Request): Promise<Response> => {
     const { email, code, userName, isWelcome }: MFAEmailRequest = await req.json();
 
     console.log(`📧 Sending ${isWelcome ? 'welcome' : 'MFA'} email to: ${email}`);
+    console.log(`🔐 Code being sent: ${code}`); // Debug log to ensure code is not undefined
 
     if (isWelcome) {
       // Send welcome email
@@ -78,6 +79,21 @@ const handler = async (req: Request): Promise<Response> => {
           ...corsHeaders,
         },
       });
+    }
+
+    // Validate that code is not undefined
+    if (!code || code === 'undefined') {
+      console.error("❌ Code is undefined or invalid:", code);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: "Invalid verification code" 
+        }),
+        {
+          status: 400,
+          headers: { "Content-Type": "application/json", ...corsHeaders },
+        }
+      );
     }
 
     // Send MFA verification code email

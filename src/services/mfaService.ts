@@ -27,6 +27,8 @@ export const sendMFACode = async (email: string): Promise<MFAResult> => {
     mfaResendCount = 0;
     lastResendTime = now;
 
+    console.log('🔐 Generated MFA code:', currentMFACode); // Debug log
+
     // Store in database with expiration
     const expiresAt = new Date();
     expiresAt.setMinutes(expiresAt.getMinutes() + 10); // 10 minutes expiry
@@ -44,11 +46,11 @@ export const sendMFACode = async (email: string): Promise<MFAResult> => {
       return { success: false, error: 'Failed to generate MFA code' };
     }
 
-    // Call edge function to send email
+    // Call edge function to send email with the actual code
     const { error: emailError } = await supabase.functions.invoke('send-mfa-email', {
       body: {
         email: email,
-        mfaCode: currentMFACode
+        code: currentMFACode // Pass the actual code, not 'mfaCode'
       }
     });
 
@@ -57,6 +59,7 @@ export const sendMFACode = async (email: string): Promise<MFAResult> => {
       return { success: false, error: 'Failed to send MFA code via email' };
     }
 
+    console.log('✅ MFA code sent successfully to:', email);
     return { success: true };
   } catch (error) {
     console.error('MFA send error:', error);
@@ -87,6 +90,8 @@ export const resendMFACode = async (email: string): Promise<MFAResult> => {
     mfaResendCount += 1;
     lastResendTime = now;
 
+    console.log('🔐 Resending MFA code:', currentMFACode); // Debug log
+
     // Store new code in database
     const expiresAt = new Date();
     expiresAt.setMinutes(expiresAt.getMinutes() + 10);
@@ -114,7 +119,7 @@ export const resendMFACode = async (email: string): Promise<MFAResult> => {
     const { error: emailError } = await supabase.functions.invoke('send-mfa-email', {
       body: {
         email: email,
-        mfaCode: currentMFACode
+        code: currentMFACode // Pass the actual code
       }
     });
 
@@ -123,6 +128,7 @@ export const resendMFACode = async (email: string): Promise<MFAResult> => {
       return { success: false, error: 'Failed to send new MFA code via email' };
     }
 
+    console.log('✅ MFA code resent successfully to:', email);
     return { success: true };
   } catch (error) {
     console.error('MFA resend error:', error);
@@ -132,6 +138,8 @@ export const resendMFACode = async (email: string): Promise<MFAResult> => {
 
 export const verifyMFACode = async (email: string, code: string): Promise<MFAResult> => {
   try {
+    console.log('🔍 Verifying MFA code:', code, 'for email:', email); // Debug log
+
     // Use the database function to verify the token
     const { data, error } = await supabase.rpc('verify_mfa_token_bypass', {
       email_arg: email,
@@ -144,6 +152,7 @@ export const verifyMFACode = async (email: string, code: string): Promise<MFARes
     }
 
     if (!data || data.length === 0) {
+      console.log('❌ Invalid or expired MFA code');
       return { success: false, error: 'Invalid or expired MFA code' };
     }
 
@@ -159,6 +168,7 @@ export const verifyMFACode = async (email: string, code: string): Promise<MFARes
     mfaResendCount = 0;
     lastResendTime = 0;
 
+    console.log('✅ MFA verification successful');
     return { success: true };
   } catch (error) {
     console.error('MFA verification error:', error);

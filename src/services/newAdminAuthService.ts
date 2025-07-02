@@ -117,7 +117,7 @@ class NewAdminAuthService {
     return data.data;
   }
 
-  // Admin user management
+  // Admin user management using Supabase Auth
   async registerAdminUser(userData: {
     email: string;
     password: string;
@@ -130,9 +130,30 @@ class NewAdminAuthService {
       throw new Error(passwordValidation.message);
     }
 
-    // For now, return a mock response
-    return {
-      id: 'mock-id',
+    // Use Supabase Auth to create the user
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: userData.email,
+      password: userData.password,
+      options: {
+        data: {
+          name: userData.name,
+          role: 'admin',
+          organization_id: userData.organizationId
+        }
+      }
+    });
+
+    if (authError) {
+      throw new Error(authError.message);
+    }
+
+    if (!authData.user) {
+      throw new Error('Failed to create user');
+    }
+
+    // Create admin user record in our custom table
+    const adminUser: AdminUser = {
+      id: authData.user.id,
       email: userData.email,
       name: userData.name,
       organization_id: userData.organizationId,
@@ -141,6 +162,8 @@ class NewAdminAuthService {
       is_active: true,
       created_at: new Date().toISOString()
     };
+
+    return adminUser;
   }
 
   async loginAdmin(email: string, password: string): Promise<{ user: AdminUser; session: AdminSession }> {
@@ -195,8 +218,29 @@ class NewAdminAuthService {
       throw new Error('Generated password does not meet policy requirements');
     }
 
+    // Create user with Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: userData.email,
+      password: tempPassword,
+      options: {
+        data: {
+          name: userData.name,
+          role: 'user',
+          organization_id: userData.organizationId
+        }
+      }
+    });
+
+    if (authError) {
+      throw new Error(authError.message);
+    }
+
+    if (!authData.user) {
+      throw new Error('Failed to create user');
+    }
+
     const user: AdminUser = {
-      id: 'mock-user-id',
+      id: authData.user.id,
       email: userData.email,
       name: userData.name,
       organization_id: userData.organizationId,
@@ -205,6 +249,20 @@ class NewAdminAuthService {
       is_active: true,
       created_at: new Date().toISOString()
     };
+
+    // Send welcome email with credentials
+    try {
+      await supabase.functions.invoke('send-mfa-email', {
+        body: {
+          email: userData.email,
+          code: tempPassword,
+          userName: userData.name,
+          isWelcome: true
+        }
+      });
+    } catch (emailError) {
+      console.error('Failed to send welcome email:', emailError);
+    }
 
     return { user, tempPassword };
   }
