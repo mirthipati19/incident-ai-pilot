@@ -30,10 +30,10 @@ function App() {
       <TooltipProvider>
         <ThemeProvider>
           <ImprovedAuthProvider>
-            <SessionManager />
             <Toaster />
             <Sonner />
             <BrowserRouter>
+              <SessionManager />
               <div className="min-h-screen bg-gray-50">
                 <Routes>
                   {/* Public routes - accessible to everyone */}
