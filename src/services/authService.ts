@@ -1,4 +1,3 @@
-
 import { supabase } from '@/integrations/supabase/client';
 import { sendMFACode, verifyMFACode } from './mfaService';
 import { authConfig, logAuthEvent } from '@/utils/authConfig';
@@ -15,12 +14,11 @@ export const createAdminUserIfNeeded = async () => {
   try {
     logAuthEvent('Checking/creating admin user');
     
-    // Check if admin exists in auth.users using service role
+    // Check if admin exists in auth.users
     const { data: { users }, error: listError } = await supabase.auth.admin.listUsers();
     
     if (listError) {
       console.warn('⚠️ Cannot list users with current permissions, trying alternative approach');
-      // Alternative: Check if we can sign in as admin
       return await verifyAdminExists();
     }
     
@@ -130,38 +128,58 @@ export const adminDirectLogin = async (email: string, password: string, captchaT
   try {
     logAuthEvent('Attempting admin direct login', { email });
     
-    // Require captcha token for admin login
     if (!captchaToken) {
       return { success: false, error: 'Security verification required' };
     }
     
-    // For hardcoded admin, allow direct login
+    // For hardcoded admin, allow direct login - FIXED: Use plain password
     if (email === authConfig.adminEmail && password === authConfig.adminPassword) {
       logAuthEvent('Admin credentials detected, processing login');
       
-      // Ensure admin user exists
-      const adminSetup = await createAdminUserIfNeeded();
-      if (!adminSetup) {
-        console.warn('⚠️ Admin setup check completed, attempting login anyway');
-      }
+      // Ensure admin user exists in Supabase Auth
+      await createAdminUserIfNeeded();
       
-      // Sign in with Supabase - always include captcha token
+      // Sign in with Supabase using plain password (not encrypted)
       const signInOptions: any = {
         email,
-        password,
+        password, // Use the plain password directly
         options: { captchaToken }
       };
 
+      // First check if user exists in auth
       const { data: session, error } = await supabase.auth.signInWithPassword(signInOptions);
       
-      logAuthEvent('Admin sign-in session result', { 
-        success: !!session?.session, 
-        error: error?.message || 'none' 
-      });
-
       if (error) {
+        // If user doesn't exist in auth, create it
+        if (error.message.includes('Invalid login credentials')) {
+          logAuthEvent('Creating admin user in Supabase Auth');
+          const { data: newUser, error: createError } = await supabase.auth.signUp({
+            email: authConfig.adminEmail,
+            password: authConfig.adminPassword,
+            options: { 
+              captchaToken,
+              emailRedirectTo: `${window.location.origin}/signin`
+            }
+          });
+          
+          if (createError) {
+            console.error('❌ Failed to create admin in auth:', createError);
+            return { success: false, error: 'Failed to create admin user' };
+          }
+          
+          // Sign in after creation
+          const { data: loginSession, error: loginError } = await supabase.auth.signInWithPassword(signInOptions);
+          
+          if (loginError || !loginSession.user) {
+            return { success: false, error: loginError?.message || 'Admin login failed after creation' };
+          }
+          
+          logAuthEvent('Admin login successful after creation', { userId: loginSession.user.id });
+          return { success: true, isAdmin: true, userId: loginSession.user.id };
+        }
+        
         console.error('❌ Admin auth failed:', error);
-        return { success: false, error: error.message };
+        return { success: false, error: 'Invalid admin credentials' };
       }
 
       if (!session.user) {
@@ -183,7 +201,6 @@ export const regularUserLogin = async (email: string, password: string, captchaT
   try {
     logAuthEvent('Regular user login with MFA', { email });
     
-    // Require captcha token for all logins
     if (!captchaToken) {
       return { success: false, error: 'Security verification required' };
     }
@@ -199,6 +216,10 @@ export const regularUserLogin = async (email: string, password: string, captchaT
     
     if (testError) {
       console.error('❌ Credential validation failed:', testError);
+      // Return user-friendly error message
+      if (testError.message.includes('Invalid login credentials')) {
+        return { success: false, error: 'User doesn\'t exist or invalid credentials' };
+      }
       return { success: false, error: testError.message };
     }
     
@@ -226,7 +247,6 @@ export const completeMFALogin = async (email: string, password: string, mfaCode:
   try {
     logAuthEvent('Completing MFA login', { email });
     
-    // Require captcha token
     if (!captchaToken) {
       return { success: false, error: 'Security verification required' };
     }

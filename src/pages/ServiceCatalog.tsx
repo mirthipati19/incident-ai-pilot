@@ -85,64 +85,73 @@ export const ServiceCatalogPage: React.FC = () => {
   };
 
   if (isLoading) {
-    return <div className="flex justify-center items-center h-64">Loading...</div>;
+    return (
+      <div className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDM0di00aC0ydjRoLTR2Mmg0djRoMnYtNGg0di0yaC00em0wLTMwVjBoLTJ2NGgtNHYyaDR2NGgyVjZoNFY0aC00ek02IDM0di00SDR2NEgwdjJoNHY0aDJ2LTRoNHYtMkg2ek02IDRWMEg0djRIMHYyaDR2NEgyVjZoNFY0SDZ6Ci8+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
+        <div className="text-white">Loading...</div>
+      </div>
+    );
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Service Catalog</h1>
-        <p className="text-gray-600">Request IT services and track your requests</p>
+    <div className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 p-4">
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDM0di00aC0ydjRoLTR2Mmg0djRoMnYtNGg0di0yaC00em0wLTMwVjBoLTJ2NGgtNHYyaDR2NGgyVjZoNFY0aC00ek02IDM0di00SDR2NEgwdjJoNHY0aDJ2LTRoNHYtMkg2ek02IDRWMEg0djRIMHYyaDR2NEgyVjZoNFY0SDZ6Ci8+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
+      
+      <div className="relative z-10 container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2 text-white">Service Catalog</h1>
+          <p className="text-blue-200">Request IT services and track your requests</p>
+        </div>
+
+        <Tabs defaultValue="catalog" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-2 bg-white/10 backdrop-blur-sm border-white/20">
+            <TabsTrigger value="catalog" className="text-white data-[state=active]:bg-white/20">Service Catalog</TabsTrigger>
+            <TabsTrigger value="requests" className="text-white data-[state=active]:bg-white/20">My Requests</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="catalog">
+            <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white">
+              <CardHeader>
+                <CardTitle>Available Services</CardTitle>
+                <CardDescription className="text-blue-200">
+                  Browse and request IT services from our catalog
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ServiceCatalogGrid
+                  services={services}
+                  onRequestService={handleRequestService}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="requests">
+            <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white">
+              <CardHeader>
+                <CardTitle>Service Requests</CardTitle>
+                <CardDescription className="text-blue-200">
+                  Track the status of your service requests
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ServiceRequestsList
+                  requests={requests}
+                  onUpdateStatus={handleUpdateStatus}
+                  isAdmin={true}
+                />
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+
+        <ServiceRequestForm
+          service={selectedService}
+          isOpen={isFormOpen}
+          onClose={() => setIsFormOpen(false)}
+          onSubmit={handleSubmitRequest}
+        />
       </div>
-
-      <Tabs defaultValue="catalog" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="catalog">Service Catalog</TabsTrigger>
-          <TabsTrigger value="requests">My Requests</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="catalog">
-          <Card>
-            <CardHeader>
-              <CardTitle>Available Services</CardTitle>
-              <CardDescription>
-                Browse and request IT services from our catalog
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ServiceCatalogGrid
-                services={services}
-                onRequestService={handleRequestService}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="requests">
-          <Card>
-            <CardHeader>
-              <CardTitle>Service Requests</CardTitle>
-              <CardDescription>
-                Track the status of your service requests
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <ServiceRequestsList
-                requests={requests}
-                onUpdateStatus={handleUpdateStatus}
-                isAdmin={true}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      <ServiceRequestForm
-        service={selectedService}
-        isOpen={isFormOpen}
-        onClose={() => setIsFormOpen(false)}
-        onSubmit={handleSubmitRequest}
-      />
     </div>
   );
 };

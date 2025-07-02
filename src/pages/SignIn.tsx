@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,6 +11,7 @@ import { Eye, EyeOff, Mail, Lock, Shield, Bot, Zap, Users, BarChart3, RefreshCw 
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import ImprovedHCaptcha from "@/components/ImprovedHCaptcha";
 import { sendMFACode } from "@/services/mfaService";
+import { supabase } from "@/integrations/supabase/client";
 
 const SignIn = () => {
   const [email, setEmail] = useState("");
@@ -27,6 +27,9 @@ const SignIn = () => {
   const [otpAttempts, setOtpAttempts] = useState(0);
   const [isResending, setIsResending] = useState(false);
   const [resendCooldown, setResendCooldown] = useState(0);
+  const [showResetPassword, setShowResetPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState("");
+  const [isResettingPassword, setIsResettingPassword] = useState(false);
   
   const { signIn, verifyMFA } = useImprovedAuth();
   const { toast } = useToast();
@@ -48,6 +51,47 @@ const SignIn = () => {
     });
   };
 
+  const handlePasswordReset = async () => {
+    if (!resetEmail) {
+      toast({
+        title: "Email Required",
+        description: "Please enter your email address.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsResettingPassword(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: `${window.location.origin}/signin`,
+      });
+
+      if (error) {
+        toast({
+          title: "Reset Failed",
+          description: error.message,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Reset Email Sent",
+          description: "Check your email for password reset instructions.",
+        });
+        setShowResetPassword(false);
+        setResetEmail("");
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to send reset email.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsResettingPassword(false);
+    }
+  };
+
   const handleResendMFA = async () => {
     if (resendCooldown > 0) return;
     
@@ -60,12 +104,10 @@ const SignIn = () => {
           description: "A new verification code has been sent to your email.",
         });
         
-        // Reset OTP attempts and start cooldown
         setOtpAttempts(0);
         setMfaCode("");
         setResendCooldown(60);
         
-        // Countdown timer
         const timer = setInterval(() => {
           setResendCooldown((prev) => {
             if (prev <= 1) {
@@ -124,12 +166,12 @@ const SignIn = () => {
             title: "Welcome Back!",
             description: `Successfully signed in${isAdmin ? " as Administrator" : ""}.`,
           });
-          navigate(isAdmin ? "/admin" : "/itsm");
+          navigate(isAdmin ? "/admin/dashboard" : "/dashboard");
         }
       } else {
         toast({
           title: "Sign In Failed",
-          description: result.error || "Invalid credentials. Please try again.",
+          description: result.error || "User doesn't exist or invalid credentials",
           variant: "destructive",
         });
       }
@@ -165,7 +207,6 @@ const SignIn = () => {
       return;
     }
 
-    // Check attempt limit
     if (otpAttempts >= 3) {
       toast({
         title: "Too Many Attempts",
@@ -186,7 +227,7 @@ const SignIn = () => {
           title: "Access Granted",
           description: "Welcome to your ITSM portal!",
         });
-        navigate(result.isAdmin ? "/admin" : "/itsm");
+        navigate(result.isAdmin ? "/admin/dashboard" : "/dashboard");
       } else {
         const newAttempts = otpAttempts + 1;
         setOtpAttempts(newAttempts);
@@ -246,7 +287,6 @@ const SignIn = () => {
               Enter the 6-digit code sent to your email
             </CardDescription>
             
-            {/* Resend Option */}
             <div className="mt-4">
               <Button
                 type="button"
@@ -382,70 +422,128 @@ const SignIn = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="space-y-2">
-                <Label htmlFor="email" className="text-gray-700 font-medium">Email Address</Label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="Enter your email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10 h-12 border-2 focus:border-blue-500"
-                    required
-                  />
+            {!showResetPassword ? (
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="text-gray-700 font-medium">Email Address</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="Enter your email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="pl-10 h-12 border-2 focus:border-blue-500"
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="password" className="text-gray-700 font-medium">Password</Label>
-                <div className="relative">
-                  <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-                  <Input
-                    id="password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 pr-10 h-12 border-2 focus:border-blue-500"
-                    required
-                  />
-                  <button
+                
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-gray-700 font-medium">Password</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      className="pl-10 pr-10 h-12 border-2 focus:border-blue-500"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="admin"
+                      checked={isAdmin}
+                      onCheckedChange={(checked) => setIsAdmin(checked as boolean)}
+                    />
+                    <Label htmlFor="admin" className="text-sm text-gray-600">
+                      Sign in as Administrator
+                    </Label>
+                  </div>
+                  
+                  <Button
                     type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-3 text-gray-400 hover:text-gray-600"
+                    variant="link"
+                    onClick={() => setShowResetPassword(true)}
+                    className="text-sm text-blue-600 hover:text-blue-700 p-0"
                   >
-                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+                    Forgot password?
+                  </Button>
+                </div>
+
+                <ImprovedHCaptcha 
+                  onVerify={handleCaptchaVerify}
+                  onError={handleCaptchaError}
+                />
+
+                <Button 
+                  type="submit" 
+                  className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 text-lg shadow-lg h-12"
+                  disabled={isLoading || !captchaToken}
+                >
+                  {isLoading ? "Signing In..." : "Sign In"}
+                </Button>
+              </form>
+            ) : (
+              <div className="space-y-6">
+                <div className="text-center">
+                  <h3 className="text-lg font-semibold text-gray-800 mb-2">Reset Your Password</h3>
+                  <p className="text-sm text-gray-600">Enter your email to receive reset instructions</p>
+                </div>
+                
+                <div className="space-y-2">
+                  <Label htmlFor="reset-email" className="text-gray-700 font-medium">Email Address</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+                    <Input
+                      id="reset-email"
+                      type="email"
+                      placeholder="Enter your email"
+                      value={resetEmail}
+                      onChange={(e) => setResetEmail(e.target.value)}
+                      className="pl-10 h-12 border-2 focus:border-blue-500"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <Button 
+                    onClick={handlePasswordReset}
+                    className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 text-lg shadow-lg h-12"
+                    disabled={isResettingPassword || !resetEmail}
+                  >
+                    {isResettingPassword ? "Sending..." : "Send Reset Email"}
+                  </Button>
+                  
+                  <Button 
+                    type="button" 
+                    variant="outline" 
+                    className="w-full border-2 hover:bg-gray-50"
+                    onClick={() => {
+                      setShowResetPassword(false);
+                      setResetEmail("");
+                    }}
+                  >
+                    Back to Sign In
+                  </Button>
                 </div>
               </div>
-
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="admin"
-                  checked={isAdmin}
-                  onCheckedChange={(checked) => setIsAdmin(checked as boolean)}
-                />
-                <Label htmlFor="admin" className="text-sm text-gray-600">
-                  Sign in as Administrator
-                </Label>
-              </div>
-
-              <ImprovedHCaptcha 
-                onVerify={handleCaptchaVerify}
-                onError={handleCaptchaError}
-              />
-
-              <Button 
-                type="submit" 
-                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 text-lg shadow-lg h-12"
-                disabled={isLoading || !captchaToken}
-              >
-                {isLoading ? "Signing In..." : "Sign In"}
-              </Button>
-            </form>
+            )}
 
             <div className="mt-8 text-center">
               <p className="text-sm text-gray-600">

@@ -4,6 +4,7 @@ import { User } from '@supabase/supabase-js';
 import { adminDirectLogin, regularUserLogin, completeMFALogin, createAdminUserIfNeeded } from '@/services/authService';
 import { authConfig, logAuthEvent } from '@/utils/authConfig';
 import { generateSessionToken, validateSessionToken } from '@/utils/urlEncryption';
+import { useToast } from '@/hooks/use-toast';
 
 interface AuthUser extends User {
   user_id?: string;
@@ -34,6 +35,7 @@ export const useImprovedAuth = () => {
 export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     logAuthEvent('Initializing production auth context with enhanced security');
@@ -83,8 +85,7 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
 
     // Security: Clear sensitive data on page unload
     const handleBeforeUnload = () => {
-      // Clear sensitive data from memory
-      if (performance.navigation.type === 1) { // Reload
+      if (performance.navigation.type === 1) {
         localStorage.removeItem('temp_auth_data');
       }
     };
@@ -227,6 +228,13 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
         }
 
         logAuthEvent('Sign up successful with enhanced security', { userId });
+        
+        // Show confirmation popup
+        toast({
+          title: "Account Created!",
+          description: "A confirmation email has been sent to your email address. Please check your inbox and click the link to verify your account.",
+        });
+        
         return { success: true, userId };
       }
 
