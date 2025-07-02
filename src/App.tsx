@@ -43,18 +43,12 @@ function App() {
               <BrowserRouter>
                 <div className="min-h-screen bg-gray-50">
                   <Routes>
-                    {/* Public routes */}
+                    {/* Public routes - accessible to everyone */}
+                    <Route path="/" element={<Index />} />
                     <Route path="/signin" element={<SignIn />} />
                     <Route path="/signup" element={<SignUp />} />
                     
                     {/* Protected routes with navigation */}
-                    <Route path="/" element={
-                      <ProtectedRoute>
-                        <MainNavigation />
-                        <Index />
-                      </ProtectedRoute>
-                    } />
-                    
                     <Route path="/dashboard" element={
                       <ProtectedRoute>
                         <MainNavigation />

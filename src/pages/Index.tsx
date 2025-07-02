@@ -2,9 +2,31 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Bot, Shield, Zap, Users, BarChart3, ArrowRight, CheckCircle, Star, Sparkles } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { useImprovedAuth } from "@/contexts/ImprovedAuthContext";
+import { useEffect } from "react";
 
 const Index = () => {
+  const { user, loading } = useImprovedAuth();
+  const navigate = useNavigate();
+
+  // Redirect authenticated users to dashboard
+  useEffect(() => {
+    if (!loading && user) {
+      navigate('/dashboard');
+    }
+  }, [user, loading, navigate]);
+
+  // Show loading state while checking authentication
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+        <div className="text-white text-lg">Loading...</div>
+      </div>
+    );
+  }
+
+  // Show landing page for non-authenticated users
   const features = [
     {
       icon: <Zap className="w-6 h-6 text-blue-500" />,
