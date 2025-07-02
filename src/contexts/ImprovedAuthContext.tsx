@@ -1,10 +1,10 @@
+
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
 import { adminDirectLogin, regularUserLogin, completeMFALogin, createAdminUserIfNeeded } from '@/services/authService';
 import { authConfig, logAuthEvent } from '@/utils/authConfig';
 import { generateSessionToken, validateSessionToken } from '@/utils/urlEncryption';
-import { useSessionTimeout } from '@/hooks/useSessionTimeout';
 
 interface AuthUser extends User {
   user_id?: string;
@@ -35,9 +35,6 @@ export const useImprovedAuth = () => {
 export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
-
-  // Use session timeout hook
-  useSessionTimeout(30); // 30 minutes timeout
 
   useEffect(() => {
     logAuthEvent('Initializing production auth context with enhanced security');
