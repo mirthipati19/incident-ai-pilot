@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -9,10 +8,10 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { Phone, MessageCircle, Plus, Ticket, Search, Filter, Clock, User, AlertCircle } from 'lucide-react';
-import { CreateIncidentForm } from '@/components/Incidents/CreateIncidentForm';
-import { IncidentList } from '@/components/Incidents/IncidentList';
-import { CallSupport } from '@/components/Assistant/CallSupport';
-import { ChatSupport } from '@/components/Assistant/ChatSupport';
+import CreateIncidentForm from '@/components/Incidents/CreateIncidentForm';
+import IncidentList from '@/components/Incidents/IncidentList';
+import CallSupport from '@/components/Assistant/CallSupport';
+import ChatSupport from '@/components/Assistant/ChatSupport';
 import { incidentService } from '@/services/incidentService';
 import { useToast } from '@/hooks/use-toast';
 import { useImprovedAuth } from '@/contexts/ImprovedAuthContext';
@@ -38,7 +37,7 @@ const ITSM = () => {
   const loadIncidents = async () => {
     try {
       setLoading(true);
-      const data = await incidentService.getIncidents();
+      const data = await incidentService.getUserIncidents(user?.id);
       setIncidents(data);
     } catch (error: any) {
       console.error('Failed to load incidents:', error);
