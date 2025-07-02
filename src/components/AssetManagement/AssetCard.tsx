@@ -10,7 +10,8 @@ import { format } from "date-fns";
 interface AssetCardProps {
   asset: Asset;
   onEdit: (asset: Asset) => void;
-  onViewDetails: (asset: Asset) => void;
+  onViewDetails?: (asset: Asset) => void;
+  onDelete: (assetId: string) => void;
 }
 
 const getAssetIcon = (type: string) => {
@@ -46,7 +47,8 @@ const getStatusColor = (status: string) => {
 export const AssetCard: React.FC<AssetCardProps> = ({
   asset,
   onEdit,
-  onViewDetails
+  onViewDetails,
+  onDelete
 }) => {
   return (
     <Card className="hover:shadow-lg transition-shadow">
@@ -108,19 +110,30 @@ export const AssetCard: React.FC<AssetCardProps> = ({
           )}
 
           <div className="flex justify-between pt-3 border-t">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onViewDetails(asset)}
-            >
-              View Details
-            </Button>
-            <Button
-              size="sm"
-              onClick={() => onEdit(asset)}
-            >
-              Edit
-            </Button>
+            {onViewDetails && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onViewDetails(asset)}
+              >
+                View Details
+              </Button>
+            )}
+            <div className="flex gap-2 ml-auto">
+              <Button
+                size="sm"
+                onClick={() => onEdit(asset)}
+              >
+                Edit
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => onDelete(asset.id)}
+              >
+                Delete
+              </Button>
+            </div>
           </div>
         </div>
       </CardContent>

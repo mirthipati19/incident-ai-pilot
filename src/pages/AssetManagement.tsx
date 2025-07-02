@@ -7,28 +7,9 @@ import { Badge } from '@/components/ui/badge';
 import { Plus, Search, Filter, Monitor, Smartphone, Laptop, HardDrive, Printer, Wifi } from 'lucide-react';
 import { AssetCard } from '@/components/AssetManagement/AssetCard';
 import { AssetForm } from '@/components/AssetManagement/AssetForm';
-import { assetManagementService } from '@/services/assetManagementService';
+import { assetManagementService, Asset } from '@/services/assetManagementService';
 import { useToast } from '@/hooks/use-toast';
 import { useImprovedAuth } from '@/contexts/ImprovedAuthContext';
-
-interface Asset {
-  id: string;
-  name: string;
-  asset_tag: string;
-  asset_type: string;
-  category: string;
-  status: string;
-  assigned_to: string | null;
-  location: string | null;
-  manufacturer: string | null;
-  model: string | null;
-  serial_number: string | null;
-  purchase_date: string | null;
-  warranty_expiry: string | null;
-  cost: number | null;
-  created_at: string;
-  updated_at: string;
-}
 
 const AssetManagement = () => {
   const { user } = useImprovedAuth();
@@ -294,6 +275,10 @@ const AssetManagement = () => {
                   setShowForm(true);
                 }}
                 onDelete={handleDeleteAsset}
+                onViewDetails={(asset) => {
+                  // Handle view details if needed
+                  console.log('View details for asset:', asset);
+                }}
               />
             ))}
           </div>

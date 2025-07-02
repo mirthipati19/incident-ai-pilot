@@ -7,33 +7,18 @@ import { Badge } from '@/components/ui/badge';
 import { Search, BookOpen, ThumbsUp, ThumbsDown, Eye, Plus, Filter } from 'lucide-react';
 import { ArticleCard } from '@/components/KnowledgeBase/ArticleCard';
 import { ArticleViewer } from '@/components/KnowledgeBase/ArticleViewer';
-import { knowledgeBaseService } from '@/services/knowledgeBaseService';
+import { knowledgeBaseService, KnowledgeArticle } from '@/services/knowledgeBaseService';
 import { useToast } from '@/hooks/use-toast';
 import { useImprovedAuth } from '@/contexts/ImprovedAuthContext';
-
-interface Article {
-  id: string;
-  title: string;
-  content: string;
-  category: string;
-  tags: string[];
-  author_id: string;
-  created_at: string;
-  updated_at: string;
-  view_count: number;
-  helpful_votes: number;
-  unhelpful_votes: number;
-  summary?: string;
-}
 
 const KnowledgeBase = () => {
   const { user } = useImprovedAuth();
   const { toast } = useToast();
-  const [articles, setArticles] = useState<Article[]>([]);
+  const [articles, setArticles] = useState<KnowledgeArticle[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('All');
-  const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
+  const [selectedArticle, setSelectedArticle] = useState<KnowledgeArticle | null>(null);
 
   const categories = ['All', 'Hardware', 'Software', 'Network', 'Security', 'General'];
 
@@ -66,7 +51,7 @@ const KnowledgeBase = () => {
 
     try {
       setLoading(true);
-      const results = await knowledgeBaseService.searchArticles(searchTerm);
+      const results = await knowledgeBaseService.getArticles(undefined, searchTerm);
       setArticles(results);
     } catch (error: any) {
       console.error('Search failed:', error);
@@ -80,18 +65,22 @@ const KnowledgeBase = () => {
     }
   };
 
-  const handleArticleClick = async (article: Article) => {
+  const handleArticleClick = async (article: KnowledgeArticle) => {
     setSelectedArticle(article);
     try {
-      await knowledgeBaseService.incrementViewCount(article.id);
-      // Update local state
+      // Update view count locally
       setArticles(prev => 
         prev.map(a => 
           a.id === article.id 
-            ? { ...a, view_count: a.view_count + 1 }
+            ? { ...a, view_count: (a.view_count || 0) + 1 }
             : a
         )
       );
+      
+      // Update in database
+      await knowledgeBaseService.updateArticle(article.id, {
+        view_count: (article.view_count || 0) + 1
+      });
     } catch (error) {
       console.error('Failed to increment view count:', error);
     }
@@ -108,7 +97,7 @@ const KnowledgeBase = () => {
     }
 
     try {
-      await knowledgeBaseService.submitFeedback(articleId, user.id, isHelpful);
+      await knowledgeBaseService.voteArticle(articleId, isHelpful);
       toast({
         title: 'Feedback Submitted',
         description: 'Thank you for your feedback!',
@@ -126,7 +115,7 @@ const KnowledgeBase = () => {
   const filteredArticles = articles.filter(article => {
     const matchesSearch = article.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          article.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         article.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase()));
+                         (article.tags && article.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())));
     const matchesCategory = selectedCategory === 'All' || article.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
@@ -138,8 +127,9 @@ const KnowledgeBase = () => {
         <div className="relative z-10">
           <ArticleViewer
             article={selectedArticle}
-            onBack={() => setSelectedArticle(null)}
-            onFeedback={handleFeedback}
+            isOpen={true}
+            onClose={() => setSelectedArticle(null)}
+            onVote={handleFeedback}
           />
         </div>
       </div>
@@ -219,6 +209,8 @@ const KnowledgeBase = () => {
                 key={article.id}
                 article={article}
                 onClick={() => handleArticleClick(article)}
+                onVote={handleFeedback}
+                showVoting={true}
               />
             ))}
           </div>
