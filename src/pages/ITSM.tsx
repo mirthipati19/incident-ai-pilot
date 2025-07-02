@@ -344,37 +344,62 @@ const ITSMPage = () => {
   ];
 
   return (
-    <div className="min-h-screen relative bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-4 overflow-hidden">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-[0.02]">
-        <div className="absolute top-0 left-0 w-96 h-96 bg-blue-600 rounded-full mix-blend-multiply filter blur-3xl animate-pulse"></div>
-        <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-600 rounded-full mix-blend-multiply filter blur-3xl animate-pulse delay-1000"></div>
-        <div className="absolute bottom-0 left-1/2 w-96 h-96 bg-purple-600 rounded-full mix-blend-multiply filter blur-3xl animate-pulse delay-2000"></div>
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Enhanced Animated Background */}
+      <div className="absolute inset-0 bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900">
+        {/* Animated gradient orbs */}
+        <div className="absolute top-0 left-0 w-96 h-96 bg-gradient-to-br from-blue-400/20 to-cyan-400/20 rounded-full mix-blend-multiply filter blur-3xl animate-pulse"></div>
+        <div className="absolute top-0 right-0 w-96 h-96 bg-gradient-to-br from-purple-400/20 to-pink-400/20 rounded-full mix-blend-multiply filter blur-3xl animate-pulse delay-1000"></div>
+        <div className="absolute bottom-0 left-1/2 w-96 h-96 bg-gradient-to-br from-indigo-400/20 to-violet-400/20 rounded-full mix-blend-multiply filter blur-3xl animate-pulse delay-2000"></div>
+        
+        {/* Floating particles */}
+        <div className="absolute inset-0">
+          {[...Array(20)].map((_, i) => (
+            <div
+              key={i}
+              className="absolute w-2 h-2 bg-white/10 rounded-full animate-float"
+              style={{
+                left: `${Math.random() * 100}%`,
+                top: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 10}s`,
+                animationDuration: `${5 + Math.random() * 10}s`
+              }}
+            />
+          ))}
+        </div>
+        
+        {/* Geometric patterns */}
+        <div className="absolute inset-0 opacity-[0.03]">
+          <div className="absolute top-20 left-20 w-32 h-32 border border-white rotate-45 animate-spin-slow"></div>
+          <div className="absolute top-40 right-40 w-24 h-24 border border-white rounded-full animate-pulse"></div>
+          <div className="absolute bottom-32 left-32 w-40 h-40 border border-white rotate-12 animate-bounce-slow"></div>
+        </div>
+        
+        {/* Grid overlay */}
+        <div className="absolute inset-0 opacity-[0.02]" style={{
+          backgroundImage: `
+            linear-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(255, 255, 255, 0.1) 1px, transparent 1px)
+          `,
+          backgroundSize: '40px 40px'
+        }}></div>
       </div>
       
-      {/* Grid Pattern */}
-      <div className="absolute inset-0 opacity-[0.03]" style={{
-        backgroundImage: `
-          linear-gradient(rgba(59, 130, 246, 0.1) 1px, transparent 1px),
-          linear-gradient(90deg, rgba(59, 130, 246, 0.1) 1px, transparent 1px)
-        `,
-        backgroundSize: '20px 20px'
-      }}></div>
-      <div className="max-w-7xl mx-auto space-y-6">
+      <div className="relative z-10 max-w-7xl mx-auto space-y-6 p-4">
         {/* Header */}
         <div className="text-center space-y-4">
           <div className="flex items-center justify-center gap-3">
             <img 
               src="/lovable-uploads/c94935e4-6231-41ae-993c-155a820c9885.png" 
               alt="Authexa Logo" 
-              className="w-12 h-12"
+              className="w-12 h-12 drop-shadow-lg"
             />
-            <h1 className="text-4xl font-bold text-indigo-800">
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-white to-blue-200 bg-clip-text text-transparent">
               Self Service Portal
             </h1>
           </div>
           {user?.name && (
-            <p className="text-md text-indigo-600">
+            <p className="text-md text-blue-200/80">
               Welcome back, {user.name}! (ID: {user.user_id})
             </p>
           )}
@@ -383,14 +408,14 @@ const ITSMPage = () => {
         {/* Statistics Dashboard */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {statCards.map((stat) => (
-            <Card key={stat.label} className="bg-white/80 backdrop-blur-sm border border-indigo-200 hover:bg-white transition-all shadow-sm">
+            <Card key={stat.label} className="bg-white/10 backdrop-blur-md border border-white/20 hover:bg-white/15 transition-all shadow-xl hover:shadow-2xl">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-indigo-600">{stat.label}</p>
-                    <p className="text-2xl font-bold text-indigo-800">{stat.value}</p>
+                    <p className="text-sm font-medium text-blue-200">{stat.label}</p>
+                    <p className="text-2xl font-bold text-white">{stat.value}</p>
                   </div>
-                  <stat.icon className={`w-8 h-8 ${stat.color}`} />
+                  <stat.icon className={`w-8 h-8 ${stat.color} drop-shadow-lg`} />
                 </div>
               </CardContent>
             </Card>
@@ -400,9 +425,9 @@ const ITSMPage = () => {
         {/* AI Assistant Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Call Support */}
-          <Card className="bg-white/80 backdrop-blur-sm border border-indigo-200 shadow-sm">
+          <Card className="bg-white/10 backdrop-blur-md border border-white/20 shadow-xl">
             <CardHeader>
-              <CardTitle className="text-center text-indigo-800 flex items-center justify-center gap-2">
+              <CardTitle className="text-center text-white flex items-center justify-center gap-2">
                 <Phone className="w-5 h-5" />
                 Call Support
               </CardTitle>
@@ -414,9 +439,9 @@ const ITSMPage = () => {
           </Card>
 
           {/* Chat Support */}
-          <Card className="bg-white/80 backdrop-blur-sm border border-indigo-200 shadow-sm">
+          <Card className="bg-white/10 backdrop-blur-md border border-white/20 shadow-xl">
             <CardHeader>
-              <CardTitle className="text-center text-indigo-800 flex items-center justify-center gap-2">
+              <CardTitle className="text-center text-white flex items-center justify-center gap-2">
                 <MessageCircle className="w-5 h-5" />
                 Chat Support
               </CardTitle>
@@ -427,7 +452,7 @@ const ITSMPage = () => {
           </Card>
 
           {/* Download and Install Software */}
-          <Card className="bg-gradient-to-br from-indigo-100 to-purple-100 backdrop-blur-sm border border-indigo-200 shadow-sm">
+          <Card className="bg-gradient-to-br from-white/15 to-white/5 backdrop-blur-md border border-white/20 shadow-xl">
             <CardContent className="p-4">
               <ImprovedVoiceInstaller />
             </CardContent>
@@ -436,8 +461,8 @@ const ITSMPage = () => {
 
         {/* Main Content - Only Incidents Tab */}
         <Tabs defaultValue="incidents" className="w-full">
-          <TabsList className="grid w-full grid-cols-1 bg-white/80 backdrop-blur-sm border border-indigo-200">
-            <TabsTrigger value="incidents" className="flex items-center gap-2 text-indigo-700 data-[state=active]:bg-white data-[state=active]:text-indigo-800">
+          <TabsList className="grid w-full grid-cols-1 bg-white/10 backdrop-blur-md border border-white/20">
+            <TabsTrigger value="incidents" className="flex items-center gap-2 text-blue-200 data-[state=active]:bg-white/20 data-[state=active]:text-white">
               <List className="w-4 h-4" />
               My Incidents
             </TabsTrigger>
@@ -476,6 +501,30 @@ const ITSMPage = () => {
           />
         )}
       </div>
+      
+      <style jsx>{`
+        @keyframes float {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-20px) rotate(180deg); }
+        }
+        @keyframes spin-slow {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+        @keyframes bounce-slow {
+          0%, 100% { transform: translateY(0px); }
+          50% { transform: translateY(-10px); }
+        }
+        .animate-float {
+          animation: float 8s ease-in-out infinite;
+        }
+        .animate-spin-slow {
+          animation: spin-slow 20s linear infinite;
+        }
+        .animate-bounce-slow {
+          animation: bounce-slow 6s ease-in-out infinite;
+        }
+      `}</style>
     </div>
   );
 };

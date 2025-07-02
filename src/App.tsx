@@ -22,7 +22,14 @@ import AssetManagementPage from "@/pages/AssetManagement";
 import NotFound from "@/pages/NotFound";
 import "./App.css";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 function App() {
   return (
@@ -45,35 +52,45 @@ function App() {
                   <Route path="/dashboard" element={
                     <ProtectedRoute>
                       <MainNavigation />
-                      <Dashboard />
+                      <main className="pt-16">
+                        <Dashboard />
+                      </main>
                     </ProtectedRoute>
                   } />
                   
                   <Route path="/itsm" element={
                     <ProtectedRoute>
                       <MainNavigation />
-                      <ITSM />
+                      <main className="pt-16">
+                        <ITSM />
+                      </main>
                     </ProtectedRoute>
                   } />
                   
                   <Route path="/service-catalog" element={
                     <ProtectedRoute>
                       <MainNavigation />
-                      <ServiceCatalogPage />
+                      <main className="pt-16">
+                        <ServiceCatalogPage />
+                      </main>
                     </ProtectedRoute>
                   } />
                   
                   <Route path="/knowledge-base" element={
                     <ProtectedRoute>
                       <MainNavigation />
-                      <KnowledgeBasePage />
+                      <main className="pt-16">
+                        <KnowledgeBasePage />
+                      </main>
                     </ProtectedRoute>
                   } />
                   
                   <Route path="/asset-management" element={
                     <ProtectedRoute>
                       <MainNavigation />
-                      <AssetManagementPage />
+                      <main className="pt-16">
+                        <AssetManagementPage />
+                      </main>
                     </ProtectedRoute>
                   } />
                   
@@ -81,7 +98,9 @@ function App() {
                   <Route path="/admin/dashboard" element={
                     <AdminRoute>
                       <MainNavigation />
-                      <AdminDashboard />
+                      <main className="pt-16">
+                        <AdminDashboard />
+                      </main>
                     </AdminRoute>
                   } />
                   
