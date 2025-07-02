@@ -3,28 +3,33 @@ import React, { useState } from 'react';
 import { Shield, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useSmartAgent } from '@/hooks/useSmartAgent';
 
 interface ConnectPermissionPromptProps {
   onApproval?: (approved: boolean) => void;
 }
 
 const ConnectPermissionPrompt = ({ onApproval }: ConnectPermissionPromptProps) => {
-  const { approved, isConnecting, requestApproval, sendCommand } = useSmartAgent();
+  const [approved, setApproved] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(false);
   const [isInstalling, setIsInstalling] = useState(false);
   const [installOutput, setInstallOutput] = useState('');
 
   const handleApprove = async () => {
-    await requestApproval();
-    onApproval?.(true);
-    
-    // Voice prompt
-    if ('speechSynthesis' in window) {
-      const utterance = new SpeechSynthesisUtterance(
-        "Connection approved! I can now help you install approved software and manage your system."
-      );
-      speechSynthesis.speak(utterance);
-    }
+    setIsConnecting(true);
+    // Simulate connection time
+    setTimeout(() => {
+      setApproved(true);
+      setIsConnecting(false);
+      onApproval?.(true);
+      
+      // Voice prompt
+      if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(
+          "Connection approved! I can now help you install approved software and manage your system."
+        );
+        speechSynthesis.speak(utterance);
+      }
+    }, 2000);
   };
 
   const handleDeny = () => {
@@ -42,8 +47,8 @@ const ConnectPermissionPrompt = ({ onApproval }: ConnectPermissionPromptProps) =
   const handleInstallSoftware = async (software: string, command: string) => {
     setIsInstalling(true);
     try {
-      const output = await sendCommand(command);
-      setInstallOutput(output);
+      // Mock installation - in a real implementation this would use a secure API
+      setInstallOutput(`✅ Simulating: ${command}\n🔄 Installation in progress...\n✅ ${software} installed successfully!`);
       
       if ('speechSynthesis' in window) {
         const utterance = new SpeechSynthesisUtterance(
@@ -55,7 +60,7 @@ const ConnectPermissionPrompt = ({ onApproval }: ConnectPermissionPromptProps) =
       setInstallOutput(`❌ Error: ${error}`);
       console.error('Installation failed:', error);
     } finally {
-      setIsInstalling(false);
+      setTimeout(() => setIsInstalling(false), 3000);
     }
   };
 

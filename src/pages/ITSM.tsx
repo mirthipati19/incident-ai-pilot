@@ -502,7 +502,7 @@ const ITSMPage = () => {
         )}
       </div>
       
-      <style jsx>{`
+      <style>{`
         @keyframes float {
           0%, 100% { transform: translateY(0px) rotate(0deg); }
           50% { transform: translateY(-20px) rotate(180deg); }
