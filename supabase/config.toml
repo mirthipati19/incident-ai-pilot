@@ -35,6 +35,9 @@ jwt_expiry = 3600
 refresh_token_rotation_enabled = true
 security_captcha_enabled = false
 security_captcha_secret = ""
+enable_signup = true
+enable_confirmations = true
+enable_recoveries = true
 
 [edge_runtime]
 enabled = true

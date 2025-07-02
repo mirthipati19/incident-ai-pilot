@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
@@ -157,7 +156,7 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
         return { success: false, error: 'Security verification required' };
       }
       
-      // Sign up with email confirmation disabled
+      // Sign up with email confirmation enabled
       const signUpOptions: any = {
         email,
         password,
@@ -165,7 +164,8 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
           captchaToken,
           data: {
             name: name
-          }
+          },
+          emailRedirectTo: `${window.location.origin}/signin`
         }
       };
 
@@ -193,26 +193,6 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
         if (profileError) {
           console.error('❌ Profile creation error:', profileError);
           return { success: false, error: 'Failed to create user profile' };
-        }
-
-        // Send custom welcome email using our Resend setup
-        try {
-          const { error: emailError } = await supabase.functions.invoke('send-mfa-email', {
-            body: { 
-              email, 
-              code: 'WELCOME', 
-              userName: name,
-              isWelcome: true 
-            }
-          });
-
-          if (emailError) {
-            console.warn('⚠️ Welcome email failed to send:', emailError);
-          } else {
-            logAuthEvent('Welcome email sent successfully');
-          }
-        } catch (emailError) {
-          console.warn('⚠️ Welcome email error:', emailError);
         }
 
         logAuthEvent('Sign up successful with enhanced security', { userId });

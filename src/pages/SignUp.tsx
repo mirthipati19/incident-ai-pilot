@@ -100,7 +100,8 @@ const SignUp = () => {
       if (result.success) {
         toast({
           title: "Account Created Successfully!",
-          description: "Please check your email to verify your account, then sign in.",
+          description: "Please check your email for a confirmation link to verify your account before signing in.",
+          duration: 8000,
         });
         navigate("/signin");
       } else {
