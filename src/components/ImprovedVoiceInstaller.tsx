@@ -1,10 +1,9 @@
 
 import { useState, useRef } from 'react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { Mic, MicOff, Download, Loader2, RefreshCw, Volume2 } from 'lucide-react';
+import { Mic, MicOff, Download, Loader2, Volume2 } from 'lucide-react';
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // Initialize Gemini AI
@@ -187,69 +186,59 @@ Software request: ${input}`;
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto">
-      <Card className="bg-gradient-to-br from-blue-50 to-indigo-100 border-indigo-200">
+    <div className="w-full">
+      <Card className="bg-gradient-to-br from-indigo-50 to-purple-100 border-indigo-200">
         <CardHeader className="text-center pb-4">
-          <CardTitle className="text-2xl font-bold text-indigo-800 flex items-center justify-center gap-2">
-            <Volume2 className="w-6 h-6" />
-            AI Batch Script Generator
+          <CardTitle className="text-xl font-bold text-indigo-800 flex items-center justify-center gap-2">
+            <Volume2 className="w-5 h-5" />
+            Download and Install Software
           </CardTitle>
-          <p className="text-indigo-600 mt-2">
+          <p className="text-indigo-600 text-sm mt-2">
             Generate Windows installation scripts using voice or text input
           </p>
         </CardHeader>
         
-        <CardContent className="space-y-6">
+        <CardContent className="space-y-4">
           {/* Status Display */}
-          <div className="bg-white/70 rounded-lg p-4 text-center">
-            <p className="text-indigo-700 font-medium">{status}</p>
+          <div className="bg-white/70 rounded-lg p-3 text-center">
+            <p className="text-indigo-700 font-medium text-sm">{status}</p>
           </div>
 
           {/* Voice Input Section */}
-          <div className="text-center space-y-4">
-            <div className="flex justify-center gap-4">
-              <Button
-                onClick={isListening ? stopListening : startListening}
-                className={`w-24 h-24 rounded-full text-white font-bold transition-all ${
-                  isListening
-                    ? 'bg-red-500 hover:bg-red-600 animate-pulse shadow-lg'
-                    : 'bg-blue-500 hover:bg-blue-600 shadow-md hover:shadow-lg'
-                }`}
-                disabled={isGenerating}
-              >
-                {isListening ? (
-                  <div className="flex flex-col items-center">
-                    <MicOff className="w-6 h-6 mb-1" />
-                    <span className="text-xs">Stop</span>
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center">
-                    <Mic className="w-6 h-6 mb-1" />
-                    <span className="text-xs">Speak</span>
-                  </div>
-                )}
-              </Button>
-              
-              <Button
-                onClick={clearAll}
-                className="w-16 h-16 rounded-full bg-gray-500 hover:bg-gray-600 text-white"
-                title="Clear All"
-              >
-                <RefreshCw className="w-5 h-5" />
-              </Button>
-            </div>
+          <div className="text-center space-y-3">
+            <Button
+              onClick={isListening ? stopListening : startListening}
+              className={`w-20 h-20 rounded-full text-white font-bold transition-all ${
+                isListening
+                  ? 'bg-red-500 hover:bg-red-600 animate-pulse shadow-lg'
+                  : 'bg-blue-500 hover:bg-blue-600 shadow-md hover:shadow-lg'
+              }`}
+              disabled={isGenerating}
+            >
+              {isListening ? (
+                <div className="flex flex-col items-center">
+                  <MicOff className="w-5 h-5 mb-1" />
+                  <span className="text-xs">Stop</span>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center">
+                  <Mic className="w-5 h-5 mb-1" />
+                  <span className="text-xs">Speak</span>
+                </div>
+              )}
+            </Button>
           </div>
 
           {/* Text Input Section */}
-          <div className="space-y-3">
-            <label className="block text-indigo-700 font-medium">
+          <div className="space-y-2">
+            <label className="block text-indigo-700 font-medium text-sm">
               Or type your software installation request:
             </label>
             <Textarea
               value={textInput}
               onChange={(e) => setTextInput(e.target.value)}
               placeholder="e.g., Install Visual Studio Code, Chrome, and NodeJS"
-              className="bg-white/80 border-indigo-200 focus:border-indigo-400 min-h-[80px]"
+              className="bg-white/80 border-indigo-200 focus:border-indigo-400 min-h-[60px] text-sm"
               disabled={isGenerating}
             />
           </div>
@@ -258,11 +247,11 @@ Software request: ${input}`;
           <Button
             onClick={handleGenerate}
             disabled={!textInput.trim() || isGenerating}
-            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-3 text-lg font-semibold"
+            className="w-full bg-indigo-600 hover:bg-indigo-700 text-white py-2 text-sm font-semibold"
           >
             {isGenerating ? (
               <>
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 🤖 AI Generating Script...
               </>
             ) : (
@@ -272,38 +261,26 @@ Software request: ${input}`;
 
           {/* Generated Script Display */}
           {generatedScript && (
-            <div className="space-y-4">
-              <div className="bg-gray-900 rounded-lg p-4 max-h-64 overflow-y-auto">
-                <h3 className="text-white font-semibold mb-2 flex items-center gap-2">
+            <div className="space-y-3">
+              <div className="bg-gray-900 rounded-lg p-3 max-h-48 overflow-y-auto">
+                <h3 className="text-white font-semibold mb-2 flex items-center gap-2 text-sm">
                   <Download className="w-4 h-4" />
                   Generated Batch Script:
                 </h3>
-                <pre className="text-green-400 text-sm whitespace-pre-wrap">
+                <pre className="text-green-400 text-xs whitespace-pre-wrap">
                   {generatedScript}
                 </pre>
               </div>
               
               <Button
                 onClick={downloadBatchFile}
-                className="w-full bg-green-600 hover:bg-green-700 text-white py-3 text-lg font-semibold"
+                className="w-full bg-green-600 hover:bg-green-700 text-white py-2 text-sm font-semibold"
               >
-                <Download className="w-5 h-5 mr-2" />
+                <Download className="w-4 h-4 mr-2" />
                 📥 Download .bat File
               </Button>
             </div>
           )}
-
-          {/* Instructions */}
-          <div className="bg-indigo-50 rounded-lg p-4 border border-indigo-200">
-            <h4 className="text-indigo-800 font-semibold mb-2">💡 Quick Tips:</h4>
-            <ul className="text-indigo-700 text-sm space-y-1">
-              <li>• Click the microphone to use voice input</li>
-              <li>• Or type your software installation request</li>
-              <li>• AI generates intelligent batch scripts with error handling</li>
-              <li>• Download and run the .bat file as administrator</li>
-              <li>• Requires Windows Package Manager (winget) for best results</li>
-            </ul>
-          </div>
         </CardContent>
       </Card>
     </div>

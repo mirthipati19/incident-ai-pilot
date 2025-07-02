@@ -9,12 +9,11 @@ import IncidentResolutionPopup from '@/components/IncidentResolutionPopup';
 import ImprovedVoiceInstaller from '@/components/ImprovedVoiceInstaller';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { List, CheckCircle, XCircle, Clock, MessageCircle, Phone, LogOut, AlertTriangle } from 'lucide-react';
+import { List, CheckCircle, XCircle, Clock, MessageCircle, Phone, AlertTriangle } from 'lucide-react';
 import { useImprovedAuth } from '@/contexts/ImprovedAuthContext';
 import { incidentService, type Incident } from '@/services/incidentService';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { useNavigate } from 'react-router-dom';
 
 const ITSMPage = () => {
   const [selectedIncident, setSelectedIncident] = useState<Incident | null>(null);
@@ -33,9 +32,8 @@ const ITSMPage = () => {
   });
   const [loading, setLoading] = useState(true);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
-  const { user, signOut } = useImprovedAuth();
+  const { user } = useImprovedAuth();
   const { toast } = useToast();
-  const navigate = useNavigate();
 
   // Load user incidents and stats
   useEffect(() => {
@@ -71,24 +69,6 @@ const ITSMPage = () => {
       setStats(userStats);
     } catch (error) {
       console.error('Failed to load stats:', error);
-    }
-  };
-
-  const handleSignOut = async () => {
-    try {
-      await signOut();
-      toast({
-        title: "Signed Out",
-        description: "You have been successfully signed out",
-      });
-      navigate('/signin');
-    } catch (error) {
-      console.error('Sign out error:', error);
-      toast({
-        title: "Error",
-        description: "Failed to sign out",
-        variant: "destructive"
-      });
     }
   };
 
@@ -364,7 +344,7 @@ const ITSMPage = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 p-4">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-4">
       <div className="max-w-7xl mx-auto space-y-6">
         {/* Header */}
         <div className="text-center space-y-4">
@@ -374,26 +354,12 @@ const ITSMPage = () => {
               alt="Authexa Logo" 
               className="w-12 h-12"
             />
-            <h1 className="text-4xl font-bold text-slate-800">
-              Authexa Support
+            <h1 className="text-4xl font-bold text-indigo-800">
+              Self Service Portal
             </h1>
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                size="sm" 
-                onClick={handleSignOut}
-                className="bg-red-50 text-red-700 border-red-200 hover:bg-red-100"
-              >
-                <LogOut className="w-4 h-4 mr-2" />
-                Sign Out
-              </Button>
-            </div>
           </div>
-          <p className="text-lg text-slate-600">
-            AI-powered IT Service Management with voice, automation and smart device integration
-          </p>
           {user?.name && (
-            <p className="text-md text-slate-500">
+            <p className="text-md text-indigo-600">
               Welcome back, {user.name}! (ID: {user.user_id})
             </p>
           )}
@@ -402,12 +368,12 @@ const ITSMPage = () => {
         {/* Statistics Dashboard */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           {statCards.map((stat) => (
-            <Card key={stat.label} className="bg-white/80 backdrop-blur-sm border border-slate-200 hover:bg-white transition-all shadow-sm">
+            <Card key={stat.label} className="bg-white/80 backdrop-blur-sm border border-indigo-200 hover:bg-white transition-all shadow-sm">
               <CardContent className="p-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-slate-600">{stat.label}</p>
-                    <p className="text-2xl font-bold text-slate-800">{stat.value}</p>
+                    <p className="text-sm font-medium text-indigo-600">{stat.label}</p>
+                    <p className="text-2xl font-bold text-indigo-800">{stat.value}</p>
                   </div>
                   <stat.icon className={`w-8 h-8 ${stat.color}`} />
                 </div>
@@ -419,9 +385,9 @@ const ITSMPage = () => {
         {/* AI Assistant Section */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Call Support */}
-          <Card className="bg-white/80 backdrop-blur-sm border border-slate-200 shadow-sm">
+          <Card className="bg-white/80 backdrop-blur-sm border border-indigo-200 shadow-sm">
             <CardHeader>
-              <CardTitle className="text-center text-slate-800 flex items-center justify-center gap-2">
+              <CardTitle className="text-center text-indigo-800 flex items-center justify-center gap-2">
                 <Phone className="w-5 h-5" />
                 Call Support
               </CardTitle>
@@ -433,9 +399,9 @@ const ITSMPage = () => {
           </Card>
 
           {/* Chat Support */}
-          <Card className="bg-white/80 backdrop-blur-sm border border-slate-200 shadow-sm">
+          <Card className="bg-white/80 backdrop-blur-sm border border-indigo-200 shadow-sm">
             <CardHeader>
-              <CardTitle className="text-center text-slate-800 flex items-center justify-center gap-2">
+              <CardTitle className="text-center text-indigo-800 flex items-center justify-center gap-2">
                 <MessageCircle className="w-5 h-5" />
                 Chat Support
               </CardTitle>
@@ -445,8 +411,8 @@ const ITSMPage = () => {
             </CardContent>
           </Card>
 
-          {/* Improved Batch Script Generator */}
-          <Card className="bg-white/80 backdrop-blur-sm border border-slate-200 shadow-sm">
+          {/* Download and Install Software */}
+          <Card className="bg-gradient-to-br from-indigo-100 to-purple-100 backdrop-blur-sm border border-indigo-200 shadow-sm">
             <CardContent className="p-4">
               <ImprovedVoiceInstaller />
             </CardContent>
@@ -455,8 +421,8 @@ const ITSMPage = () => {
 
         {/* Main Content - Only Incidents Tab */}
         <Tabs defaultValue="incidents" className="w-full">
-          <TabsList className="grid w-full grid-cols-1 bg-white/80 backdrop-blur-sm border border-slate-200">
-            <TabsTrigger value="incidents" className="flex items-center gap-2 text-slate-700 data-[state=active]:bg-white data-[state=active]:text-slate-800">
+          <TabsList className="grid w-full grid-cols-1 bg-white/80 backdrop-blur-sm border border-indigo-200">
+            <TabsTrigger value="incidents" className="flex items-center gap-2 text-indigo-700 data-[state=active]:bg-white data-[state=active]:text-indigo-800">
               <List className="w-4 h-4" />
               My Incidents
             </TabsTrigger>
