@@ -35,7 +35,7 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
           const user = await newAdminAuthService.validateSession(sessionToken);
           if (user) {
             setAdminUser(user);
-            setOrganization(user.organization);
+            setOrganization(user.organization || null);
           } else {
             localStorage.removeItem('admin_session_token');
           }
@@ -56,7 +56,7 @@ export const AdminAuthProvider = ({ children }: { children: ReactNode }) => {
       const { user, session } = await newAdminAuthService.loginAdmin(email, password);
       
       setAdminUser(user);
-      setOrganization(user.organizations);
+      setOrganization(user.organization || null);
       localStorage.setItem('admin_session_token', session.session_token);
       
       return { success: true };
