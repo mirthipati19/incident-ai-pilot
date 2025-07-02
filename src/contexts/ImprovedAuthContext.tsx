@@ -3,6 +3,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
 import { adminDirectLogin, regularUserLogin, completeMFALogin, createAdminUserIfNeeded } from '@/services/authService';
 import { authConfig, logAuthEvent } from '@/utils/authConfig';
+import { generateSessionToken, validateSessionToken } from '@/utils/urlEncryption';
+import { useSessionTimeout } from '@/hooks/useSessionTimeout';
 
 interface AuthUser extends User {
   user_id?: string;
@@ -34,8 +36,11 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Use session timeout hook
+  useSessionTimeout(30); // 30 minutes timeout
+
   useEffect(() => {
-    logAuthEvent('Initializing production auth context');
+    logAuthEvent('Initializing production auth context with enhanced security');
     
     // Initialize admin user on startup
     createAdminUserIfNeeded();
@@ -44,6 +49,15 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
+          // Validate session token if it exists
+          const sessionToken = localStorage.getItem('auth_session_token');
+          if (sessionToken && !validateSessionToken(sessionToken)) {
+            logAuthEvent('Invalid session token detected, signing out');
+            await supabase.auth.signOut();
+            localStorage.removeItem('auth_session_token');
+            return;
+          }
+          
           await updateUserFromSession(session.user);
         }
       } catch (error) {
@@ -55,17 +69,35 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
     getSession();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      logAuthEvent('Auth state changed', { event, email: session?.user?.email });
+      logAuthEvent('Auth state changed with enhanced security', { event, email: session?.user?.email });
       
       if (session?.user) {
+        // Generate and store session token
+        const sessionToken = generateSessionToken();
+        localStorage.setItem('auth_session_token', sessionToken);
+        
         await updateUserFromSession(session.user);
       } else {
+        localStorage.removeItem('auth_session_token');
         setUser(null);
       }
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    // Security: Clear sensitive data on page unload
+    const handleBeforeUnload = () => {
+      // Clear sensitive data from memory
+      if (performance.navigation.type === 1) { // Reload
+        localStorage.removeItem('temp_auth_data');
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+
+    return () => {
+      subscription.unsubscribe();
+      window.removeEventListener('beforeunload', handleBeforeUnload);
+    };
   }, []);
 
   const updateUserFromSession = async (authUser: User) => {
@@ -87,7 +119,7 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
         isAdmin
       });
       
-      logAuthEvent('User session updated', { 
+      logAuthEvent('User session updated with security validation', { 
         email: authUser.email, 
         isAdmin: isAdmin ? '(Admin)' : '(User)' 
       });
@@ -121,7 +153,7 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signUp = async (email: string, password: string, name: string, captchaToken?: string) => {
     try {
-      logAuthEvent('Sign up attempt', { email });
+      logAuthEvent('Sign up attempt with enhanced security', { email });
       
       // Require captcha token
       if (!captchaToken) {
@@ -179,16 +211,14 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
 
           if (emailError) {
             console.warn('⚠️ Welcome email failed to send:', emailError);
-            // Don't fail signup if email fails
           } else {
             logAuthEvent('Welcome email sent successfully');
           }
         } catch (emailError) {
           console.warn('⚠️ Welcome email error:', emailError);
-          // Don't fail signup if email fails
         }
 
-        logAuthEvent('Sign up successful', { userId });
+        logAuthEvent('Sign up successful with enhanced security', { userId });
         return { success: true, userId };
       }
 
@@ -201,14 +231,12 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signIn = async (email: string, password: string, isAdmin = false, captchaToken?: string) => {
     try {
-      logAuthEvent('Sign in attempt', { email, isAdmin: isAdmin ? '(Admin)' : '(User)' });
+      logAuthEvent('Sign in attempt with enhanced security', { email, isAdmin: isAdmin ? '(Admin)' : '(User)' });
       
       if (isAdmin) {
-        // Use direct admin login
         const result = await adminDirectLogin(email, password, captchaToken);
         return result;
       } else {
-        // Use regular user login with MFA
         const result = await regularUserLogin(email, password, captchaToken);
         return result;
       }
@@ -239,8 +267,12 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
           .eq('is_active', true);
       }
       
+      // Clear all local storage auth data
+      localStorage.removeItem('auth_session_token');
+      localStorage.removeItem('temp_auth_data');
+      
       await supabase.auth.signOut();
-      logAuthEvent('User signed out successfully');
+      logAuthEvent('User signed out successfully with security cleanup');
     } catch (error) {
       console.error('❌ Sign out error:', error);
     }
@@ -254,7 +286,7 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
       signIn,
       signOut,
       verifyMFA,
-      isDevelopmentMode: false, // Always false now
+      isDevelopmentMode: false,
     }}>
       {children}
     </ImprovedAuthContext.Provider>

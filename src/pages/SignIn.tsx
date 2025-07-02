@@ -8,9 +8,10 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useImprovedAuth } from "@/contexts/ImprovedAuthContext";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Eye, EyeOff, Mail, Lock, Shield, Bot, Zap, Users, BarChart3 } from "lucide-react";
+import { Eye, EyeOff, Mail, Lock, Shield, Bot, Zap, Users, BarChart3, RefreshCw } from "lucide-react";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import ImprovedHCaptcha from "@/components/ImprovedHCaptcha";
+import { sendMFACode } from "@/services/mfaService";
 
 const SignIn = () => {
   const [email, setEmail] = useState("");
@@ -23,6 +24,9 @@ const SignIn = () => {
   const [mfaCode, setMfaCode] = useState("");
   const [isMfaLoading, setIsMfaLoading] = useState(false);
   const [mfaCaptchaToken, setMfaCaptchaToken] = useState<string | null>(null);
+  const [otpAttempts, setOtpAttempts] = useState(0);
+  const [isResending, setIsResending] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
   
   const { signIn, verifyMFA } = useImprovedAuth();
   const { toast } = useToast();
@@ -42,6 +46,51 @@ const SignIn = () => {
       description: "Please try the security verification again.",
       variant: "destructive",
     });
+  };
+
+  const handleResendMFA = async () => {
+    if (resendCooldown > 0) return;
+    
+    setIsResending(true);
+    try {
+      const result = await sendMFACode(email);
+      if (result.success) {
+        toast({
+          title: "Code Resent",
+          description: "A new verification code has been sent to your email.",
+        });
+        
+        // Reset OTP attempts and start cooldown
+        setOtpAttempts(0);
+        setMfaCode("");
+        setResendCooldown(60);
+        
+        // Countdown timer
+        const timer = setInterval(() => {
+          setResendCooldown((prev) => {
+            if (prev <= 1) {
+              clearInterval(timer);
+              return 0;
+            }
+            return prev - 1;
+          });
+        }, 1000);
+      } else {
+        toast({
+          title: "Resend Failed",
+          description: result.error || "Failed to resend verification code.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to resend verification code.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsResending(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -64,8 +113,8 @@ const SignIn = () => {
       if (result.success) {
         if (result.requiresMFA) {
           setRequiresMFA(true);
-          // Clear the initial captcha token since we'll need a new one for MFA
           setCaptchaToken(null);
+          setOtpAttempts(0);
           toast({
             title: "Verification Required",
             description: "We've sent a verification code to your email.",
@@ -116,6 +165,17 @@ const SignIn = () => {
       return;
     }
 
+    // Check attempt limit
+    if (otpAttempts >= 3) {
+      toast({
+        title: "Too Many Attempts",
+        description: "You have exceeded the maximum number of attempts. A new code will be sent.",
+        variant: "destructive",
+      });
+      await handleResendMFA();
+      return;
+    }
+
     setIsMfaLoading(true);
 
     try {
@@ -128,13 +188,25 @@ const SignIn = () => {
         });
         navigate(result.isAdmin ? "/admin" : "/itsm");
       } else {
-        toast({
-          title: "Verification Failed",
-          description: result.error || "Invalid verification code. Please try again.",
-          variant: "destructive",
-        });
+        const newAttempts = otpAttempts + 1;
+        setOtpAttempts(newAttempts);
+        
+        if (newAttempts >= 3) {
+          toast({
+            title: "Too Many Failed Attempts",
+            description: "Maximum attempts exceeded. A new verification code will be sent.",
+            variant: "destructive",
+          });
+          await handleResendMFA();
+        } else {
+          toast({
+            title: "Verification Failed",
+            description: `${result.error || "Invalid verification code."} Attempts remaining: ${3 - newAttempts}`,
+            variant: "destructive",
+          });
+        }
+        
         setMfaCode("");
-        // Reset MFA captcha token so user gets a fresh one
         setMfaCaptchaToken(null);
       }
     } catch (error) {
@@ -153,11 +225,13 @@ const SignIn = () => {
     setMfaCode("");
     setCaptchaToken(null);
     setMfaCaptchaToken(null);
+    setOtpAttempts(0);
+    setResendCooldown(0);
   };
 
   if (requiresMFA) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center p-4">
+      <div className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center p-4">
         <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDM0di00aC0ydjRoLTR2Mmg0djRoMnYtNGg0di0yaC00em0wLTMwVjBoLTJ2NGgtNHYyaDR2NGgyVjZoNFY0aC00ek02IDM0di00SDR2NEgwdjJoNHY0aDJ2LTRoNHYtMkg2ek02IDRWMEg0djRIMHYyaDR2NEgyVjZoNFY0SDZ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
         
         <Card className="w-full max-w-md bg-white/95 backdrop-blur-sm border-0 shadow-2xl">
@@ -171,6 +245,29 @@ const SignIn = () => {
             <CardDescription className="text-gray-600 mt-2">
               Enter the 6-digit code sent to your email
             </CardDescription>
+            
+            {/* Resend Option */}
+            <div className="mt-4">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={handleResendMFA}
+                disabled={isResending || resendCooldown > 0}
+                className="text-sm"
+              >
+                {isResending ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 mr-2 animate-spin" />
+                    Sending...
+                  </>
+                ) : resendCooldown > 0 ? (
+                  `Resend in ${resendCooldown}s`
+                ) : (
+                  "Resend Code"
+                )}
+              </Button>
+            </div>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleMFASubmit} className="space-y-6">
@@ -191,6 +288,12 @@ const SignIn = () => {
                   </InputOTPGroup>
                 </InputOTP>
               </div>
+
+              {otpAttempts > 0 && (
+                <div className="text-center text-sm text-orange-600">
+                  Attempts remaining: {3 - otpAttempts}
+                </div>
+              )}
 
               <ImprovedHCaptcha 
                 onVerify={handleMfaCaptchaVerify}
@@ -223,7 +326,7 @@ const SignIn = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex">
+    <div className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex">
       <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDM0di00aC0ydjRoLTR2Mmg0djRoMnYtNGg0di0yaC00em0wLTMwVjBoLTJ2NGgtNHYyaDR2NGgyVjZoNFY0aC00ek02IDM0di00SDR2NEgwdjJoNHY0aDJ2LTRoNHYtMkg2ek02IDRWMEg0djRIMHYyaDR2NEgyVjZoNFY0SDZ6Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
       
       {/* Left Side - Branding */}
