@@ -8,31 +8,28 @@ import { incidentService, Incident } from '@/services/incidentService';
 import UserFeedbackDialog from '@/components/UserFeedbackDialog';
 
 interface IncidentListProps {
-  userId: string;
-  refreshTrigger?: number;
+  incidents: Incident[];
+  onIncidentUpdate: () => Promise<void>;
 }
 
-const IncidentList = ({ userId, refreshTrigger }: IncidentListProps) => {
-  const [incidents, setIncidents] = useState<Incident[]>([]);
-  const [loading, setLoading] = useState(true);
+const IncidentList = ({ incidents, onIncidentUpdate }: IncidentListProps) => {
   const [feedbackSubmitted, setFeedbackSubmitted] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    loadIncidents();
-  }, [userId, refreshTrigger]);
-
-  const loadIncidents = async () => {
-    try {
-      setLoading(true);
-      const data = await incidentService.getUserIncidents(userId);
-      setIncidents(data);
-
-      // Check which resolved incidents already have feedback
-      const resolvedIncidents = data.filter(inc => inc.status === 'Resolved' || inc.status === 'Closed');
+    // Check which resolved incidents already have feedback
+    const checkFeedback = async () => {
+      if (incidents.length === 0) return;
+      
+      const resolvedIncidents = incidents.filter(inc => inc.status === 'Resolved' || inc.status === 'Closed');
       const feedbackChecks = await Promise.all(
         resolvedIncidents.map(async (incident) => {
-          const hasFeedback = await incidentService.checkExistingFeedback(incident.id, userId);
-          return { incidentId: incident.id, hasFeedback };
+          try {
+            const hasFeedback = await incidentService.checkExistingFeedback(incident.id, incident.user_id);
+            return { incidentId: incident.id, hasFeedback };
+          } catch (error) {
+            console.error('Error checking feedback:', error);
+            return { incidentId: incident.id, hasFeedback: false };
+          }
         })
       );
 
@@ -42,12 +39,10 @@ const IncidentList = ({ userId, refreshTrigger }: IncidentListProps) => {
           .map(check => check.incidentId)
       );
       setFeedbackSubmitted(submittedSet);
-    } catch (error) {
-      console.error('Error loading incidents:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    };
+
+    checkFeedback();
+  }, [incidents]);
 
   const handleFeedbackSubmitted = (incidentId: string) => {
     setFeedbackSubmitted(prev => new Set(prev.add(incidentId)));
@@ -81,19 +76,11 @@ const IncidentList = ({ userId, refreshTrigger }: IncidentListProps) => {
     return `${hours}h ${remainingMinutes}min`;
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center p-8">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
   if (incidents.length === 0) {
     return (
-      <Card>
+      <Card className="bg-white/10 backdrop-blur-sm border-white/20">
         <CardContent className="text-center py-8">
-          <p className="text-gray-500">No incidents found. Create your first incident to get started.</p>
+          <p className="text-white/70">No incidents found. Create your first incident to get started.</p>
         </CardContent>
       </Card>
     );
@@ -102,12 +89,12 @@ const IncidentList = ({ userId, refreshTrigger }: IncidentListProps) => {
   return (
     <div className="space-y-4">
       {incidents.map((incident) => (
-        <Card key={incident.id} className="hover:shadow-md transition-shadow">
+        <Card key={incident.id} className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/15 transition-colors">
           <CardHeader>
             <div className="flex items-start justify-between">
               <div className="space-y-1">
-                <CardTitle className="text-lg">{incident.title}</CardTitle>
-                <p className="text-sm text-gray-600 line-clamp-2">{incident.description}</p>
+                <CardTitle className="text-lg text-white">{incident.title}</CardTitle>
+                <p className="text-sm text-blue-200 line-clamp-2">{incident.description}</p>
               </div>
               <div className="flex gap-2">
                 <Badge className={getPriorityColor(incident.priority)}>
@@ -121,7 +108,7 @@ const IncidentList = ({ userId, refreshTrigger }: IncidentListProps) => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <div className="flex items-center gap-4 text-sm text-gray-600">
+              <div className="flex items-center gap-4 text-sm text-blue-200">
                 <div className="flex items-center gap-1">
                   <Calendar className="w-4 h-4" />
                   <span>Created: {new Date(incident.created_at).toLocaleDateString()}</span>
@@ -138,13 +125,13 @@ const IncidentList = ({ userId, refreshTrigger }: IncidentListProps) => {
               {(incident.response_time_minutes || incident.resolution_time_minutes) && (
                 <div className="flex items-center gap-4 text-sm">
                   {incident.response_time_minutes && (
-                    <div className="flex items-center gap-1 text-blue-600">
+                    <div className="flex items-center gap-1 text-blue-400">
                       <Clock className="w-4 h-4" />
                       <span>Response: {formatDuration(incident.response_time_minutes)}</span>
                     </div>
                   )}
                   {incident.resolution_time_minutes && (
-                    <div className="flex items-center gap-1 text-green-600">
+                    <div className="flex items-center gap-1 text-green-400">
                       <CheckCircle className="w-4 h-4" />
                       <span>Resolution: {formatDuration(incident.resolution_time_minutes)}</span>
                     </div>
@@ -154,9 +141,9 @@ const IncidentList = ({ userId, refreshTrigger }: IncidentListProps) => {
 
               {/* Feedback section for resolved incidents */}
               {(incident.status === 'Resolved' || incident.status === 'Closed') && (
-                <div className="pt-2 border-t">
+                <div className="pt-2 border-t border-white/10">
                   {feedbackSubmitted.has(incident.id) ? (
-                    <div className="flex items-center gap-2 text-sm text-green-600">
+                    <div className="flex items-center gap-2 text-sm text-green-400">
                       <CheckCircle className="w-4 h-4" />
                       <span>Feedback submitted - Thank you!</span>
                     </div>
@@ -164,7 +151,7 @@ const IncidentList = ({ userId, refreshTrigger }: IncidentListProps) => {
                     <UserFeedbackDialog
                       incidentId={incident.id}
                       incidentTitle={incident.title}
-                      userId={userId}
+                      userId={incident.user_id}
                       onFeedbackSubmitted={() => handleFeedbackSubmitted(incident.id)}
                     />
                   )}

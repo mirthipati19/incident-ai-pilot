@@ -1,13 +1,15 @@
 
 import React, { useState, useEffect } from 'react';
-import { Phone, PhoneCall, PhoneOff, Mic, MicOff } from 'lucide-react';
+import { Phone, PhoneCall, PhoneOff, Mic, MicOff, X } from 'lucide-react';
 import Vapi from '@vapi-ai/web';
+import { Button } from '@/components/ui/button';
 
 interface CallSupportProps {
+  onClose: () => void;
   onCallResult?: (text: string) => void;
 }
 
-const CallSupport = ({ onCallResult }: CallSupportProps) => {
+const CallSupport = ({ onClose, onCallResult }: CallSupportProps) => {
   const [isConnected, setIsConnected] = useState(false);
   const [transcript, setTranscript] = useState('');
   const [showRing, setShowRing] = useState(false);
@@ -246,104 +248,117 @@ const CallSupport = ({ onCallResult }: CallSupportProps) => {
   };
 
   return (
-    <div className="flex flex-col items-center gap-6 p-6">
-      <div className="relative flex justify-center items-center">
-        {/* Siri-like pulsing rings when connected */}
-        {showRing && (
-          <div className="absolute inset-0">
-            <div className="absolute inset-0 rounded-full border-4 border-blue-300 animate-ping opacity-40"></div>
-            <div className="absolute inset-0 rounded-full border-4 border-cyan-400 animate-ping opacity-30" style={{ animationDelay: '0.3s' }}></div>
-            <div className="absolute inset-0 rounded-full border-4 border-purple-400 animate-ping opacity-20" style={{ animationDelay: '0.6s' }}></div>
-          </div>
-        )}
-        
-        {/* Main gradient ring - Siri inspired */}
-        <div className="relative w-48 h-48">
-          <div className={`absolute inset-0 rounded-full ${isConnected ? 'animate-pulse' : ''} overflow-hidden`}>
-            <div className="w-full h-full bg-gradient-to-br from-blue-400 via-purple-500 to-cyan-500 opacity-90 shadow-2xl"></div>
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="relative bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 rounded-2xl p-8 max-w-md w-full border border-white/20">
+        <Button
+          onClick={onClose}
+          variant="ghost"
+          size="sm"
+          className="absolute top-4 right-4 text-white/70 hover:text-white hover:bg-white/10"
+        >
+          <X className="h-5 w-5" />
+        </Button>
+
+        <div className="flex flex-col items-center gap-6">
+          <div className="relative flex justify-center items-center">
+            {/* Siri-like pulsing rings when connected */}
+            {showRing && (
+              <div className="absolute inset-0">
+                <div className="absolute inset-0 rounded-full border-4 border-blue-300 animate-ping opacity-40"></div>
+                <div className="absolute inset-0 rounded-full border-4 border-cyan-400 animate-ping opacity-30" style={{ animationDelay: '0.3s' }}></div>
+                <div className="absolute inset-0 rounded-full border-4 border-purple-400 animate-ping opacity-20" style={{ animationDelay: '0.6s' }}></div>
+              </div>
+            )}
+            
+            {/* Main gradient ring - Siri inspired */}
+            <div className="relative w-48 h-48">
+              <div className={`absolute inset-0 rounded-full ${isConnected ? 'animate-pulse' : ''} overflow-hidden`}>
+                <div className="w-full h-full bg-gradient-to-br from-blue-400 via-purple-500 to-cyan-500 opacity-90 shadow-2xl"></div>
+              </div>
+              
+              {/* Inner circle with phone icon */}
+              <div className="absolute inset-0 flex items-center justify-center">
+                <div className="w-32 h-32 rounded-full bg-slate-900 flex items-center justify-center shadow-xl">
+                  {isConnected && (
+                    <div className="absolute inset-0">
+                      <div className="absolute inset-0 rounded-full border-2 border-cyan-400 animate-ping opacity-60"></div>
+                      <div className="absolute inset-0 rounded-full border-2 border-blue-400 animate-ping opacity-40" style={{ animationDelay: '0.2s' }}></div>
+                    </div>
+                  )}
+                  {isConnected ? (
+                    <PhoneCall className="w-12 h-12 text-cyan-400 animate-pulse" />
+                  ) : (
+                    <Phone className="w-12 h-12 text-white" />
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
           
-          {/* Inner circle with phone icon */}
-          <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-32 h-32 rounded-full bg-slate-900 flex items-center justify-center shadow-xl">
-              {isConnected && (
-                <div className="absolute inset-0">
-                  <div className="absolute inset-0 rounded-full border-2 border-cyan-400 animate-ping opacity-60"></div>
-                  <div className="absolute inset-0 rounded-full border-2 border-blue-400 animate-ping opacity-40" style={{ animationDelay: '0.2s' }}></div>
+          {/* Connection Status with Duration */}
+          <div className="text-center">
+            <p className="text-white/90 font-medium mb-2">{connectionStatus}</p>
+            
+            {isConnected && (
+              <div className="flex items-center justify-center gap-4 mb-4">
+                <div className="flex items-center gap-2 px-3 py-1 bg-green-600/20 rounded-full border border-green-500/30">
+                  <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                  <span className="text-green-200 text-sm font-medium">
+                    Live • {formatDuration(callDuration)}
+                  </span>
                 </div>
-              )}
-              {isConnected ? (
-                <PhoneCall className="w-12 h-12 text-cyan-400 animate-pulse" />
-              ) : (
-                <Phone className="w-12 h-12 text-white" />
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
-      
-      {/* Connection Status with Duration */}
-      <div className="text-center">
-        <p className="text-white/90 font-medium mb-2">{connectionStatus}</p>
-        
-        {isConnected && (
-          <div className="flex items-center justify-center gap-4 mb-4">
-            <div className="flex items-center gap-2 px-3 py-1 bg-green-600/20 rounded-full border border-green-500/30">
-              <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-              <span className="text-green-200 text-sm font-medium">
-                Live • {formatDuration(callDuration)}
-              </span>
-            </div>
-            {isMuted && (
-              <div className="flex items-center gap-2 px-3 py-1 bg-red-600/20 rounded-full border border-red-500/30">
-                <MicOff className="w-3 h-3 text-red-400" />
-                <span className="text-red-200 text-xs">Muted</span>
+                {isMuted && (
+                  <div className="flex items-center gap-2 px-3 py-1 bg-red-600/20 rounded-full border border-red-500/30">
+                    <MicOff className="w-3 h-3 text-red-400" />
+                    <span className="text-red-200 text-xs">Muted</span>
+                  </div>
+                )}
+              </div>
+            )}
+            
+            {!isConnected ? (
+              <button 
+                onClick={handleStartCall}
+                className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-8 py-3 rounded-xl hover:from-blue-700 hover:to-cyan-700 transition-all shadow-lg font-medium"
+              >
+                📞 Call Support
+              </button>
+            ) : (
+              <div className="flex gap-4">
+                {/* Mute/Unmute Button */}
+                <button 
+                  onClick={handleToggleMute}
+                  className={`${
+                    isMuted 
+                      ? 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800' 
+                      : 'bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800'
+                  } text-white px-6 py-3 rounded-xl transition-all shadow-lg font-medium flex items-center gap-2`}
+                >
+                  {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
+                  {isMuted ? 'Unmute' : 'Mute'}
+                </button>
+                
+                {/* End Call Button */}
+                <button 
+                  onClick={handleEndCall}
+                  className="bg-gradient-to-r from-red-600 to-red-700 text-white px-6 py-3 rounded-xl hover:from-red-700 hover:to-red-800 transition-all shadow-lg font-medium flex items-center gap-2"
+                >
+                  <PhoneOff className="w-5 h-5" />
+                  End Call
+                </button>
               </div>
             )}
           </div>
-        )}
-        
-        {!isConnected ? (
-          <button 
-            onClick={handleStartCall}
-            className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white px-8 py-3 rounded-xl hover:from-blue-700 hover:to-cyan-700 transition-all shadow-lg font-medium"
-          >
-            📞 Call Support
-          </button>
-        ) : (
-          <div className="flex gap-4">
-            {/* Mute/Unmute Button */}
-            <button 
-              onClick={handleToggleMute}
-              className={`${
-                isMuted 
-                  ? 'bg-gradient-to-r from-red-600 to-red-700 hover:from-red-700 hover:to-red-800' 
-                  : 'bg-gradient-to-r from-gray-600 to-gray-700 hover:from-gray-700 hover:to-gray-800'
-              } text-white px-6 py-3 rounded-xl transition-all shadow-lg font-medium flex items-center gap-2`}
-            >
-              {isMuted ? <MicOff className="w-5 h-5" /> : <Mic className="w-5 h-5" />}
-              {isMuted ? 'Unmute' : 'Mute'}
-            </button>
-            
-            {/* End Call Button */}
-            <button 
-              onClick={handleEndCall}
-              className="bg-gradient-to-r from-red-600 to-red-700 text-white px-6 py-3 rounded-xl hover:from-red-700 hover:to-red-800 transition-all shadow-lg font-medium flex items-center gap-2"
-            >
-              <PhoneOff className="w-5 h-5" />
-              End Call
-            </button>
-          </div>
-        )}
-      </div>
-      
-      {/* Live Transcript */}
-      {transcript && isConnected && (
-        <div className="mt-4 p-4 bg-slate-800/60 backdrop-blur-sm rounded-xl max-w-md text-center border border-cyan-500/30 shadow-lg">
-          <p className="text-sm text-cyan-100 font-medium">Live Transcript:</p>
-          <p className="text-cyan-200 mt-2">{transcript}</p>
+          
+          {/* Live Transcript */}
+          {transcript && isConnected && (
+            <div className="mt-4 p-4 bg-slate-800/60 backdrop-blur-sm rounded-xl max-w-md text-center border border-cyan-500/30 shadow-lg">
+              <p className="text-sm text-cyan-100 font-medium">Live Transcript:</p>
+              <p className="text-cyan-200 mt-2">{transcript}</p>
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 };
