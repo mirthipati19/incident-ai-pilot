@@ -175,7 +175,7 @@ const AdminRegister = () => {
     return true;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+ const handleSubmit = async (e: React.FormEvent) => {
   e.preventDefault();
 
   if (!validateForm()) return;
@@ -183,7 +183,39 @@ const AdminRegister = () => {
   setIsLoading(true);
 
   try {
-    // 1️⃣ Create the admin user first (user gets authenticated)
+    console.log('🏢 Starting organization registration process');
+
+    // Step 1: Create the organization with created_by: null
+    const { data: orgData, error: orgError } = await supabase
+      .from('organizations')
+      .insert({
+        name: formData.organizationName,
+        domain: formData.domain,
+        created_by: null,
+      })
+      .select()
+      .single();
+
+    if (orgError) {
+      console.error('🏢 Organization creation error:', orgError);
+      throw new Error(`Failed to create organization: ${orgError.message}`);
+    }
+
+    console.log('🏢 Organization created:', orgData);
+
+    // Step 2: Upload logo if provided
+    let logoUrl = null;
+    if (logoFile) {
+      logoUrl = await uploadLogo(orgData.id);
+      if (logoUrl) {
+        await supabase
+          .from('organizations')
+          .update({ logo_url: logoUrl })
+          .eq('id', orgData.id);
+      }
+    }
+
+    // Step 3: Create the admin user with Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.signUp({
       email: formData.email,
       password: formData.password,
@@ -201,36 +233,13 @@ const AdminRegister = () => {
       throw new Error(`Failed to create admin user: ${authError.message}`);
     }
 
-    // 2️⃣ Create the organization (now allowed due to active session)
-    const { data: orgData, error: orgError } = await supabase
+    // Step 4: Update organization to set created_by to admin user ID
+    await supabase
       .from('organizations')
-      .insert({
-        name: formData.organizationName,
-        domain: formData.domain,
-        created_by: authData.user.id,
-      })
-      .select()
-      .single();
+      .update({ created_by: authData.user.id })
+      .eq('id', orgData.id);
 
-    if (orgError) {
-      console.error('Organization creation error:', orgError);
-      // Optionally clean up user if org creation fails
-      await supabase.auth.admin.deleteUser(authData.user.id);
-      throw new Error(`Failed to create organization: ${orgError.message}`);
-    }
-
-    // 3️⃣ Upload logo if present
-    if (logoFile) {
-      const logoUrl = await uploadLogo(orgData.id);
-      if (logoUrl) {
-        await supabase
-          .from('organizations')
-          .update({ logo_url: logoUrl })
-          .eq('id', orgData.id);
-      }
-    }
-
-    // 4️⃣ Create admin user record
+    // Step 5: Create admin user record in admin_users table
     await supabase.from('admin_users').insert({
       user_id: authData.user.id,
       role: 'admin',
@@ -256,81 +265,6 @@ const AdminRegister = () => {
   }
 };
 
-
-      // Then create the admin user with Supabase Auth
-      // 1️⃣ Create the admin user first (user gets authenticated)
-const { data: authData, error: authError } = await supabase.auth.signUp({
-  email: formData.email,
-  password: formData.password,
-  options: {
-    data: {
-      name: formData.adminName,
-      role: 'admin'
-    },
-    emailRedirectTo: `${window.location.origin}/admin/login`
-  }
-});
-
-if (authError || !authData.user) {
-  console.error('Auth user creation error:', authError);
-  throw new Error(`Failed to create admin user: ${authError.message}`);
-}
-
-// 2️⃣ Create the organization (now allowed due to active session)
-const { data: orgData, error: orgError } = await supabase
-  .from('organizations')
-  .insert({
-    name: formData.organizationName,
-    domain: formData.domain,
-    created_by: authData.user.id
-  })
-  .select()
-  .single();
-
-if (orgError) {
-  console.error('Organization creation error:', orgError);
-  // Optionally clean up user if org creation fails
-  await supabase.auth.admin.deleteUser(authData.user.id);
-  throw new Error(`Failed to create organization: ${orgError.message}`);
-}
-
-// 3️⃣ Upload logo if present
-if (logoFile) {
-  const logoUrl = await uploadLogo(orgData.id);
-  if (logoUrl) {
-    await supabase
-      .from('organizations')
-      .update({ logo_url: logoUrl })
-      .eq('id', orgData.id);
-  }
-}
-
-// 4️⃣ Create admin user record (not critical, so can skip error handling)
-await supabase.from('admin_users').insert({
-  user_id: authData.user.id,
-  role: 'admin',
-  organization_id: orgData.id,
-  permissions: ['view_tickets', 'manage_users', 'view_stats', 'full_admin']
-});
-
-      toast({
-        title: 'Registration Successful!',
-        description: `Your organization "${formData.organizationName}" and admin account have been created. Please check your email to verify your account.`,
-      });
-
-      // Redirect to admin login with a success message
-      navigate('/admin/login?registered=true');
-    } catch (error: any) {
-      console.error('🏢 Registration error:', error);
-      toast({
-        title: 'Registration Failed',
-        description: error.message || 'Failed to create organization. Please try again.',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center p-4">
