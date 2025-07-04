@@ -1,4 +1,3 @@
-
 import { useState, useRef } from "react";
 import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -19,7 +18,7 @@ const SignIn = () => {
   const [showMFA, setShowMFA] = useState(false);
   const [mfaCode, setMfaCode] = useState("");
   const [mfaLoading, setMfaLoading] = useState(false);
-  const captchaRef = useRef<any>(null);
+  const captchaRef = useRef<{ resetCaptcha: () => void } | null>(null);
 
   const { signIn, verifyMFA } = useImprovedAuth();
   const { toast } = useToast();
@@ -27,10 +26,12 @@ const SignIn = () => {
   const [searchParams] = useSearchParams();
 
   const handleCaptchaVerify = (token: string) => {
+    console.log('✅ Captcha verified with token:', token);
     setCaptchaToken(token);
   };
 
   const handleCaptchaError = (error: string) => {
+    console.error('❌ Captcha error:', error);
     toast({
       title: "Security Verification Failed",
       description: "Please try the security verification again.",
@@ -44,10 +45,30 @@ const SignIn = () => {
     setEmail("");
     setPassword("");
     
-    // Reset captcha
+    // Reset captcha token
     setCaptchaToken(null);
-    if (captchaRef.current) {
-      captchaRef.current.resetCaptcha();
+    
+    // Reset the captcha component if ref is available
+    if (captchaRef.current && captchaRef.current.resetCaptcha) {
+      try {
+        captchaRef.current.resetCaptcha();
+      } catch (error) {
+        console.warn('Could not reset captcha:', error);
+      }
+    }
+  };
+
+  const resetCaptchaOnly = () => {
+    // Reset captcha token
+    setCaptchaToken(null);
+    
+    // Reset the captcha component if ref is available
+    if (captchaRef.current && captchaRef.current.resetCaptcha) {
+      try {
+        captchaRef.current.resetCaptcha();
+      } catch (error) {
+        console.warn('Could not reset captcha:', error);
+      }
     }
   };
 
@@ -100,6 +121,7 @@ const SignIn = () => {
         refreshCaptchaAndFields();
       }
     } catch (error) {
+      console.error('Sign in error:', error);
       toast({
         title: "Error",
         description: "An unexpected error occurred. Please try again.",
@@ -123,6 +145,17 @@ const SignIn = () => {
       return;
     }
 
+    // For MFA, we need a fresh captcha token if the previous one was used
+    if (!captchaToken) {
+      toast({
+        title: "Security Verification Required",
+        description: "Please complete the security verification again.",
+        variant: "destructive",
+      });
+      resetCaptchaOnly();
+      return;
+    }
+
     setMfaLoading(true);
 
     try {
@@ -141,17 +174,27 @@ const SignIn = () => {
           variant: "destructive",
         });
         setMfaCode("");
+        // Reset captcha for retry
+        resetCaptchaOnly();
       }
     } catch (error) {
+      console.error('MFA verification error:', error);
       toast({
         title: "Error",
         description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
       setMfaCode("");
+      resetCaptchaOnly();
     } finally {
       setMfaLoading(false);
     }
+  };
+
+  const handleBackToSignIn = () => {
+    setShowMFA(false);
+    setMfaCode("");
+    resetCaptchaOnly();
   };
 
   if (showMFA) {
@@ -191,10 +234,16 @@ const SignIn = () => {
                 />
               </div>
 
+              <ImprovedHCaptcha 
+                ref={captchaRef}
+                onVerify={handleCaptchaVerify}
+                onError={handleCaptchaError}
+              />
+
               <Button 
                 type="submit" 
                 className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 text-lg shadow-lg h-12"
-                disabled={mfaLoading}
+                disabled={mfaLoading || !captchaToken}
               >
                 {mfaLoading ? "Verifying..." : "Verify & Sign In"}
               </Button>
@@ -203,7 +252,7 @@ const SignIn = () => {
             <div className="mt-6 text-center">
               <Button
                 variant="ghost"
-                onClick={() => setShowMFA(false)}
+                onClick={handleBackToSignIn}
                 className="text-sm text-blue-600 hover:text-blue-700 font-medium"
               >
                 <ArrowLeft className="w-4 h-4 mr-1" />
@@ -289,6 +338,7 @@ const SignIn = () => {
               </div>
 
               <ImprovedHCaptcha 
+                ref={captchaRef}
                 onVerify={handleCaptchaVerify}
                 onError={handleCaptchaError}
               />
