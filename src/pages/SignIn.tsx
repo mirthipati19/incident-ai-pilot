@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useImprovedAuth } from "@/contexts/ImprovedAuthContext";
 import { Eye, EyeOff, Mail, Lock, Bot, Shield, Zap, Users, BarChart3, CheckCircle, ArrowLeft } from "lucide-react";
-import ImprovedHCaptcha from "@/components/ImprovedHCaptcha";
+import ImprovedHCaptcha, { ImprovedHCaptchaRef } from "@/components/ImprovedHCaptcha";
 
 const SignIn = () => {
   const [email, setEmail] = useState("");
@@ -18,7 +18,9 @@ const SignIn = () => {
   const [showMFA, setShowMFA] = useState(false);
   const [mfaCode, setMfaCode] = useState("");
   const [mfaLoading, setMfaLoading] = useState(false);
-  const captchaRef = useRef<{ resetCaptcha: () => void } | null>(null);
+  const [mfaCaptchaToken, setMfaCaptchaToken] = useState<string | null>(null);
+  const captchaRef = useRef<ImprovedHCaptchaRef | null>(null);
+  const mfaCaptchaRef = useRef<ImprovedHCaptchaRef | null>(null);
 
   const { signIn, verifyMFA } = useImprovedAuth();
   const { toast } = useToast();
@@ -38,6 +40,21 @@ const SignIn = () => {
       variant: "destructive",
     });
     setCaptchaToken(null);
+  };
+
+  const handleMfaCaptchaVerify = (token: string) => {
+    console.log('✅ MFA Captcha verified with token:', token);
+    setMfaCaptchaToken(token);
+  };
+
+  const handleMfaCaptchaError = (error: string) => {
+    console.error('❌ MFA Captcha error:', error);
+    toast({
+      title: "Security Verification Failed",
+      description: "Please complete the security verification for MFA.",
+      variant: "destructive",
+    });
+    setMfaCaptchaToken(null);
   };
 
   const refreshCaptchaAndFields = () => {
@@ -68,6 +85,20 @@ const SignIn = () => {
         captchaRef.current.resetCaptcha();
       } catch (error) {
         console.warn('Could not reset captcha:', error);
+      }
+    }
+  };
+
+  const resetMfaCaptcha = () => {
+    // Reset MFA captcha token
+    setMfaCaptchaToken(null);
+    
+    // Reset the MFA captcha component if ref is available
+    if (mfaCaptchaRef.current && mfaCaptchaRef.current.resetCaptcha) {
+      try {
+        mfaCaptchaRef.current.resetCaptcha();
+      } catch (error) {
+        console.warn('Could not reset MFA captcha:', error);
       }
     }
   };
@@ -145,21 +176,19 @@ const SignIn = () => {
       return;
     }
 
-    // For MFA, we need a fresh captcha token if the previous one was used
-    if (!captchaToken) {
+    if (!mfaCaptchaToken) {
       toast({
         title: "Security Verification Required",
-        description: "Please complete the security verification again.",
+        description: "Please complete the security verification.",
         variant: "destructive",
       });
-      resetCaptchaOnly();
       return;
     }
 
     setMfaLoading(true);
 
     try {
-      const result = await verifyMFA(email, mfaCode, password, captchaToken);
+      const result = await verifyMFA(email, mfaCode, password, mfaCaptchaToken);
       
       if (result.success) {
         toast({
@@ -174,8 +203,7 @@ const SignIn = () => {
           variant: "destructive",
         });
         setMfaCode("");
-        // Reset captcha for retry
-        resetCaptchaOnly();
+        resetMfaCaptcha();
       }
     } catch (error) {
       console.error('MFA verification error:', error);
@@ -185,7 +213,7 @@ const SignIn = () => {
         variant: "destructive",
       });
       setMfaCode("");
-      resetCaptchaOnly();
+      resetMfaCaptcha();
     } finally {
       setMfaLoading(false);
     }
@@ -194,7 +222,8 @@ const SignIn = () => {
   const handleBackToSignIn = () => {
     setShowMFA(false);
     setMfaCode("");
-    resetCaptchaOnly();
+    setMfaCaptchaToken(null);
+    resetMfaCaptcha();
   };
 
   if (showMFA) {
@@ -235,15 +264,15 @@ const SignIn = () => {
               </div>
 
               <ImprovedHCaptcha 
-                ref={captchaRef}
-                onVerify={handleCaptchaVerify}
-                onError={handleCaptchaError}
+                ref={mfaCaptchaRef}
+                onVerify={handleMfaCaptchaVerify}
+                onError={handleMfaCaptchaError}
               />
 
               <Button 
                 type="submit" 
                 className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 text-lg shadow-lg h-12"
-                disabled={mfaLoading || !captchaToken}
+                disabled={mfaLoading || !mfaCaptchaToken}
               >
                 {mfaLoading ? "Verifying..." : "Verify & Sign In"}
               </Button>

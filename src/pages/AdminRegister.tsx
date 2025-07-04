@@ -205,7 +205,7 @@ const AdminRegister = () => {
     setIsLoading(true);
 
     try {
-      console.log('🔐 Signing up admin user first...');
+      console.log('🔐 Starting admin registration process...');
 
       // 1️⃣ Sign up the admin user with captcha token
       const { data: authData, error: authError } = await supabase.auth.signUp({
@@ -226,10 +226,27 @@ const AdminRegister = () => {
       }
 
       const adminUserId = authData.user.id;
-
       console.log('✅ Admin user created:', adminUserId);
 
-      // 2️⃣ Now create the organization as this user (authenticated)
+      // 2️⃣ Create user profile in users table
+      const { error: userProfileError } = await supabase
+        .from('users')
+        .insert({
+          id: adminUserId,
+          user_id: Math.floor(100000 + Math.random() * 100000).toString(),
+          name: formData.adminName,
+          email: formData.email,
+          password_hash: 'handled_by_supabase'
+        });
+
+      if (userProfileError) {
+        console.error('❌ User profile creation error:', userProfileError);
+        throw new Error(`Failed to create user profile: ${userProfileError.message}`);
+      }
+
+      console.log('✅ User profile created');
+
+      // 3️⃣ Create the organization
       const { data: orgData, error: orgError } = await supabase
         .from('organizations')
         .insert({
@@ -241,14 +258,13 @@ const AdminRegister = () => {
         .single();
 
       if (orgError) {
-        // Cleanup auth user if org creation fails
-        await supabase.auth.admin.deleteUser(adminUserId);
+        console.error('❌ Organization creation error:', orgError);
         throw new Error(`Failed to create organization: ${orgError.message}`);
       }
 
-      console.log('🏢 Organization created:', orgData);
+      console.log('✅ Organization created:', orgData);
 
-      // 3️⃣ Upload logo if present
+      // 4️⃣ Upload logo if present
       let logoUrl = null;
       if (logoFile) {
         logoUrl = await uploadLogo(orgData.id);
@@ -260,13 +276,29 @@ const AdminRegister = () => {
         }
       }
 
-      // 4️⃣ Add record in admin_users table
-      await supabase.from('admin_users').insert({
-        user_id: adminUserId,
-        role: 'admin',
-        organization_id: orgData.id,
-        permissions: ['view_tickets', 'manage_users', 'view_stats', 'full_admin'],
-      });
+      // 5️⃣ Update user profile with organization_id
+      const { error: updateUserError } = await supabase
+        .from('users')
+        .update({ organization_id: orgData.id })
+        .eq('id', adminUserId);
+
+      if (updateUserError) {
+        console.error('❌ User organization update error:', updateUserError);
+      }
+
+      // 6️⃣ Add record in admin_users table
+      const { error: adminUserError } = await supabase
+        .from('admin_users')
+        .insert({
+          user_id: adminUserId,
+          role: 'admin',
+          permissions: ['view_tickets', 'manage_users', 'view_stats', 'full_admin'],
+        });
+
+      if (adminUserError) {
+        console.error('❌ Admin user creation error:', adminUserError);
+        // This is not critical, continue with success
+      }
 
       toast({
         title: 'Registration Successful!',
@@ -278,7 +310,7 @@ const AdminRegister = () => {
       console.error('🔥 Registration error:', error);
       toast({
         title: 'Registration Failed',
-        description: error.message || 'Something went wrong.',
+        description: error.message || 'Something went wrong during registration.',
         variant: 'destructive',
       });
       setCaptchaToken(null); // Reset captcha on error
