@@ -149,7 +149,7 @@ const NewAdminPortal = () => {
               )}
               <div>
                 <h1 className="text-3xl font-bold text-white">{organization.name}</h1>
-                <p className="text-blue-200">Admin Portal - {organization.domain}</p>
+                <p className="text-blue-200">Authexa Service Portal Admin - {organization.domain}</p>
               </div>
             </div>
             

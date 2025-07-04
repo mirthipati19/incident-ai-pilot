@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,6 +7,7 @@ import { Label } from '@/components/ui/label';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff, Mail, Lock, User, Building2, Globe, Shield, Upload, Image } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import ImprovedHCaptcha from '@/components/ImprovedHCaptcha';
 
 const AdminRegister = () => {
   const [formData, setFormData] = useState({
@@ -24,9 +24,23 @@ const AdminRegister = () => {
   const [passwordValidation, setPasswordValidation] = useState<string[]>([]);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
 
   const { toast } = useToast();
   const navigate = useNavigate();
+
+  const handleCaptchaVerify = (token: string) => {
+    setCaptchaToken(token);
+  };
+
+  const handleCaptchaError = (error: string) => {
+    toast({
+      title: "Security Verification Failed",
+      description: "Please try the security verification again.",
+      variant: "destructive",
+    });
+    setCaptchaToken(null);
+  };
 
   const validatePassword = (password: string) => {
     const errors = [];
@@ -172,96 +186,106 @@ const AdminRegister = () => {
       return false;
     }
 
+    if (!captchaToken) {
+      toast({
+        title: "Security Verification Required",
+        description: "Please complete the security verification.",
+        variant: "destructive",
+      });
+      return false;
+    }
+
     return true;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
+    e.preventDefault();
 
-  if (!validateForm()) return;
-  setIsLoading(true);
+    if (!validateForm()) return;
+    setIsLoading(true);
 
-  try {
-    console.log('🔐 Signing up admin user first...');
+    try {
+      console.log('🔐 Signing up admin user first...');
 
-    // 1️⃣ Sign up the admin user (auth record only, triggers email confirmation)
-    const { data: authData, error: authError } = await supabase.auth.signUp({
-      email: formData.email,
-      password: formData.password,
-      options: {
-        data: {
-          name: formData.adminName,
-          role: 'admin',
+      // 1️⃣ Sign up the admin user with captcha token
+      const { data: authData, error: authError } = await supabase.auth.signUp({
+        email: formData.email,
+        password: formData.password,
+        options: {
+          data: {
+            name: formData.adminName,
+            role: 'admin',
+          },
+          emailRedirectTo: `${window.location.origin}/admin/login`,
+          captchaToken: captchaToken,
         },
-        emailRedirectTo: `${window.location.origin}/admin/login`,
-      },
-    });
+      });
 
-    if (authError || !authData.user) {
-      throw new Error(`Failed to create admin user: ${authError?.message}`);
-    }
-
-    const adminUserId = authData.user.id;
-
-    console.log('✅ Admin user created:', adminUserId);
-
-    // 2️⃣ Now create the organization as this user (authenticated)
-    const { data: orgData, error: orgError } = await supabase
-      .from('organizations')
-      .insert({
-        name: formData.organizationName,
-        domain: formData.domain,
-        created_by: adminUserId,
-      })
-      .select()
-      .single();
-
-    if (orgError) {
-      // Cleanup auth user if org creation fails
-      await supabase.auth.admin.deleteUser(adminUserId);
-      throw new Error(`Failed to create organization: ${orgError.message}`);
-    }
-
-    console.log('🏢 Organization created:', orgData);
-
-    // 3️⃣ Upload logo if present
-    let logoUrl = null;
-    if (logoFile) {
-      logoUrl = await uploadLogo(orgData.id);
-      if (logoUrl) {
-        await supabase
-          .from('organizations')
-          .update({ logo_url: logoUrl })
-          .eq('id', orgData.id);
+      if (authError || !authData.user) {
+        throw new Error(`Failed to create admin user: ${authError?.message}`);
       }
+
+      const adminUserId = authData.user.id;
+
+      console.log('✅ Admin user created:', adminUserId);
+
+      // 2️⃣ Now create the organization as this user (authenticated)
+      const { data: orgData, error: orgError } = await supabase
+        .from('organizations')
+        .insert({
+          name: formData.organizationName,
+          domain: formData.domain,
+          created_by: adminUserId,
+        })
+        .select()
+        .single();
+
+      if (orgError) {
+        // Cleanup auth user if org creation fails
+        await supabase.auth.admin.deleteUser(adminUserId);
+        throw new Error(`Failed to create organization: ${orgError.message}`);
+      }
+
+      console.log('🏢 Organization created:', orgData);
+
+      // 3️⃣ Upload logo if present
+      let logoUrl = null;
+      if (logoFile) {
+        logoUrl = await uploadLogo(orgData.id);
+        if (logoUrl) {
+          await supabase
+            .from('organizations')
+            .update({ logo_url: logoUrl })
+            .eq('id', orgData.id);
+        }
+      }
+
+      // 4️⃣ Add record in admin_users table
+      await supabase.from('admin_users').insert({
+        user_id: adminUserId,
+        role: 'admin',
+        organization_id: orgData.id,
+        permissions: ['view_tickets', 'manage_users', 'view_stats', 'full_admin'],
+      });
+
+      toast({
+        title: 'Registration Successful!',
+        description: `Your organization "${formData.organizationName}" and admin account have been created. Please check your email to verify your account.`,
+      });
+
+      navigate('/admin/login?registered=true');
+    } catch (error: any) {
+      console.error('🔥 Registration error:', error);
+      toast({
+        title: 'Registration Failed',
+        description: error.message || 'Something went wrong.',
+        variant: 'destructive',
+      });
+      setCaptchaToken(null); // Reset captcha on error
+    } finally {
+      setIsLoading(false);
     }
-
-    // 4️⃣ Add record in admin_users table
-    await supabase.from('admin_users').insert({
-      user_id: adminUserId,
-      role: 'admin',
-      organization_id: orgData.id,
-      permissions: ['view_tickets', 'manage_users', 'view_stats', 'full_admin'],
-    });
-
-    toast({
-      title: 'Registration Successful!',
-      description: `Your organization "${formData.organizationName}" and admin account have been created. Please check your email to verify your account.`,
-    });
-
-    navigate('/admin/login?registered=true');
-  } catch (error: any) {
-    console.error('🔥 Registration error:', error);
-    toast({
-      title: 'Registration Failed',
-      description: error.message || 'Something went wrong.',
-      variant: 'destructive',
-    });
-  } finally {
-    setIsLoading(false);
-  }
-};
-
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center p-4">
@@ -276,7 +300,7 @@ const AdminRegister = () => {
               </div>
               <div>
                 <h1 className="text-2xl font-bold">Register Organization</h1>
-                <p className="text-sm text-blue-200">Authexa ITSM Admin</p>
+                <p className="text-sm text-blue-200">Authexa Service Portal Admin</p>
               </div>
             </div>
             
@@ -445,10 +469,15 @@ const AdminRegister = () => {
                 </ul>
               </div>
 
+              <ImprovedHCaptcha 
+                onVerify={handleCaptchaVerify}
+                onError={handleCaptchaError}
+              />
+
               <Button 
                 type="submit" 
                 className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 text-lg shadow-lg h-12"
-                disabled={isLoading}
+                disabled={isLoading || !captchaToken}
               >
                 {isLoading ? "Creating Organization..." : "Create Organization & Admin Account"}
               </Button>
