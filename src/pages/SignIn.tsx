@@ -21,7 +21,7 @@ const SignIn = () => {
   const [mfaLoading, setMfaLoading] = useState(false);
   const captchaRef = useRef<any>(null);
 
-  const { signIn, verifyMFAAndSignIn } = useImprovedAuth();
+  const { signIn, verifyMFA } = useImprovedAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -75,7 +75,7 @@ const SignIn = () => {
     setIsLoading(true);
 
     try {
-      const result = await signIn(email, password, captchaToken);
+      const result = await signIn(email, password, false, captchaToken);
       
       if (result.success) {
         if (result.requiresMFA) {
@@ -126,7 +126,7 @@ const SignIn = () => {
     setMfaLoading(true);
 
     try {
-      const result = await verifyMFAAndSignIn(email, mfaCode);
+      const result = await verifyMFA(email, mfaCode, password, captchaToken);
       
       if (result.success) {
         toast({
@@ -289,7 +289,6 @@ const SignIn = () => {
               </div>
 
               <ImprovedHCaptcha 
-                ref={captchaRef}
                 onVerify={handleCaptchaVerify}
                 onError={handleCaptchaError}
               />
