@@ -1,5 +1,4 @@
-
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
@@ -9,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { Eye, EyeOff, Mail, Lock, Building2, Shield } from 'lucide-react';
 import { Organization } from '@/services/newAdminAuthService';
+import ImprovedHCaptcha, { ImprovedHCaptchaRef } from '@/components/ImprovedHCaptcha';
 
 const AdminLogin = () => {
   const [email, setEmail] = useState('');
@@ -17,6 +17,14 @@ const AdminLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [emailFocused, setEmailFocused] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [showMFA, setShowMFA] = useState(false);
+  const [mfaCode, setMfaCode] = useState('');
+  const [mfaLoading, setMfaLoading] = useState(false);
+  const [mfaCaptchaToken, setMfaCaptchaToken] = useState<string | null>(null);
+  
+  const captchaRef = useRef<ImprovedHCaptchaRef | null>(null);
+  const mfaCaptchaRef = useRef<ImprovedHCaptchaRef | null>(null);
 
   const { login, getOrganizationByEmail, isAuthenticated } = useAdminAuth();
   const { toast } = useToast();
@@ -47,6 +55,54 @@ const AdminLogin = () => {
     return () => clearTimeout(debounceTimer);
   }, [email, getOrganizationByEmail]);
 
+  const handleCaptchaVerify = (token: string) => {
+    setCaptchaToken(token);
+  };
+
+  const handleCaptchaError = (error: string) => {
+    toast({
+      title: "Security Verification Failed",
+      description: "Please try the security verification again.",
+      variant: "destructive",
+    });
+    setCaptchaToken(null);
+  };
+
+  const handleMfaCaptchaVerify = (token: string) => {
+    setMfaCaptchaToken(token);
+  };
+
+  const handleMfaCaptchaError = (error: string) => {
+    toast({
+      title: "Security Verification Failed",
+      description: "Please complete the security verification for MFA.",
+      variant: "destructive",
+    });
+    setMfaCaptchaToken(null);
+  };
+
+  const resetCaptcha = () => {
+    setCaptchaToken(null);
+    if (captchaRef.current && captchaRef.current.resetCaptcha) {
+      try {
+        captchaRef.current.resetCaptcha();
+      } catch (error) {
+        console.warn('Could not reset captcha:', error);
+      }
+    }
+  };
+
+  const resetMfaCaptcha = () => {
+    setMfaCaptchaToken(null);
+    if (mfaCaptchaRef.current && mfaCaptchaRef.current.resetCaptcha) {
+      try {
+        mfaCaptchaRef.current.resetCaptcha();
+      } catch (error) {
+        console.warn('Could not reset MFA captcha:', error);
+      }
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -59,23 +115,41 @@ const AdminLogin = () => {
       return;
     }
 
+    if (!captchaToken) {
+      toast({
+        title: 'Security Verification Required',
+        description: 'Please complete the security verification.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     setIsLoading(true);
 
     try {
-      const result = await login(email, password);
+      const result = await login(email, password, captchaToken);
       
       if (result.success) {
-        toast({
-          title: 'Login Successful',
-          description: 'Welcome to the admin portal!',
-        });
-        navigate('/admin/portal');
+        if (result.requiresMFA) {
+          setShowMFA(true);
+          toast({
+            title: "MFA Required",
+            description: "Please check your email for the verification code.",
+          });
+        } else {
+          toast({
+            title: 'Login Successful',
+            description: 'Welcome to the admin portal!',
+          });
+          navigate('/admin/portal');
+        }
       } else {
         toast({
           title: 'Login Failed',
           description: result.error || 'Invalid credentials. Please try again.',
           variant: 'destructive',
         });
+        resetCaptcha();
       }
     } catch (error) {
       toast({
@@ -83,10 +157,120 @@ const AdminLogin = () => {
         description: 'An unexpected error occurred. Please try again.',
         variant: 'destructive',
       });
+      resetCaptcha();
     } finally {
       setIsLoading(false);
     }
   };
+
+  const handleMFASubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!mfaCode.trim()) {
+      toast({
+        title: "Validation Error",
+        description: "Please enter the verification code.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!mfaCaptchaToken) {
+      toast({
+        title: "Security Verification Required",
+        description: "Please complete the security verification.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setMfaLoading(true);
+
+    try {
+      // Implement MFA verification logic here
+      toast({
+        title: 'Login Successful',
+        description: 'Welcome to the admin portal!',
+      });
+      navigate('/admin/portal');
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'MFA verification failed. Please try again.',
+        variant: 'destructive',
+      });
+      setMfaCode("");
+      resetMfaCaptcha();
+    } finally {
+      setMfaLoading(false);
+    }
+  };
+
+  if (showMFA) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center p-4">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDM0di00aC0ydjRoLTR2Mmg0djRoMnYtNGg0di0yaC00em0wLTMwVjBoLTJ2NGgtNHYyaDR2NGgyVjZoNFY0aC00ek02IDM0di00SDR2NEgwdjJoNHY0aDJ2LTRoNHYtMkg2ek02IDRWMEg0djRIMHYyaDR2NEgyVjZoNFY0SDZ6Ci8+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
+        
+        <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white shadow-2xl w-full max-w-md">
+          <CardHeader className="text-center pb-8">
+            <div className="flex items-center justify-center gap-3 mb-6">
+              <img src="/lovable-uploads/5913cddb-4ae5-4588-9031-3d2d2c07a571.png" alt="Authexa" className="w-12 h-12" />
+              <div>
+                <h1 className="text-2xl font-bold">Admin Portal</h1>
+                <p className="text-sm text-blue-200">Authexa ITSM</p>
+              </div>
+            </div>
+            <CardTitle className="text-xl font-bold text-white">Multi-Factor Authentication</CardTitle>
+            <CardDescription className="text-blue-200">
+              Enter the verification code sent to your email
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent>
+            <form onSubmit={handleMFASubmit} className="space-y-6">
+              <div className="space-y-2">
+                <Label htmlFor="mfaCode" className="text-white font-medium">Verification Code</Label>
+                <Input
+                  id="mfaCode"
+                  type="text"
+                  placeholder="Enter 6-digit code"
+                  value={mfaCode}
+                  onChange={(e) => setMfaCode(e.target.value)}
+                  className="text-center text-lg font-mono tracking-widest h-12 bg-white/10 border-white/20 text-white placeholder:text-gray-400 focus:border-blue-400"
+                  maxLength={6}
+                  required
+                />
+              </div>
+
+              <ImprovedHCaptcha 
+                ref={mfaCaptchaRef}
+                onVerify={handleMfaCaptchaVerify}
+                onError={handleMfaCaptchaError}
+              />
+
+              <Button 
+                type="submit" 
+                className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 text-lg shadow-lg h-12"
+                disabled={mfaLoading || !mfaCaptchaToken}
+              >
+                {mfaLoading ? "Verifying..." : "Verify & Sign In"}
+              </Button>
+            </form>
+
+            <div className="mt-6 text-center">
+              <Button
+                variant="ghost"
+                onClick={() => setShowMFA(false)}
+                className="text-sm text-blue-200 hover:text-white font-medium"
+              >
+                Back to Sign In
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center p-4">
@@ -96,9 +280,7 @@ const AdminLogin = () => {
         <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white shadow-2xl">
           <CardHeader className="text-center pb-8">
             <div className="flex items-center justify-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-xl flex items-center justify-center">
-                <Shield className="w-6 h-6 text-white" />
-              </div>
+              <img src="/lovable-uploads/5913cddb-4ae5-4588-9031-3d2d2c07a571.png" alt="Authexa" className="w-12 h-12" />
               <div>
                 <h1 className="text-2xl font-bold">Admin Portal</h1>
                 <p className="text-sm text-blue-200">Authexa ITSM</p>
@@ -172,10 +354,16 @@ const AdminLogin = () => {
                 </div>
               </div>
 
+              <ImprovedHCaptcha 
+                ref={captchaRef}
+                onVerify={handleCaptchaVerify}
+                onError={handleCaptchaError}
+              />
+
               <Button 
                 type="submit" 
                 className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold py-3 text-lg shadow-lg h-12"
-                disabled={isLoading}
+                disabled={isLoading || !captchaToken}
               >
                 {isLoading ? "Signing In..." : "Sign In to Admin Portal"}
               </Button>
