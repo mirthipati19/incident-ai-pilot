@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +13,7 @@ import { incidentService } from '@/services/incidentService';
 interface IncidentData {
   title: string;
   description: string;
-  priority: 'low' | 'medium' | 'high' | 'critical' | '';
+  priority: string;
   category: string;
   assignee: string;
 }
@@ -51,28 +52,15 @@ const CreateIncidentForm = ({ onClose }: CreateIncidentFormProps) => {
       return;
     }
 
-    // Get current user
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) {
-      toast({
-        title: "Authentication Error",
-        description: "You must be logged in to create an incident",
-        variant: "destructive"
-      });
-      return;
-    }
-
     setIsSubmitting(true);
     
     try {
       await incidentService.createIncident({
         title: formData.title,
         description: formData.description,
-        priority: formData.priority as 'low' | 'medium' | 'high' | 'critical',
+        priority: formData.priority,
         category: formData.category || 'other',
-        assignee: formData.assignee || 'auto',
-        user_id: user.id,
-        status: 'Open'
+        assignee: formData.assignee || 'auto'
       });
       
       toast({
@@ -141,7 +129,7 @@ const CreateIncidentForm = ({ onClose }: CreateIncidentFormProps) => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="priority" className="text-gray-700">Priority *</Label>
-                <Select onValueChange={(value) => handleInputChange('priority', value as 'low' | 'medium' | 'high' | 'critical')}>
+                <Select onValueChange={(value) => handleInputChange('priority', value)}>
                   <SelectTrigger className="bg-white border-gray-300 text-gray-900">
                     <SelectValue placeholder="Select priority" />
                   </SelectTrigger>

@@ -19,41 +19,15 @@ export interface Incident {
 }
 
 export const incidentService = {
-  async getUserIncidents(userId?: string): Promise<Incident[]> {
-    // If no userId provided, get current user's incidents
-    const targetUserId = userId || (await supabase.auth.getUser()).data.user?.id;
-    
-    if (!targetUserId) {
-      console.error('No user ID available');
-      return [];
-    }
-
+  async getUserIncidents(userId: string): Promise<Incident[]> {
     const { data, error } = await supabase
       .from('incidents')
       .select('*')
-      .eq('user_id', targetUserId)
+      .eq('user_id', userId)
       .order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error fetching incidents:', error);
-      throw error;
-    }
-
-    return (data || []).map(item => ({
-      ...item,
-      status: item.status as 'Open' | 'In Progress' | 'Resolved' | 'Closed',
-      priority: item.priority as 'low' | 'medium' | 'high' | 'critical'
-    }));
-  },
-
-  async getAllIncidents(): Promise<Incident[]> {
-    const { data, error } = await supabase
-      .from('incidents')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      console.error('Error fetching all incidents:', error);
       throw error;
     }
 
