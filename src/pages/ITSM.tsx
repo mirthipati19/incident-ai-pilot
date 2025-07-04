@@ -1,8 +1,7 @@
-
 import React, { useState } from "react";
 import { MainNavigation } from "@/components/Navigation/MainNavigation";
-import { CreateIncidentForm } from "@/components/Incidents/CreateIncidentForm";
-import { IncidentList } from "@/components/Incidents/IncidentList";
+import CreateIncidentForm from "@/components/Incidents/CreateIncidentForm";
+import IncidentList from "@/components/Incidents/IncidentList";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";

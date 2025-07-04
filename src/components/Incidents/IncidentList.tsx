@@ -8,12 +8,32 @@ import { incidentService, Incident } from '@/services/incidentService';
 import UserFeedbackDialog from '@/components/UserFeedbackDialog';
 
 interface IncidentListProps {
-  incidents: Incident[];
-  onIncidentUpdate: () => Promise<void>;
+  showAllOrganization?: boolean;
 }
 
-const IncidentList = ({ incidents, onIncidentUpdate }: IncidentListProps) => {
+const IncidentList = ({ showAllOrganization = false }: IncidentListProps) => {
+  const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [feedbackSubmitted, setFeedbackSubmitted] = useState<Set<string>>(new Set());
+
+  const fetchIncidents = async () => {
+    try {
+      setIsLoading(true);
+      const data = showAllOrganization 
+        ? await incidentService.getAllIncidents()
+        : await incidentService.getUserIncidents();
+      setIncidents(data);
+    } catch (error) {
+      console.error('Error fetching incidents:', error);
+      setIncidents([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchIncidents();
+  }, [showAllOrganization]);
 
   useEffect(() => {
     // Check which resolved incidents already have feedback
@@ -76,11 +96,21 @@ const IncidentList = ({ incidents, onIncidentUpdate }: IncidentListProps) => {
     return `${hours}h ${remainingMinutes}min`;
   };
 
+  if (isLoading) {
+    return (
+      <Card className="bg-white/10 backdrop-blur-sm border-white/20">
+        <CardContent className="text-center py-8">
+          <p className="text-gray-600">Loading incidents...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   if (incidents.length === 0) {
     return (
       <Card className="bg-white/10 backdrop-blur-sm border-white/20">
         <CardContent className="text-center py-8">
-          <p className="text-white/70">No incidents found. Create your first incident to get started.</p>
+          <p className="text-gray-600">No incidents found. Create your first incident to get started.</p>
         </CardContent>
       </Card>
     );
@@ -89,12 +119,12 @@ const IncidentList = ({ incidents, onIncidentUpdate }: IncidentListProps) => {
   return (
     <div className="space-y-4">
       {incidents.map((incident) => (
-        <Card key={incident.id} className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/15 transition-colors">
+        <Card key={incident.id} className="bg-white border-gray-200 text-gray-900 hover:bg-gray-50 transition-colors">
           <CardHeader>
             <div className="flex items-start justify-between">
               <div className="space-y-1">
-                <CardTitle className="text-lg text-white">{incident.title}</CardTitle>
-                <p className="text-sm text-blue-200 line-clamp-2">{incident.description}</p>
+                <CardTitle className="text-lg text-gray-900">{incident.title}</CardTitle>
+                <p className="text-sm text-gray-600 line-clamp-2">{incident.description}</p>
               </div>
               <div className="flex gap-2">
                 <Badge className={getPriorityColor(incident.priority)}>
@@ -108,7 +138,7 @@ const IncidentList = ({ incidents, onIncidentUpdate }: IncidentListProps) => {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              <div className="flex items-center gap-4 text-sm text-blue-200">
+              <div className="flex items-center gap-4 text-sm text-gray-600">
                 <div className="flex items-center gap-1">
                   <Calendar className="w-4 h-4" />
                   <span>Created: {new Date(incident.created_at).toLocaleDateString()}</span>
@@ -125,13 +155,13 @@ const IncidentList = ({ incidents, onIncidentUpdate }: IncidentListProps) => {
               {(incident.response_time_minutes || incident.resolution_time_minutes) && (
                 <div className="flex items-center gap-4 text-sm">
                   {incident.response_time_minutes && (
-                    <div className="flex items-center gap-1 text-blue-400">
+                    <div className="flex items-center gap-1 text-blue-600">
                       <Clock className="w-4 h-4" />
                       <span>Response: {formatDuration(incident.response_time_minutes)}</span>
                     </div>
                   )}
                   {incident.resolution_time_minutes && (
-                    <div className="flex items-center gap-1 text-green-400">
+                    <div className="flex items-center gap-1 text-green-600">
                       <CheckCircle className="w-4 h-4" />
                       <span>Resolution: {formatDuration(incident.resolution_time_minutes)}</span>
                     </div>
@@ -141,9 +171,9 @@ const IncidentList = ({ incidents, onIncidentUpdate }: IncidentListProps) => {
 
               {/* Feedback section for resolved incidents */}
               {(incident.status === 'Resolved' || incident.status === 'Closed') && (
-                <div className="pt-2 border-t border-white/10">
+                <div className="pt-2 border-t border-gray-200">
                   {feedbackSubmitted.has(incident.id) ? (
-                    <div className="flex items-center gap-2 text-sm text-green-400">
+                    <div className="flex items-center gap-2 text-sm text-green-600">
                       <CheckCircle className="w-4 h-4" />
                       <span>Feedback submitted - Thank you!</span>
                     </div>

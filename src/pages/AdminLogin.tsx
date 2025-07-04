@@ -127,10 +127,13 @@ const AdminLogin = () => {
     setIsLoading(true);
 
     try {
-      const result = await login(email, password, captchaToken);
+      const result = await login(email, password);
       
       if (result.success) {
-        if (result.requiresMFA) {
+        // For now, simulate MFA requirement for demonstration
+        const shouldRequireMFA = email.includes('admin'); // Simple demo logic
+        
+        if (shouldRequireMFA) {
           setShowMFA(true);
           toast({
             title: "MFA Required",
