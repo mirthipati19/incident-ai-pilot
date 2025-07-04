@@ -176,44 +176,86 @@ const AdminRegister = () => {
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!validateForm()) return;
+  e.preventDefault();
 
-    setIsLoading(true);
+  if (!validateForm()) return;
 
-    try {
-      console.log('🏢 Starting organization registration process');
-      
-      // First create the organization
-      const { data: orgData, error: orgError } = await supabase
-        .from('organizations')
-        .insert({
-          name: formData.organizationName,
-          domain: formData.domain,
-          created_by: null // Will be updated after user creation
-        })
-        .select()
-        .single();
+  setIsLoading(true);
 
-      if (orgError) {
-        console.error('🏢 Organization creation error:', orgError);
-        throw new Error(`Failed to create organization: ${orgError.message}`);
+  try {
+    // 1️⃣ Create the admin user first (user gets authenticated)
+    const { data: authData, error: authError } = await supabase.auth.signUp({
+      email: formData.email,
+      password: formData.password,
+      options: {
+        data: {
+          name: formData.adminName,
+          role: 'admin',
+        },
+        emailRedirectTo: `${window.location.origin}/admin/login`,
+      },
+    });
+
+    if (authError || !authData.user) {
+      console.error('Auth user creation error:', authError);
+      throw new Error(`Failed to create admin user: ${authError.message}`);
+    }
+
+    // 2️⃣ Create the organization (now allowed due to active session)
+    const { data: orgData, error: orgError } = await supabase
+      .from('organizations')
+      .insert({
+        name: formData.organizationName,
+        domain: formData.domain,
+        created_by: authData.user.id,
+      })
+      .select()
+      .single();
+
+    if (orgError) {
+      console.error('Organization creation error:', orgError);
+      // Optionally clean up user if org creation fails
+      await supabase.auth.admin.deleteUser(authData.user.id);
+      throw new Error(`Failed to create organization: ${orgError.message}`);
+    }
+
+    // 3️⃣ Upload logo if present
+    if (logoFile) {
+      const logoUrl = await uploadLogo(orgData.id);
+      if (logoUrl) {
+        await supabase
+          .from('organizations')
+          .update({ logo_url: logoUrl })
+          .eq('id', orgData.id);
       }
+    }
 
-      console.log('🏢 Organization created:', orgData);
+    // 4️⃣ Create admin user record
+    await supabase.from('admin_users').insert({
+      user_id: authData.user.id,
+      role: 'admin',
+      organization_id: orgData.id,
+      permissions: ['view_tickets', 'manage_users', 'view_stats', 'full_admin'],
+    });
 
-      // Upload logo if provided
-      let logoUrl = null;
-      if (logoFile) {
-        logoUrl = await uploadLogo(orgData.id);
-        if (logoUrl) {
-          await supabase
-            .from('organizations')
-            .update({ logo_url: logoUrl })
-            .eq('id', orgData.id);
-        }
-      }
+    toast({
+      title: 'Registration Successful!',
+      description: `Your organization "${formData.organizationName}" and admin account have been created. Please check your email to verify your account.`,
+    });
+
+    navigate('/admin/login?registered=true');
+  } catch (error: any) {
+    console.error('🏢 Registration error:', error);
+    toast({
+      title: 'Registration Failed',
+      description: error.message || 'Failed to create organization. Please try again.',
+      variant: 'destructive',
+    });
+  } finally {
+    setIsLoading(false);
+  }
+};
+
 
       // Then create the admin user with Supabase Auth
       // 1️⃣ Create the admin user first (user gets authenticated)
