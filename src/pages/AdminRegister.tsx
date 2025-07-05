@@ -205,9 +205,9 @@ const AdminRegister = () => {
     setIsLoading(true);
 
     try {
-      console.log('🔐 Starting admin registration process...');
+      console.log('🔐 Signing up admin user first...');
 
-      // 1️⃣ Sign up the admin user with email confirmation
+      // 1️⃣ Sign up the admin user with captcha token
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -226,9 +226,10 @@ const AdminRegister = () => {
       }
 
       const adminUserId = authData.user.id;
+
       console.log('✅ Admin user created:', adminUserId);
 
-      // 2️⃣ Create the organization (temporarily without user_id constraint)
+      // 2️⃣ Now create the organization as this user (authenticated)
       const { data: orgData, error: orgError } = await supabase
         .from('organizations')
         .insert({
@@ -240,11 +241,12 @@ const AdminRegister = () => {
         .single();
 
       if (orgError) {
-        console.error('❌ Organization creation error:', orgError);
+        // Cleanup auth user if org creation fails
+        await supabase.auth.admin.deleteUser(adminUserId);
         throw new Error(`Failed to create organization: ${orgError.message}`);
       }
 
-      console.log('✅ Organization created:', orgData);
+      console.log('🏢 Organization created:', orgData);
 
       // 3️⃣ Upload logo if present
       let logoUrl = null;
@@ -258,23 +260,17 @@ const AdminRegister = () => {
         }
       }
 
-      // 4️⃣ Send confirmation email
-      try {
-        await supabase.functions.invoke('send-mfa-email', {
-          body: {
-            email: formData.email,
-            code: 'REGISTRATION_CONFIRMATION',
-            userName: formData.adminName,
-            isWelcome: true
-          }
-        });
-      } catch (emailError) {
-        console.error('Failed to send confirmation email:', emailError);
-      }
+      // 4️⃣ Add record in admin_users table
+      await supabase.from('admin_users').insert({
+        user_id: adminUserId,
+        role: 'admin',
+        organization_id: orgData.id,
+        permissions: ['view_tickets', 'manage_users', 'view_stats', 'full_admin'],
+      });
 
       toast({
         title: 'Registration Successful!',
-        description: `Your organization "${formData.organizationName}" has been created. Please check your email to verify your account before signing in.`,
+        description: `Your organization "${formData.organizationName}" and admin account have been created. Please check your email to verify your account.`,
       });
 
       navigate('/admin/login?registered=true');
@@ -282,7 +278,7 @@ const AdminRegister = () => {
       console.error('🔥 Registration error:', error);
       toast({
         title: 'Registration Failed',
-        description: error.message || 'Something went wrong during registration.',
+        description: error.message || 'Something went wrong.',
         variant: 'destructive',
       });
       setCaptchaToken(null); // Reset captcha on error
@@ -299,7 +295,9 @@ const AdminRegister = () => {
         <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white shadow-2xl">
           <CardHeader className="text-center pb-8">
             <div className="flex items-center justify-center gap-3 mb-6">
-              <img src="/lovable-uploads/5913cddb-4ae5-4588-9031-3d2d2c07a571.png" alt="Authexa" className="w-12 h-12" />
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-xl flex items-center justify-center">
+                <Shield className="w-6 h-6 text-white" />
+              </div>
               <div>
                 <h1 className="text-2xl font-bold">Register Organization</h1>
                 <p className="text-sm text-blue-200">Authexa Service Portal Admin</p>

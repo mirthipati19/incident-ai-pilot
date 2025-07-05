@@ -62,8 +62,8 @@ export const MainNavigation: React.FC = () => {
           {/* Logo and Brand */}
           <div className="flex items-center space-x-8">
             <Link to="/dashboard" className="flex items-center space-x-3 text-xl font-bold text-gray-900 hover:text-blue-600 transition-all duration-200 group">
-              <div className="w-10 h-10 flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-200">
-                <img src="/lovable-uploads/5913cddb-4ae5-4588-9031-3d2d2c07a571.png" alt="Authexa" className="w-10 h-10" />
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-200">
+                <Shield className="w-5 h-5 text-white" />
               </div>
               <div className="flex flex-col">
                 <span className="text-lg font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">

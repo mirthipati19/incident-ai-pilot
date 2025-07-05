@@ -2,8 +2,14 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Send, MessageCircle, X, Phone } from 'lucide-react';
-import { useChatContext } from '@/contexts/ChatContext';
+import { Send, MessageCircle, X } from 'lucide-react';
+
+interface Message {
+  id: number;
+  text: string;
+  isBot: boolean;
+  timestamp: Date;
+}
 
 interface ChatSupportProps {
   onClose: () => void;
@@ -11,9 +17,16 @@ interface ChatSupportProps {
 }
 
 const ChatSupport: React.FC<ChatSupportProps> = ({ onClose, onMessageSent }) => {
+  const [messages, setMessages] = useState<Message[]>([
+    {
+      id: 1,
+      text: "Hello! I'm your Authexa support assistant. Describe any issues you're experiencing and I'll help you resolve them.",
+      isBot: true,
+      timestamp: new Date()
+    }
+  ]);
   const [inputValue, setInputValue] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const { messages, addMessage, startCall } = useChatContext();
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -25,7 +38,14 @@ const ChatSupport: React.FC<ChatSupportProps> = ({ onClose, onMessageSent }) => 
 
   const handleSend = () => {
     if (inputValue.trim()) {
-      addMessage(inputValue, false);
+      const userMessage: Message = {
+        id: messages.length + 1,
+        text: inputValue,
+        isBot: false,
+        timestamp: new Date()
+      };
+
+      setMessages(prev => [...prev, userMessage]);
       
       // Call the callback if provided
       if (onMessageSent) {
@@ -36,7 +56,13 @@ const ChatSupport: React.FC<ChatSupportProps> = ({ onClose, onMessageSent }) => 
 
       // Simulate bot response
       setTimeout(() => {
-        addMessage(`I understand you're experiencing: "${inputValue}". I'm analyzing this issue and will create a support ticket for you right away.`, true);
+        const botResponse: Message = {
+          id: messages.length + 2,
+          text: `I understand you're experiencing: "${inputValue}". I'm analyzing this issue and will create a support ticket for you right away.`,
+          isBot: true,
+          timestamp: new Date()
+        };
+        setMessages(prev => [...prev, botResponse]);
       }, 1000);
     }
   };
@@ -45,11 +71,6 @@ const ChatSupport: React.FC<ChatSupportProps> = ({ onClose, onMessageSent }) => 
     if (e.key === 'Enter') {
       handleSend();
     }
-  };
-
-  const handleStartCall = () => {
-    startCall();
-    onClose();
   };
 
   return (
@@ -65,20 +86,10 @@ const ChatSupport: React.FC<ChatSupportProps> = ({ onClose, onMessageSent }) => 
         </Button>
 
         {/* Chat Header */}
-        <div className="bg-slate-800 text-white p-4 rounded-t-2xl flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <MessageCircle className="w-5 h-5" />
-            <span className="font-semibold">Authexa Support Chat</span>
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-          </div>
-          <Button
-            onClick={handleStartCall}
-            variant="ghost"
-            size="sm"
-            className="text-green-400 hover:text-green-300 hover:bg-green-500/20"
-          >
-            <Phone className="h-4 w-4" />
-          </Button>
+        <div className="bg-slate-800 text-white p-4 rounded-t-2xl flex items-center gap-2">
+          <MessageCircle className="w-5 h-5" />
+          <span className="font-semibold">Authexa Support Chat</span>
+          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse ml-auto"></div>
         </div>
 
         {/* Messages Container */}

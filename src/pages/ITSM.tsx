@@ -1,240 +1,220 @@
-import React, { useState } from "react";
-import { MainNavigation } from "@/components/Navigation/MainNavigation";
-import CreateIncidentForm from "@/components/Incidents/CreateIncidentForm";
-import IncidentList from "@/components/Incidents/IncidentList";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { 
-  Ticket, 
-  Plus, 
-  Clock, 
-  AlertTriangle, 
-  CheckCircle,
-  MessageCircle,
-  Phone
-} from "lucide-react";
-import ChatSupport from "@/components/Assistant/ChatSupport";
-import ImprovedVoiceInstaller from "@/components/ImprovedVoiceInstaller";
-import { useChatContext } from "@/contexts/ChatContext";
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Phone, MessageCircle, Plus, Ticket, Search, Filter, Clock, User, AlertCircle } from 'lucide-react';
+import CreateIncidentForm from '@/components/Incidents/CreateIncidentForm';
+import IncidentList from '@/components/Incidents/IncidentList';
+import CallSupport from '@/components/Assistant/CallSupport';
+import ChatSupport from '@/components/Assistant/ChatSupport';
+import { incidentService } from '@/services/incidentService';
+import { useToast } from '@/hooks/use-toast';
+import { useImprovedAuth } from '@/contexts/ImprovedAuthContext';
 
 const ITSM = () => {
+  const { user } = useImprovedAuth();
+  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState('incidents');
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showCallSupport, setShowCallSupport] = useState(false);
   const [showChatSupport, setShowChatSupport] = useState(false);
-  const { addMessage, startCall, isCallActive } = useChatContext();
+  const [incidents, setIncidents] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
 
-  const handleChatMessage = (message: string) => {
-    addMessage(message, false);
-    // Simulate bot response
-    setTimeout(() => {
-      addMessage(`I understand you're experiencing: "${message}". I'm analyzing this issue and will create a support ticket for you right away.`, true);
-    }, 1000);
+  useEffect(() => {
+    if (user) {
+      loadIncidents();
+    }
+  }, [user]);
+
+  const loadIncidents = async () => {
+    try {
+      setLoading(true);
+      const data = await incidentService.getUserIncidents(user?.id);
+      setIncidents(data);
+    } catch (error: any) {
+      console.error('Failed to load incidents:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to load incidents.',
+        variant: 'destructive',
+      });
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleStartCall = () => {
-    startCall();
-    setShowChatSupport(false);
+  const handleCreateIncident = async (incidentData: any) => {
+    try {
+      await incidentService.createIncident({
+        ...incidentData,
+        user_id: user?.id
+      });
+      toast({
+        title: 'Success',
+        description: 'Incident created successfully.',
+      });
+      setShowCreateForm(false);
+      loadIncidents();
+    } catch (error: any) {
+      console.error('Failed to create incident:', error);
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to create incident.',
+        variant: 'destructive',
+      });
+    }
   };
 
-  // Mock data for demonstration
-  const incidentStats = {
-    open: 12,
-    inProgress: 5,
-    resolved: 48,
-    total: 65
+  const filteredIncidents = incidents.filter(incident => {
+    const matchesSearch = incident.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         incident.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || incident.status.toLowerCase() === statusFilter.toLowerCase();
+    return matchesSearch && matchesStatus;
+  });
+
+  const getStatusCounts = () => {
+    const counts = {
+      all: incidents.length,
+      open: incidents.filter(i => i.status === 'Open').length,
+      'in progress': incidents.filter(i => i.status === 'In Progress').length,
+      resolved: incidents.filter(i => i.status === 'Resolved').length,
+      closed: incidents.filter(i => i.status === 'Closed').length
+    };
+    return counts;
   };
+
+  const statusCounts = getStatusCounts();
+
+  if (showCreateForm) {
+    return (
+      <div className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 p-4">
+        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDM0di00aC0ydjRoLTR2Mmg0djRoMnYtNGg0di0yaC00em0wLTMwVjBoLTJ2NGgtNHYyaDR2NEgyVjZoNFY0aC00ek02IDM0di00SDR2NEgwdjJoNHY0aDJ2LTRoNHYtMkg2ek02IDRWMEg0djRIMHYyaDR2NEgyVjZoNFY0SDZ6Ci8+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
+        <CreateIncidentForm
+          onSubmit={handleCreateIncident}
+          onCancel={() => setShowCreateForm(false)}
+        />
+      </div>
+    );
+  }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <MainNavigation />
+    <div className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 p-4">
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDM0di00aC0ydjRoLTR2Mmg0djRoMnYtNGg0di0yaC00em0wLTMwVjBoLTJ2NGgtNHYyaDR2NEgyVjZoNFY0aC00ek02IDM0di00SDR2NEgwdjJoNHY0aDJ2LTRoNHYtMkg2ek02IDRWMEg0djRIMHYyaDR2NEgyVjZoNFY0SDZ6Ci8+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
       
-      <div className="container mx-auto px-6 py-8">
-        {/* Header Section */}
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">IT Service Management</h1>
-            <p className="text-gray-600">Manage and track your IT service requests and incidents</p>
-          </div>
-          
-          <div className="flex items-center gap-4">
-            {/* Voice Controller */}
-            <ImprovedVoiceInstaller />
-            
-            {/* Chat Support Button */}
-            <Button
-              onClick={() => setShowChatSupport(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white shadow-lg"
-            >
-              <MessageCircle className="w-4 h-4 mr-2" />
-              Chat Support
-            </Button>
-            
-            {/* Call Support Button */}
-            <Button
-              onClick={handleStartCall}
-              disabled={isCallActive}
-              className="bg-green-600 hover:bg-green-700 text-white shadow-lg"
-            >
-              <Phone className="w-4 h-4 mr-2" />
-              {isCallActive ? 'Call Active' : 'Call Support'}
-            </Button>
-            
-            {/* Create Incident Button */}
-            <Button
-              onClick={() => setShowCreateForm(true)}
-              className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-lg"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Create Incident
-            </Button>
-          </div>
+      <div className="relative z-10 container mx-auto px-4 py-8">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold mb-2 text-white">Self Service Portal</h1>
+          <p className="text-blue-200">Get quick help through our AI assistant or manage your support tickets.</p>
         </div>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
-          <Card className="bg-gradient-to-br from-blue-50 to-blue-100 border-blue-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-blue-600 text-sm font-medium">Open Tickets</p>
-                  <p className="text-2xl font-bold text-blue-800">{incidentStats.open}</p>
-                </div>
-                <div className="bg-blue-500 p-3 rounded-full">
-                  <Ticket className="w-6 h-6 text-white" />
-                </div>
-              </div>
+        {/* Quick Actions */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/15 transition-colors cursor-pointer"
+                onClick={() => setShowCallSupport(true)}>
+            <CardContent className="p-6 text-center">
+              <Phone className="h-12 w-12 mx-auto mb-4 text-blue-400" />
+              <h3 className="font-semibold mb-2">Call Support</h3>
+              <p className="text-sm text-blue-200">Get instant voice assistance</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-yellow-600 text-sm font-medium">In Progress</p>
-                  <p className="text-2xl font-bold text-yellow-800">{incidentStats.inProgress}</p>
-                </div>
-                <div className="bg-yellow-500 p-3 rounded-full">
-                  <Clock className="w-6 h-6 text-white" />
-                </div>
-              </div>
+          <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/15 transition-colors cursor-pointer"
+                onClick={() => setShowChatSupport(true)}>
+            <CardContent className="p-6 text-center">
+              <MessageCircle className="h-12 w-12 mx-auto mb-4 text-green-400" />
+              <h3 className="font-semibold mb-2">Chat Support</h3>
+              <p className="text-sm text-blue-200">Chat with our AI assistant</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-green-50 to-green-100 border-green-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-green-600 text-sm font-medium">Resolved</p>
-                  <p className="text-2xl font-bold text-green-800">{incidentStats.resolved}</p>
-                </div>
-                <div className="bg-green-500 p-3 rounded-full">
-                  <CheckCircle className="w-6 h-6 text-white" />
-                </div>
-              </div>
+          <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/15 transition-colors cursor-pointer"
+                onClick={() => setShowCreateForm(true)}>
+            <CardContent className="p-6 text-center">
+              <Plus className="h-12 w-12 mx-auto mb-4 text-purple-400" />
+              <h3 className="font-semibold mb-2">Create Ticket</h3>
+              <p className="text-sm text-blue-200">Submit a new support request</p>
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-to-br from-purple-50 to-purple-100 border-purple-200">
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-purple-600 text-sm font-medium">Total Tickets</p>
-                  <p className="text-2xl font-bold text-purple-800">{incidentStats.total}</p>
-                </div>
-                <div className="bg-purple-500 p-3 rounded-full">
-                  <AlertTriangle className="w-6 h-6 text-white" />
-                </div>
-              </div>
+          <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white">
+            <CardContent className="p-6 text-center">
+              <Ticket className="h-12 w-12 mx-auto mb-4 text-orange-400" />
+              <h3 className="font-semibold mb-2">My Tickets</h3>
+              <p className="text-sm text-blue-200">{statusCounts.all} total tickets</p>
             </CardContent>
           </Card>
         </div>
 
-        {/* Main Content */}
-        <Tabs defaultValue="incidents" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 lg:w-auto lg:grid-cols-4">
-            <TabsTrigger value="incidents">My Incidents</TabsTrigger>
-            <TabsTrigger value="all-incidents">All Incidents</TabsTrigger>
-            <TabsTrigger value="analytics">Analytics</TabsTrigger>
-            <TabsTrigger value="reports">Reports</TabsTrigger>
-          </TabsList>
+        {/* Tickets Management */}
+        <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white">
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <CardTitle className="flex items-center gap-2">
+                <Ticket className="h-5 w-5" />
+                My Support Tickets
+              </CardTitle>
+              <Button onClick={() => setShowCreateForm(true)} className="bg-blue-600 hover:bg-blue-700">
+                <Plus className="h-4 w-4 mr-2" />
+                New Ticket
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {/* Search and Filter */}
+            <div className="flex flex-col md:flex-row gap-4 mb-6">
+              <div className="flex-1">
+                <Input
+                  placeholder="Search tickets..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
+                />
+              </div>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-3 py-2 rounded-md bg-white/10 border border-white/20 text-white"
+              >
+                <option value="all" className="bg-gray-800">All Status ({statusCounts.all})</option>
+                <option value="open" className="bg-gray-800">Open ({statusCounts.open})</option>
+                <option value="in progress" className="bg-gray-800">In Progress ({statusCounts['in progress']})</option>
+                <option value="resolved" className="bg-gray-800">Resolved ({statusCounts.resolved})</option>
+                <option value="closed" className="bg-gray-800">Closed ({statusCounts.closed})</option>
+              </select>
+            </div>
 
-          <TabsContent value="incidents" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Ticket className="w-5 h-5 text-blue-600" />
-                  Your Incidents
-                </CardTitle>
-                <CardDescription>
-                  Track and manage your submitted incidents
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <IncidentList />
-              </CardContent>
-            </Card>
-          </TabsContent>
+            {/* Tickets List */}
+            {loading ? (
+              <div className="text-center py-8">
+                <div className="inline-block w-8 h-8 border-4 border-blue-400 border-t-transparent rounded-full animate-spin"></div>
+                <p className="text-white mt-4">Loading tickets...</p>
+              </div>
+            ) : (
+              <IncidentList 
+                incidents={filteredIncidents} 
+                onIncidentUpdate={loadIncidents}
+              />
+            )}
+          </CardContent>
+        </Card>
 
-          <TabsContent value="all-incidents" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>All Organization Incidents</CardTitle>
-                <CardDescription>
-                  View all incidents across your organization
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <IncidentList showAllOrganization={true} />
-              </CardContent>
-            </Card>
-          </TabsContent>
+        {/* Support Modals */}
+        {showCallSupport && (
+          <CallSupport onClose={() => setShowCallSupport(false)} />
+        )}
 
-          <TabsContent value="analytics" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Incident Analytics</CardTitle>
-                <CardDescription>
-                  View trends and statistics for your incidents
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12 text-gray-500">
-                  Analytics dashboard coming soon...
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="reports" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Incident Reports</CardTitle>
-                <CardDescription>
-                  Generate and download incident reports
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-12 text-gray-500">
-                  Reports functionality coming soon...
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+        {showChatSupport && (
+          <ChatSupport onClose={() => setShowChatSupport(false)} />
+        )}
       </div>
-
-      {/* Modals */}
-      {showCreateForm && (
-        <CreateIncidentForm onClose={() => setShowCreateForm(false)} />
-      )}
-
-      {showChatSupport && (
-        <ChatSupport 
-          onClose={() => setShowChatSupport(false)}
-          onMessageSent={handleChatMessage}
-        />
-      )}
     </div>
   );
 };

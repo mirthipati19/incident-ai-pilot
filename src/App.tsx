@@ -1,137 +1,94 @@
 
+import { Suspense, lazy } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ImprovedAuthProvider } from "@/contexts/ImprovedAuthContext";
 import { AdminAuthProvider } from "@/contexts/AdminAuthContext";
-import { ChatProvider, useChatContext } from "@/contexts/ChatContext";
-import FloatingCallWindow from "@/components/Assistant/FloatingCallWindow";
-import Index from "./pages/Index";
-import Dashboard from "./pages/Dashboard";
-import ITSM from "./pages/ITSM";
-import ServiceCatalog from "./pages/ServiceCatalog";
-import AssetManagement from "./pages/AssetManagement";
-import KnowledgeBase from "./pages/KnowledgeBase";
-import SignIn from "./pages/SignIn";
-import SignUp from "./pages/SignUp";
-import AdminLogin from "./pages/AdminLogin";
-import AdminRegister from "./pages/AdminRegister";
-import AdminDashboard from "./pages/AdminDashboard";
-import AdminPortal from "./pages/AdminPortal";
-import NewAdminPortal from "./pages/NewAdminPortal";
-import NotFound from "./pages/NotFound";
-import ProtectedRoute from "./components/ProtectedRoute";
-import AdminRoute from "./components/AdminRoute";
-import "./App.css";
+
+// Lazy load components
+const Index = lazy(() => import("./pages/Index"));
+const SignIn = lazy(() => import("./pages/SignIn"));
+const SignUp = lazy(() => import("./pages/SignUp"));
+const Dashboard = lazy(() => import("./pages/Dashboard"));
+const ITSM = lazy(() => import("./pages/ITSM"));
+const ServiceCatalogPage = lazy(() => import("./pages/ServiceCatalog"));
+const KnowledgeBasePage = lazy(() => import("./pages/KnowledgeBase"));
+const AssetManagementPage = lazy(() => import("./pages/AssetManagement"));
+const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const NotFound = lazy(() => import("./pages/NotFound"));
+const ProtectedLayout = lazy(() => import("./components/Layout/ProtectedLayout"));
+const AdminLayout = lazy(() => import("./components/Layout/AdminLayout"));
+const ProtectedRoute = lazy(() => import("./components/ProtectedRoute"));
+const AdminRoute = lazy(() => import("./components/AdminRoute"));
+
+// New admin components
+const AdminLogin = lazy(() => import("./pages/AdminLogin"));
+const AdminRegister = lazy(() => import("./pages/AdminRegister"));
+const NewAdminPortal = lazy(() => import("./pages/NewAdminPortal"));
 
 const queryClient = new QueryClient();
 
-const FloatingCallWindowWrapper = () => {
-  const { isCallActive, callDuration, endCall, isCallMinimized, toggleCallMinimized } = useChatContext();
-  
-  return (
-    <FloatingCallWindow
-      isActive={isCallActive}
-      callDuration={callDuration}
-      onEndCall={endCall}
-      isMinimized={isCallMinimized}
-      onToggleMinimize={toggleCallMinimized}
-    />
-  );
-};
-
-function App() {
-  return (
-    <QueryClientProvider client={queryClient}>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-          <ImprovedAuthProvider>
-            <AdminAuthProvider>
-              <ChatProvider>
+const App = () => (
+  <QueryClientProvider client={queryClient}>
+    <ThemeProvider>
+      <ImprovedAuthProvider>
+        <AdminAuthProvider>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <BrowserRouter>
+              <Suspense fallback={
+                <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+                  <div className="text-white text-center">
+                    <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-white mx-auto mb-4"></div>
+                    <p>Loading...</p>
+                  </div>
+                </div>
+              }>
                 <Routes>
+                  {/* Public routes */}
                   <Route path="/" element={<Index />} />
                   <Route path="/signin" element={<SignIn />} />
                   <Route path="/signup" element={<SignUp />} />
+                  <Route path="/404" element={<NotFound />} />
+
+                  {/* New Admin routes */}
                   <Route path="/admin/login" element={<AdminLogin />} />
                   <Route path="/admin/register" element={<AdminRegister />} />
-                  <Route
-                    path="/dashboard"
-                    element={
-                      <ProtectedRoute>
-                        <Dashboard />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/itsm"
-                    element={
-                      <ProtectedRoute>
-                        <ITSM />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/service-catalog"
-                    element={
-                      <ProtectedRoute>
-                        <ServiceCatalog />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/asset-management"
-                    element={
-                      <ProtectedRoute>
-                        <AssetManagement />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/knowledge-base"
-                    element={
-                      <ProtectedRoute>
-                        <KnowledgeBase />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="/admin/dashboard"
-                    element={
-                      <AdminRoute>
-                        <AdminDashboard />
-                      </AdminRoute>
-                    }
-                  />
-                  <Route
-                    path="/admin/portal"
-                    element={
-                      <AdminRoute>
-                        <AdminPortal />
-                      </AdminRoute>
-                    }
-                  />
-                  <Route
-                    path="/admin/new-portal"
-                    element={
-                      <AdminRoute>
-                        <NewAdminPortal />
-                      </AdminRoute>
-                    }
-                  />
-                  <Route path="*" element={<NotFound />} />
+                  <Route path="/admin/portal" element={
+                    <AdminRoute>
+                      <NewAdminPortal />
+                    </AdminRoute>
+                  } />
+
+                  {/* Protected user routes */}
+                  <Route element={<ProtectedRoute><ProtectedLayout /></ProtectedRoute>}>
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/itsm" element={<ITSM />} />
+                    <Route path="/service-catalog" element={<ServiceCatalogPage />} />
+                    <Route path="/knowledge-base" element={<KnowledgeBasePage />} />
+                    <Route path="/asset-management" element={<AssetManagementPage />} />
+                  </Route>
+
+                  {/* Old admin routes (deprecated) */}
+                  <Route element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
+                    <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                  </Route>
+
+                  {/* Catch all */}
+                  <Route path="*" element={<Navigate to="/404" replace />} />
                 </Routes>
-                <FloatingCallWindowWrapper />
-              </ChatProvider>
-            </AdminAuthProvider>
-          </ImprovedAuthProvider>
-        </BrowserRouter>
-      </TooltipProvider>
-    </QueryClientProvider>
-  );
-}
+              </Suspense>
+            </BrowserRouter>
+          </TooltipProvider>
+        </AdminAuthProvider>
+      </ImprovedAuthProvider>
+    </ThemeProvider>
+  </QueryClientProvider>
+);
 
 export default App;

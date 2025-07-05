@@ -6,9 +6,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { AlertCircle, User, Zap, X } from 'lucide-react';
+import { AlertCircle, User, Zap } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { incidentService } from '@/services/incidentService';
 
 interface IncidentData {
   title: string;
@@ -19,10 +18,11 @@ interface IncidentData {
 }
 
 interface CreateIncidentFormProps {
-  onClose: () => void;
+  onSubmit: (incident: IncidentData) => Promise<void>;
+  onCancel: () => void;
 }
 
-const CreateIncidentForm = ({ onClose }: CreateIncidentFormProps) => {
+const CreateIncidentForm = ({ onSubmit, onCancel }: CreateIncidentFormProps) => {
   const [formData, setFormData] = useState<IncidentData>({
     title: '',
     description: '',
@@ -55,20 +55,21 @@ const CreateIncidentForm = ({ onClose }: CreateIncidentFormProps) => {
     setIsSubmitting(true);
     
     try {
-      await incidentService.createIncident({
-        title: formData.title,
-        description: formData.description,
-        priority: formData.priority,
-        category: formData.category || 'other',
-        assignee: formData.assignee || 'auto'
-      });
+      await onSubmit(formData);
       
       toast({
         title: "Incident Created",
         description: "Your incident has been successfully created and assigned.",
       });
 
-      onClose();
+      // Reset form
+      setFormData({
+        title: '',
+        description: '',
+        priority: '',
+        category: '',
+        assignee: ''
+      });
     } catch (error) {
       toast({
         title: "Error",
@@ -81,17 +82,8 @@ const CreateIncidentForm = ({ onClose }: CreateIncidentFormProps) => {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-2xl bg-white border-gray-200 text-gray-900 relative">
-        <Button
-          onClick={onClose}
-          variant="ghost"
-          size="sm"
-          className="absolute top-4 right-4 text-gray-500 hover:text-gray-700 z-10"
-        >
-          <X className="h-5 w-5" />
-        </Button>
-        
+    <div className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 p-4 flex items-center justify-center">
+      <Card className="w-full max-w-2xl bg-white/10 backdrop-blur-sm border-white/20 text-white">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <AlertCircle className="w-5 h-5 text-blue-600" />
@@ -101,36 +93,36 @@ const CreateIncidentForm = ({ onClose }: CreateIncidentFormProps) => {
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="title" className="text-gray-700">Title *</Label>
+              <Label htmlFor="title" className="text-white">Title *</Label>
               <Input
                 id="title"
                 type="text"
                 placeholder="Brief description of the issue"
                 value={formData.title}
                 onChange={(e) => handleInputChange('title', e.target.value)}
-                className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-500"
+                className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="description" className="text-gray-700">Description *</Label>
+              <Label htmlFor="description" className="text-white">Description *</Label>
               <Textarea
                 id="description"
                 placeholder="Detailed description of the incident"
                 value={formData.description}
                 onChange={(e) => handleInputChange('description', e.target.value)}
                 rows={4}
-                className="bg-white border-gray-300 text-gray-900 placeholder:text-gray-500"
+                className="bg-white/10 border-white/20 text-white placeholder:text-gray-400"
                 required
               />
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="priority" className="text-gray-700">Priority *</Label>
+                <Label htmlFor="priority" className="text-white">Priority *</Label>
                 <Select onValueChange={(value) => handleInputChange('priority', value)}>
-                  <SelectTrigger className="bg-white border-gray-300 text-gray-900">
+                  <SelectTrigger className="bg-white/10 border-white/20 text-white">
                     <SelectValue placeholder="Select priority" />
                   </SelectTrigger>
                   <SelectContent>
@@ -163,9 +155,9 @@ const CreateIncidentForm = ({ onClose }: CreateIncidentFormProps) => {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="category" className="text-gray-700">Category</Label>
+                <Label htmlFor="category" className="text-white">Category</Label>
                 <Select onValueChange={(value) => handleInputChange('category', value)}>
-                  <SelectTrigger className="bg-white border-gray-300 text-gray-900">
+                  <SelectTrigger className="bg-white/10 border-white/20 text-white">
                     <SelectValue placeholder="Select category" />
                   </SelectTrigger>
                   <SelectContent>
@@ -181,9 +173,9 @@ const CreateIncidentForm = ({ onClose }: CreateIncidentFormProps) => {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="assignee" className="text-gray-700">Assign to</Label>
+              <Label htmlFor="assignee" className="text-white">Assign to</Label>
               <Select onValueChange={(value) => handleInputChange('assignee', value)}>
-                <SelectTrigger className="bg-white border-gray-300 text-gray-900">
+                <SelectTrigger className="bg-white/10 border-white/20 text-white">
                   <SelectValue placeholder="Auto-assign or select technician" />
                 </SelectTrigger>
                 <SelectContent>
@@ -226,8 +218,8 @@ const CreateIncidentForm = ({ onClose }: CreateIncidentFormProps) => {
               <Button 
                 type="button"
                 variant="outline"
-                onClick={onClose}
-                className="border-gray-300 text-gray-700 hover:bg-gray-50"
+                onClick={onCancel}
+                className="border-white/20 text-white hover:bg-white/10"
               >
                 Cancel
               </Button>
