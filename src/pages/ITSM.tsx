@@ -1,15 +1,72 @@
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Plus, Ticket, MessageSquare, Search, Filter } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 import CreateIncidentForm from "@/components/Incidents/CreateIncidentForm";
 import IncidentList from "@/components/Incidents/IncidentList";
 import ITSMVoiceController from "@/components/VoiceController/ITSMVoiceController";
+import { incidentService, Incident } from "@/services/incidentService";
 
 const ITSM = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [incidents, setIncidents] = useState<Incident[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
+
+  // Mock user ID - in a real app, this would come from authentication
+  const userId = "user-123";
+
+  const loadIncidents = async () => {
+    try {
+      setIsLoading(true);
+      const userIncidents = await incidentService.getUserIncidents(userId);
+      setIncidents(userIncidents);
+    } catch (error) {
+      console.error('Error loading incidents:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load incidents. Please try again.",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadIncidents();
+  }, []);
+
+  const handleIncidentCreate = async (incidentData: {
+    title: string;
+    description: string;
+    priority: string;
+    category: string;
+    assignee: string;
+  }) => {
+    try {
+      const newIncident = await incidentService.createIncident({
+        ...incidentData,
+        user_id: userId,
+        status: 'Open',
+        priority: incidentData.priority as 'low' | 'medium' | 'high' | 'critical'
+      });
+      
+      await loadIncidents(); // Refresh the list
+      setShowCreateForm(false);
+      
+      toast({
+        title: "Success",
+        description: "Incident created successfully!"
+      });
+    } catch (error) {
+      console.error('Error creating incident:', error);
+      throw error; // Let the form handle the error
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-slate-50 p-6">
@@ -46,7 +103,9 @@ const ITSM = () => {
                   <Ticket className="w-6 h-6 text-blue-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-gray-900">12</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {incidents.filter(i => i.status === 'Open').length}
+                  </p>
                   <p className="text-sm text-gray-600">Open Tickets</p>
                 </div>
               </div>
@@ -60,7 +119,9 @@ const ITSM = () => {
                   <MessageSquare className="w-6 h-6 text-green-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-gray-900">5</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {incidents.filter(i => i.status === 'In Progress').length}
+                  </p>
                   <p className="text-sm text-gray-600">In Progress</p>
                 </div>
               </div>
@@ -74,7 +135,9 @@ const ITSM = () => {
                   <Search className="w-6 h-6 text-purple-600" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-gray-900">23</p>
+                  <p className="text-2xl font-bold text-gray-900">
+                    {incidents.filter(i => i.status === 'Resolved').length}
+                  </p>
                   <p className="text-sm text-gray-600">Resolved</p>
                 </div>
               </div>
@@ -118,11 +181,21 @@ const ITSM = () => {
               </TabsList>
               
               <TabsContent value="tickets" className="space-y-6">
-                <IncidentList />
+                {isLoading ? (
+                  <div>Loading incidents...</div>
+                ) : (
+                  <IncidentList 
+                    incidents={incidents} 
+                    onIncidentUpdate={loadIncidents}
+                  />
+                )}
               </TabsContent>
               
               <TabsContent value="create" className="space-y-6">
-                <CreateIncidentForm onSuccess={() => {}} />
+                <CreateIncidentForm 
+                  onSubmit={handleIncidentCreate}
+                  onCancel={() => {}}
+                />
               </TabsContent>
             </Tabs>
           </CardContent>
@@ -148,9 +221,8 @@ const ITSM = () => {
                 </Button>
               </div>
               <CreateIncidentForm 
-                onSuccess={() => {
-                  setShowCreateForm(false);
-                }} 
+                onSubmit={handleIncidentCreate}
+                onCancel={() => setShowCreateForm(false)}
               />
             </div>
           </div>
