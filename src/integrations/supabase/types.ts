@@ -9,122 +9,29 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      admin_mfa_tokens: {
-        Row: {
-          admin_user_id: string
-          created_at: string | null
-          expires_at: string
-          id: string
-          is_used: boolean | null
-          token: string
-          token_type: string
-        }
-        Insert: {
-          admin_user_id: string
-          created_at?: string | null
-          expires_at: string
-          id?: string
-          is_used?: boolean | null
-          token: string
-          token_type?: string
-        }
-        Update: {
-          admin_user_id?: string
-          created_at?: string | null
-          expires_at?: string
-          id?: string
-          is_used?: boolean | null
-          token?: string
-          token_type?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "admin_mfa_tokens_admin_user_id_fkey"
-            columns: ["admin_user_id"]
-            isOneToOne: false
-            referencedRelation: "admin_users"
-            referencedColumns: ["user_id"]
-          },
-        ]
-      }
-      admin_sessions: {
-        Row: {
-          admin_user_id: string
-          created_at: string | null
-          expires_at: string
-          id: string
-          is_active: boolean | null
-          last_used_at: string | null
-          session_token: string
-        }
-        Insert: {
-          admin_user_id: string
-          created_at?: string | null
-          expires_at: string
-          id?: string
-          is_active?: boolean | null
-          last_used_at?: string | null
-          session_token: string
-        }
-        Update: {
-          admin_user_id?: string
-          created_at?: string | null
-          expires_at?: string
-          id?: string
-          is_active?: boolean | null
-          last_used_at?: string | null
-          session_token?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "admin_sessions_admin_user_id_fkey"
-            columns: ["admin_user_id"]
-            isOneToOne: false
-            referencedRelation: "admin_users"
-            referencedColumns: ["user_id"]
-          },
-        ]
-      }
       admin_users: {
         Row: {
           created_at: string
-          email_verification_token: string | null
           id: string
-          is_email_verified: boolean | null
-          organization_id: string | null
           permissions: string[] | null
           role: string
           user_id: string
         }
         Insert: {
           created_at?: string
-          email_verification_token?: string | null
           id?: string
-          is_email_verified?: boolean | null
-          organization_id?: string | null
           permissions?: string[] | null
           role?: string
           user_id: string
         }
         Update: {
           created_at?: string
-          email_verification_token?: string | null
           id?: string
-          is_email_verified?: boolean | null
-          organization_id?: string | null
           permissions?: string[] | null
           role?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "admin_users_organization_id_fkey"
-            columns: ["organization_id"]
-            isOneToOne: false
-            referencedRelation: "organizations"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       ai_resolution_stats: {
         Row: {
@@ -1025,10 +932,6 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      cleanup_expired_admin_tokens: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
       generate_unique_user_id: {
         Args: Record<PropertyKey, never>
         Returns: string
