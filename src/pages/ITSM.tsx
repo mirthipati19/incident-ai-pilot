@@ -7,7 +7,7 @@ import { Plus, Ticket, MessageSquare, Search, Filter } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import CreateIncidentForm from "@/components/Incidents/CreateIncidentForm";
 import IncidentList from "@/components/Incidents/IncidentList";
-import ITSMVoiceController from "@/components/VoiceController/ITSMVoiceController";
+import VoiceControllerInstaller from "@/components/VoiceController/VoiceControllerInstaller";
 import { incidentService, Incident } from "@/services/incidentService";
 
 const ITSM = () => {
@@ -202,8 +202,8 @@ const ITSM = () => {
         </Card>
       </div>
 
-      {/* Voice Controller */}
-      <ITSMVoiceController />
+      {/* Voice Controller Installer */}
+      <VoiceControllerInstaller />
 
       {/* Create Form Modal */}
       {showCreateForm && (
