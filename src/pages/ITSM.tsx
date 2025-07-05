@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -7,11 +8,12 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Phone, MessageCircle, Plus, Ticket, Search, Filter, Clock, User, AlertCircle } from 'lucide-react';
+import { Phone, MessageCircle, Plus, Ticket, Search, Filter, Clock, User, AlertCircle, Mic } from 'lucide-react';
 import CreateIncidentForm from '@/components/Incidents/CreateIncidentForm';
 import IncidentList from '@/components/Incidents/IncidentList';
 import CallSupport from '@/components/Assistant/CallSupport';
 import ChatSupport from '@/components/Assistant/ChatSupport';
+import VoiceControllerInstaller from '@/components/VoiceController/VoiceControllerInstaller';
 import { incidentService } from '@/services/incidentService';
 import { useToast } from '@/hooks/use-toast';
 import { useImprovedAuth } from '@/contexts/ImprovedAuthContext';
@@ -23,6 +25,7 @@ const ITSM = () => {
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [showCallSupport, setShowCallSupport] = useState(false);
   const [showChatSupport, setShowChatSupport] = useState(false);
+  const [showVoiceInstaller, setShowVoiceInstaller] = useState(false);
   const [incidents, setIncidents] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -116,7 +119,7 @@ const ITSM = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6 mb-8">
           <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/15 transition-colors cursor-pointer"
                 onClick={() => setShowCallSupport(true)}>
             <CardContent className="p-6 text-center">
@@ -136,9 +139,18 @@ const ITSM = () => {
           </Card>
 
           <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/15 transition-colors cursor-pointer"
+                onClick={() => setShowVoiceInstaller(true)}>
+            <CardContent className="p-6 text-center">
+              <Mic className="h-12 w-12 mx-auto mb-4 text-purple-400" />
+              <h3 className="font-semibold mb-2">Voice Controller</h3>
+              <p className="text-sm text-blue-200">Install voice control software</p>
+            </CardContent>
+          </Card>
+
+          <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/15 transition-colors cursor-pointer"
                 onClick={() => setShowCreateForm(true)}>
             <CardContent className="p-6 text-center">
-              <Plus className="h-12 w-12 mx-auto mb-4 text-purple-400" />
+              <Plus className="h-12 w-12 mx-auto mb-4 text-orange-400" />
               <h3 className="font-semibold mb-2">Create Ticket</h3>
               <p className="text-sm text-blue-200">Submit a new support request</p>
             </CardContent>
@@ -146,7 +158,7 @@ const ITSM = () => {
 
           <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white">
             <CardContent className="p-6 text-center">
-              <Ticket className="h-12 w-12 mx-auto mb-4 text-orange-400" />
+              <Ticket className="h-12 w-12 mx-auto mb-4 text-pink-400" />
               <h3 className="font-semibold mb-2">My Tickets</h3>
               <p className="text-sm text-blue-200">{statusCounts.all} total tickets</p>
             </CardContent>
@@ -213,6 +225,10 @@ const ITSM = () => {
 
         {showChatSupport && (
           <ChatSupport onClose={() => setShowChatSupport(false)} />
+        )}
+
+        {showVoiceInstaller && (
+          <VoiceControllerInstaller onClose={() => setShowVoiceInstaller(false)} />
         )}
       </div>
     </div>
