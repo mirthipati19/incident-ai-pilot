@@ -7,7 +7,7 @@ export const AUTHEXA_CONFIG = {
   BACKGROUND_IMAGE: '/lovable-uploads/c94935e4-6231-41ae-993c-155a820c9885.png',
   
   // Chat Support Webhook - Updated for Authexa
-  CHAT_WEBHOOK_URL: 'https://api.authexa.com/webhook/chat-support',
+  CHAT_WEBHOOK_URL: 'https://authexa.app.n8n.cloud/webhook-test/64d38da4-3add-46d8-a8d2-88eea11f29b6',
   
   // Voice Assistant Configuration
   VAPI_CONFIG: {
