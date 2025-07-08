@@ -5,13 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Send, MessageCircle, X } from 'lucide-react';
 import { AUTHEXA_CONFIG } from '@/utils/authexaConfig';
 import { useImprovedAuth } from '@/contexts/ImprovedAuthContext';
-
-interface Message {
-  id: number;
-  text: string;
-  isBot: boolean;
-  timestamp: Date;
-}
+import { chatHistoryService, ChatMessage } from '@/services/chatHistoryService';
 
 interface ChatSupportProps {
   onClose: () => void;
@@ -20,7 +14,7 @@ interface ChatSupportProps {
 
 const ChatSupport: React.FC<ChatSupportProps> = ({ onClose, onMessageSent }) => {
   const { user } = useImprovedAuth();
-  const [messages, setMessages] = useState<Message[]>([
+  const [messages, setMessages] = useState<ChatMessage[]>([
     {
       id: 1,
       text: "Hello! I'm your Authexa support assistant. Describe any issues you're experiencing and I'll help you resolve them.",
@@ -40,9 +34,34 @@ const ChatSupport: React.FC<ChatSupportProps> = ({ onClose, onMessageSent }) => 
     scrollToBottom();
   }, [messages]);
 
+  // Load chat history when component mounts
+  useEffect(() => {
+    const loadChatHistory = async () => {
+      if (user?.id) {
+        const history = await chatHistoryService.getChatHistory(user.id);
+        if (history.length > 0) {
+          setMessages(history);
+        }
+      }
+    };
+
+    loadChatHistory();
+  }, [user?.id]);
+
+  // Save chat history whenever messages change
+  useEffect(() => {
+    const saveChatHistory = async () => {
+      if (user?.id && messages.length > 1) { // Don't save just the initial message
+        await chatHistoryService.saveChatHistory(user.id, messages);
+      }
+    };
+
+    saveChatHistory();
+  }, [messages, user?.id]);
+
   const handleSend = async () => {
     if (inputValue.trim() && !isLoading) {
-      const userMessage: Message = {
+      const userMessage: ChatMessage = {
         id: messages.length + 1,
         text: inputValue,
         isBot: false,
@@ -79,12 +98,25 @@ const ChatSupport: React.FC<ChatSupportProps> = ({ onClose, onMessageSent }) => 
         if (response.ok) {
           const data = await response.json();
           
-          // Use the response from webhook or fallback message
-          const botResponseText = data.response || data.message || `I've received your message: "${messageText}" and I'm processing it. Our support team will get back to you shortly.`;
+          // Extract the actual response from the webhook
+          let botResponseText = '';
           
-          const botResponse: Message = {
+          if (data.response) {
+            botResponseText = data.response;
+          } else if (data.message) {
+            botResponseText = data.message;
+          } else if (data.reply) {
+            botResponseText = data.reply;
+          } else if (data.answer) {
+            botResponseText = data.answer;
+          } else {
+            // If no standard response field, try to extract text from the response
+            botResponseText = typeof data === 'string' ? data : JSON.stringify(data);
+          }
+          
+          const botResponse: ChatMessage = {
             id: messages.length + 2,
-            text: botResponseText,
+            text: botResponseText || `I've received your message: "${messageText}" and I'm processing it. Our support team will get back to you shortly.`,
             isBot: true,
             timestamp: new Date()
           };
@@ -97,7 +129,7 @@ const ChatSupport: React.FC<ChatSupportProps> = ({ onClose, onMessageSent }) => 
         console.error('Error sending message to webhook:', error);
         
         // Fallback response in case of error
-        const errorResponse: Message = {
+        const errorResponse: ChatMessage = {
           id: messages.length + 2,
           text: `I understand you're experiencing: "${messageText}". I'm having trouble connecting to our support system right now, but I've logged your message and our team will respond as soon as possible.`,
           isBot: true,

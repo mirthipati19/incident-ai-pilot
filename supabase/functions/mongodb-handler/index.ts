@@ -1,6 +1,7 @@
 
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { MongoClient } from "https://deno.land/x/mongo@v0.32.0/mod.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -18,7 +19,6 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     )
 
-    // Get the MongoDB URI from Supabase secrets
     const MONGODB_URI = Deno.env.get('MONGODB_URI')
     
     if (!MONGODB_URI) {
@@ -27,14 +27,40 @@ serve(async (req) => {
 
     const { action, data } = await req.json()
 
-    // Here you can add MongoDB operations
-    // For now, we'll just return a success response
+    // Connect to MongoDB
+    const client = new MongoClient()
+    await client.connect(MONGODB_URI)
     
+    const db = client.database("authexa_chat")
+    const chatCollection = db.collection("chat_history")
+
+    let result = null
+
+    switch (action) {
+      case 'saveChatHistory':
+        const { userId, messages } = data
+        result = await chatCollection.replaceOne(
+          { userId },
+          { userId, messages, updatedAt: new Date() },
+          { upsert: true }
+        )
+        break
+
+      case 'getChatHistory':
+        const chatHistory = await chatCollection.findOne({ userId: data.userId })
+        result = { messages: chatHistory?.messages || [] }
+        break
+
+      default:
+        result = { message: 'Unknown action' }
+    }
+
+    await client.close()
+
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: 'MongoDB handler ready',
-        mongodb_connected: true 
+        data: result
       }),
       { 
         headers: { 
