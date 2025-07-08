@@ -19,17 +19,20 @@ serve(async (req) => {
       Deno.env.get('SUPABASE_ANON_KEY') ?? ''
     )
 
-    const MONGODB_URI = Deno.env.get('MONGODB_URI')
+    const MONGODB_URI = Deno.env.get('MONGO_URI')
     
     if (!MONGODB_URI) {
+      console.error('MONGO_URI environment variable not found')
       throw new Error('MongoDB URI not configured')
     }
 
     const { action, data } = await req.json()
+    console.log('MongoDB handler called with action:', action, 'data:', data)
 
     // Connect to MongoDB
     const client = new MongoClient()
     await client.connect(MONGODB_URI)
+    console.log('Connected to MongoDB successfully')
     
     const db = client.database("authexa_chat")
     const chatCollection = db.collection("chat_history")
@@ -39,16 +42,20 @@ serve(async (req) => {
     switch (action) {
       case 'saveChatHistory':
         const { userId, messages } = data
+        console.log('Saving chat history for user:', userId, 'messages count:', messages?.length)
         result = await chatCollection.replaceOne(
           { userId },
           { userId, messages, updatedAt: new Date() },
           { upsert: true }
         )
+        console.log('Save result:', result)
         break
 
       case 'getChatHistory':
+        console.log('Getting chat history for user:', data.userId)
         const chatHistory = await chatCollection.findOne({ userId: data.userId })
         result = { messages: chatHistory?.messages || [] }
+        console.log('Retrieved messages count:', result.messages.length)
         break
 
       default:
@@ -71,6 +78,7 @@ serve(async (req) => {
     )
 
   } catch (error) {
+    console.error('MongoDB handler error:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
       { 

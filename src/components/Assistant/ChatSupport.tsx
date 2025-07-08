@@ -24,6 +24,7 @@ const ChatSupport: React.FC<ChatSupportProps> = ({ onClose, onMessageSent }) => 
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [historyLoaded, setHistoryLoaded] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -37,32 +38,42 @@ const ChatSupport: React.FC<ChatSupportProps> = ({ onClose, onMessageSent }) => 
   // Load chat history when component mounts
   useEffect(() => {
     const loadChatHistory = async () => {
-      if (user?.id) {
-        const history = await chatHistoryService.getChatHistory(user.id);
-        if (history.length > 0) {
-          setMessages(history);
+      if (user?.id && !historyLoaded) {
+        try {
+          const history = await chatHistoryService.getChatHistory(user.id);
+          if (history.length > 0) {
+            setMessages(history);
+          }
+        } catch (error) {
+          console.error('Error loading chat history:', error);
+        } finally {
+          setHistoryLoaded(true);
         }
       }
     };
 
     loadChatHistory();
-  }, [user?.id]);
+  }, [user?.id, historyLoaded]);
 
-  // Save chat history whenever messages change
+  // Save chat history whenever messages change (but only after history is loaded)
   useEffect(() => {
     const saveChatHistory = async () => {
-      if (user?.id && messages.length > 1) { // Don't save just the initial message
-        await chatHistoryService.saveChatHistory(user.id, messages);
+      if (user?.id && historyLoaded && messages.length > 1) {
+        try {
+          await chatHistoryService.saveChatHistory(user.id, messages);
+        } catch (error) {
+          console.error('Error saving chat history:', error);
+        }
       }
     };
 
     saveChatHistory();
-  }, [messages, user?.id]);
+  }, [messages, user?.id, historyLoaded]);
 
   const handleSend = async () => {
     if (inputValue.trim() && !isLoading) {
       const userMessage: ChatMessage = {
-        id: messages.length + 1,
+        id: Date.now(),
         text: inputValue,
         isBot: false,
         timestamp: new Date()
@@ -97,11 +108,15 @@ const ChatSupport: React.FC<ChatSupportProps> = ({ onClose, onMessageSent }) => 
 
         if (response.ok) {
           const data = await response.json();
+          console.log('Webhook response:', data);
           
-          // Extract the actual response from the webhook
+          // Extract the response from the webhook - handle both direct strings and output field
           let botResponseText = '';
           
-          if (data.response) {
+          if (data.output) {
+            // If there's an output field, use that
+            botResponseText = data.output;
+          } else if (data.response) {
             botResponseText = data.response;
           } else if (data.message) {
             botResponseText = data.message;
@@ -109,13 +124,15 @@ const ChatSupport: React.FC<ChatSupportProps> = ({ onClose, onMessageSent }) => 
             botResponseText = data.reply;
           } else if (data.answer) {
             botResponseText = data.answer;
+          } else if (typeof data === 'string') {
+            botResponseText = data;
           } else {
-            // If no standard response field, try to extract text from the response
-            botResponseText = typeof data === 'string' ? data : JSON.stringify(data);
+            // Fallback to stringify if no recognized field
+            botResponseText = JSON.stringify(data);
           }
           
           const botResponse: ChatMessage = {
-            id: messages.length + 2,
+            id: Date.now() + 1,
             text: botResponseText || `I've received your message: "${messageText}" and I'm processing it. Our support team will get back to you shortly.`,
             isBot: true,
             timestamp: new Date()
@@ -130,7 +147,7 @@ const ChatSupport: React.FC<ChatSupportProps> = ({ onClose, onMessageSent }) => 
         
         // Fallback response in case of error
         const errorResponse: ChatMessage = {
-          id: messages.length + 2,
+          id: Date.now() + 1,
           text: `I understand you're experiencing: "${messageText}". I'm having trouble connecting to our support system right now, but I've logged your message and our team will respond as soon as possible.`,
           isBot: true,
           timestamp: new Date()
