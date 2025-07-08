@@ -26,67 +26,113 @@ serve(async (req) => {
       throw new Error('MongoDB URI not configured')
     }
 
+    console.log('MongoDB URI found, attempting connection...')
+
     const { action, data } = await req.json()
-    console.log('MongoDB handler called with action:', action, 'data:', data)
+    console.log('MongoDB handler called with action:', action, 'data:', JSON.stringify(data, null, 2))
 
     // Connect to MongoDB
     const client = new MongoClient()
-    await client.connect(MONGODB_URI)
-    console.log('Connected to MongoDB successfully')
     
-    const db = client.database("authexa_chat")
-    const chatCollection = db.collection("chat_history")
+    try {
+      await client.connect(MONGODB_URI)
+      console.log('Connected to MongoDB successfully')
+      
+      const db = client.database("authexa_chat")
+      const chatCollection = db.collection("chat_history")
 
-    let result = null
+      let result = null
 
-    switch (action) {
-      case 'saveChatHistory':
-        const { userId, messages } = data
-        console.log('Saving chat history for user:', userId, 'messages count:', messages?.length)
-        result = await chatCollection.replaceOne(
-          { userId },
-          { userId, messages, updatedAt: new Date() },
-          { upsert: true }
-        )
-        console.log('Save result:', result)
-        break
+      switch (action) {
+        case 'saveChatHistory':
+          const { userId, messages } = data
+          console.log('Saving chat history for user:', userId, 'messages count:', messages?.length)
+          
+          if (!userId || !messages) {
+            throw new Error('Missing userId or messages in request')
+          }
 
-      case 'getChatHistory':
-        console.log('Getting chat history for user:', data.userId)
-        const chatHistory = await chatCollection.findOne({ userId: data.userId })
-        result = { messages: chatHistory?.messages || [] }
-        console.log('Retrieved messages count:', result.messages.length)
-        break
+          // Use updateOne with upsert to ensure the document is created or updated
+          result = await chatCollection.updateOne(
+            { userId: userId },
+            { 
+              $set: { 
+                userId: userId, 
+                messages: messages, 
+                updatedAt: new Date() 
+              } 
+            },
+            { upsert: true }
+          )
+          console.log('Save result:', result)
+          
+          // Verify the save by reading back the data
+          const savedDoc = await chatCollection.findOne({ userId: userId })
+          console.log('Verification - saved document:', savedDoc ? 'found' : 'not found')
+          break
 
-      default:
-        result = { message: 'Unknown action' }
+        case 'getChatHistory':
+          console.log('Getting chat history for user:', data.userId)
+          
+          if (!data.userId) {
+            throw new Error('Missing userId in request')
+          }
+          
+          const chatHistory = await chatCollection.findOne({ userId: data.userId })
+          console.log('Retrieved chat history:', chatHistory ? 'found' : 'not found')
+          
+          if (chatHistory) {
+            console.log('Chat history messages count:', chatHistory.messages?.length || 0)
+          }
+          
+          result = { 
+            messages: chatHistory?.messages || [],
+            found: !!chatHistory
+          }
+          break
+
+        default:
+          throw new Error(`Unknown action: ${action}`)
+      }
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          data: result
+        }),
+        { 
+          headers: { 
+            ...corsHeaders, 
+            'Content-Type': 'application/json' 
+          } 
+        }
+      )
+
+    } catch (mongoError) {
+      console.error('MongoDB operation error:', mongoError)
+      throw mongoError
+    } finally {
+      try {
+        await client.close()
+        console.log('MongoDB connection closed')
+      } catch (closeError) {
+        console.error('Error closing MongoDB connection:', closeError)
+      }
     }
 
-    await client.close()
-
+  } catch (error) {
+    console.error('MongoDB handler error:', error)
     return new Response(
       JSON.stringify({ 
-        success: true, 
-        data: result
+        success: false,
+        error: error.message 
       }),
       { 
         headers: { 
           ...corsHeaders, 
           'Content-Type': 'application/json' 
-        } 
-      }
-    )
-
-  } catch (error) {
-    console.error('MongoDB handler error:', error)
-    return new Response(
-      JSON.stringify({ error: error.message }),
-      { 
-        headers: { 
-          ...corsHeaders, 
-          'Content-Type': 'application/json' 
         }, 
-        status: 400 
+        status: 500 
       }
     )
   }

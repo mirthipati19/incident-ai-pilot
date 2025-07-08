@@ -14,17 +14,11 @@ interface ChatSupportProps {
 
 const ChatSupport: React.FC<ChatSupportProps> = ({ onClose, onMessageSent }) => {
   const { user } = useImprovedAuth();
-  const [messages, setMessages] = useState<ChatMessage[]>([
-    {
-      id: 1,
-      text: "Hello! I'm your Authexa support assistant. Describe any issues you're experiencing and I'll help you resolve them.",
-      isBot: true,
-      timestamp: new Date()
-    }
-  ]);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [historyLoaded, setHistoryLoaded] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -39,16 +33,43 @@ const ChatSupport: React.FC<ChatSupportProps> = ({ onClose, onMessageSent }) => 
   useEffect(() => {
     const loadChatHistory = async () => {
       if (user?.id && !historyLoaded) {
+        console.log('Loading chat history for user:', user.id);
+        setIsLoadingHistory(true);
+        
         try {
           const history = await chatHistoryService.getChatHistory(user.id);
+          console.log('Loaded chat history:', history);
+          
           if (history.length > 0) {
             setMessages(history);
+            console.log('Set messages from history:', history.length);
+          } else {
+            // Set default welcome message if no history exists
+            const welcomeMessage: ChatMessage = {
+              id: 1,
+              text: "Hello! I'm your Authexa support assistant. Describe any issues you're experiencing and I'll help you resolve them.",
+              isBot: true,
+              timestamp: new Date()
+            };
+            setMessages([welcomeMessage]);
+            console.log('No history found, set welcome message');
           }
         } catch (error) {
           console.error('Error loading chat history:', error);
+          // Set default welcome message on error
+          const welcomeMessage: ChatMessage = {
+            id: 1,
+            text: "Hello! I'm your Authexa support assistant. Describe any issues you're experiencing and I'll help you resolve them.",
+            isBot: true,
+            timestamp: new Date()
+          };
+          setMessages([welcomeMessage]);
         } finally {
           setHistoryLoaded(true);
+          setIsLoadingHistory(false);
         }
+      } else if (!user?.id) {
+        setIsLoadingHistory(false);
       }
     };
 
@@ -58,16 +79,20 @@ const ChatSupport: React.FC<ChatSupportProps> = ({ onClose, onMessageSent }) => 
   // Save chat history whenever messages change (but only after history is loaded)
   useEffect(() => {
     const saveChatHistory = async () => {
-      if (user?.id && historyLoaded && messages.length > 1) {
+      if (user?.id && historyLoaded && messages.length > 0) {
+        console.log('Attempting to save chat history, messages count:', messages.length);
         try {
           await chatHistoryService.saveChatHistory(user.id, messages);
+          console.log('Chat history saved successfully');
         } catch (error) {
           console.error('Error saving chat history:', error);
         }
       }
     };
 
-    saveChatHistory();
+    // Add a small delay to avoid saving too frequently
+    const timeoutId = setTimeout(saveChatHistory, 1000);
+    return () => clearTimeout(timeoutId);
   }, [messages, user?.id, historyLoaded]);
 
   const handleSend = async () => {
@@ -110,11 +135,10 @@ const ChatSupport: React.FC<ChatSupportProps> = ({ onClose, onMessageSent }) => 
           const data = await response.json();
           console.log('Webhook response:', data);
           
-          // Extract the response from the webhook - handle both direct strings and output field
+          // Extract the response from the webhook - prioritize 'output' field
           let botResponseText = '';
           
           if (data.output) {
-            // If there's an output field, use that
             botResponseText = data.output;
           } else if (data.response) {
             botResponseText = data.response;
@@ -127,13 +151,12 @@ const ChatSupport: React.FC<ChatSupportProps> = ({ onClose, onMessageSent }) => 
           } else if (typeof data === 'string') {
             botResponseText = data;
           } else {
-            // Fallback to stringify if no recognized field
-            botResponseText = JSON.stringify(data);
+            botResponseText = `I've received your message: "${messageText}" and I'm processing it. Our support team will get back to you shortly.`;
           }
           
           const botResponse: ChatMessage = {
             id: Date.now() + 1,
-            text: botResponseText || `I've received your message: "${messageText}" and I'm processing it. Our support team will get back to you shortly.`,
+            text: botResponseText,
             isBot: true,
             timestamp: new Date()
           };
@@ -165,6 +188,21 @@ const ChatSupport: React.FC<ChatSupportProps> = ({ onClose, onMessageSent }) => 
       handleSend();
     }
   };
+
+  if (isLoadingHistory) {
+    return (
+      <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div className="relative bg-slate-800 rounded-2xl w-full max-w-md h-[600px] flex flex-col border border-white/20">
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-white text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-white mx-auto mb-4"></div>
+              <p>Loading chat history...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
