@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Send, MessageCircle, X } from 'lucide-react';
 import { AUTHEXA_CONFIG } from '@/utils/authexaConfig';
+import { useImprovedAuth } from '@/contexts/ImprovedAuthContext';
 
 interface Message {
   id: number;
@@ -18,6 +19,7 @@ interface ChatSupportProps {
 }
 
 const ChatSupport: React.FC<ChatSupportProps> = ({ onClose, onMessageSent }) => {
+  const { user } = useImprovedAuth();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 1,
@@ -67,6 +69,8 @@ const ChatSupport: React.FC<ChatSupportProps> = ({ onClose, onMessageSent }) => 
           },
           body: JSON.stringify({
             message: messageText,
+            userId: user?.id || null,
+            userEmail: user?.email || null,
             timestamp: new Date().toISOString(),
             source: 'authexa_chat_support'
           })
