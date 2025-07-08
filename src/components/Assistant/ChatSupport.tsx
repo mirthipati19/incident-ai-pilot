@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Send, MessageCircle, X } from 'lucide-react';
+import { AUTHEXA_CONFIG } from '@/utils/authexaConfig';
 
 interface Message {
   id: number;
@@ -26,6 +27,7 @@ const ChatSupport: React.FC<ChatSupportProps> = ({ onClose, onMessageSent }) => 
     }
   ]);
   const [inputValue, setInputValue] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -36,8 +38,8 @@ const ChatSupport: React.FC<ChatSupportProps> = ({ onClose, onMessageSent }) => 
     scrollToBottom();
   }, [messages]);
 
-  const handleSend = () => {
-    if (inputValue.trim()) {
+  const handleSend = async () => {
+    if (inputValue.trim() && !isLoading) {
       const userMessage: Message = {
         id: messages.length + 1,
         text: inputValue,
@@ -52,23 +54,61 @@ const ChatSupport: React.FC<ChatSupportProps> = ({ onClose, onMessageSent }) => 
         onMessageSent(inputValue);
       }
 
+      const messageText = inputValue;
       setInputValue('');
+      setIsLoading(true);
 
-      // Simulate bot response
-      setTimeout(() => {
-        const botResponse: Message = {
+      try {
+        // Send message to n8n webhook
+        const response = await fetch(AUTHEXA_CONFIG.CHAT_WEBHOOK_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            message: messageText,
+            timestamp: new Date().toISOString(),
+            source: 'authexa_chat_support'
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          
+          // Use the response from webhook or fallback message
+          const botResponseText = data.response || data.message || `I've received your message: "${messageText}" and I'm processing it. Our support team will get back to you shortly.`;
+          
+          const botResponse: Message = {
+            id: messages.length + 2,
+            text: botResponseText,
+            isBot: true,
+            timestamp: new Date()
+          };
+          
+          setMessages(prev => [...prev, botResponse]);
+        } else {
+          throw new Error('Failed to send message');
+        }
+      } catch (error) {
+        console.error('Error sending message to webhook:', error);
+        
+        // Fallback response in case of error
+        const errorResponse: Message = {
           id: messages.length + 2,
-          text: `I understand you're experiencing: "${inputValue}". I'm analyzing this issue and will create a support ticket for you right away.`,
+          text: `I understand you're experiencing: "${messageText}". I'm having trouble connecting to our support system right now, but I've logged your message and our team will respond as soon as possible.`,
           isBot: true,
           timestamp: new Date()
         };
-        setMessages(prev => [...prev, botResponse]);
-      }, 1000);
+        
+        setMessages(prev => [...prev, errorResponse]);
+      } finally {
+        setIsLoading(false);
+      }
     }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
+    if (e.key === 'Enter' && !isLoading) {
       handleSend();
     }
   };
@@ -113,6 +153,18 @@ const ChatSupport: React.FC<ChatSupportProps> = ({ onClose, onMessageSent }) => 
               </div>
             </div>
           ))}
+          {isLoading && (
+            <div className="mb-4 text-left">
+              <div className="inline-block max-w-[80%] p-3 rounded-lg text-sm bg-slate-600 text-white">
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '0.2s' }}></div>
+                  <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse" style={{ animationDelay: '0.4s' }}></div>
+                  <span className="text-xs">Typing...</span>
+                </div>
+              </div>
+            </div>
+          )}
           <div ref={messagesEndRef} />
         </div>
 
@@ -124,12 +176,13 @@ const ChatSupport: React.FC<ChatSupportProps> = ({ onClose, onMessageSent }) => 
             onKeyPress={handleKeyPress}
             placeholder="Describe your IT issue..."
             className="bg-slate-700 border-slate-500 text-white placeholder-slate-400 text-sm"
+            disabled={isLoading}
           />
           <Button
             onClick={handleSend}
-            disabled={!inputValue.trim()}
+            disabled={!inputValue.trim() || isLoading}
             size="sm"
-            className="bg-blue-600 hover:bg-blue-700"
+            className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
           >
             <Send className="w-4 h-4" />
           </Button>
