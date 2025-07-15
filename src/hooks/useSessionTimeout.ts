@@ -4,15 +4,15 @@ import { useImprovedAuth } from '@/contexts/ImprovedAuthContext';
 import { cookieUtils } from '@/utils/cookieUtils';
 import { useToast } from '@/hooks/use-toast';
 
-const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes
-const WARNING_TIME = 2 * 60 * 1000; // 2 minutes before timeout
-
-export const useSessionTimeout = () => {
+export const useSessionTimeout = (timeoutMinutes: number = 30) => {
   const { user, signOut } = useImprovedAuth();
   const { toast } = useToast();
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const warningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [showWarning, setShowWarning] = useState(false);
+
+  const INACTIVITY_TIMEOUT = timeoutMinutes * 60 * 1000; // Convert to milliseconds
+  const WARNING_TIME = 2 * 60 * 1000; // 2 minutes before timeout
 
   const resetTimer = () => {
     if (timeoutRef.current) {
@@ -53,7 +53,7 @@ export const useSessionTimeout = () => {
     resetTimer();
     toast({
       title: "Session Extended",
-      description: "Your session has been extended for another 30 minutes.",
+      description: `Your session has been extended for another ${timeoutMinutes} minutes.`,
       variant: "default",
     });
   };
@@ -89,7 +89,7 @@ export const useSessionTimeout = () => {
         clearTimeout(warningTimeoutRef.current);
       }
     };
-  }, [user]);
+  }, [user, timeoutMinutes]);
 
   return {
     showWarning,

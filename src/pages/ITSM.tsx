@@ -223,9 +223,10 @@ const ITSM = () => {
           <CallSupport onClose={() => setShowCallSupport(false)} />
         )}
 
-        {showChatSupport && (
-          <ChatSupport onClose={() => setShowChatSupport(false)} />
-        )}
+        <ChatSupport 
+          isOpen={showChatSupport} 
+          onClose={() => setShowChatSupport(false)} 
+        />
 
         {showVoiceInstaller && (
           <VoiceControllerInstaller onClose={() => setShowVoiceInstaller(false)} />
