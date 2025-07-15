@@ -6,7 +6,7 @@ export const AUTHEXA_CONFIG = {
   LOGO_URL: '/lovable-uploads/c94935e4-6231-41ae-993c-155a820c9885.png',
   BACKGROUND_IMAGE: '/lovable-uploads/c94935e4-6231-41ae-993c-155a820c9885.png',
   
-  // Chat Support Webhook - Updated for Authexa
+  // Chat Support Webhook - Updated URL
   CHAT_WEBHOOK_URL: 'https://authexa.app.n8n.cloud/webhook-test/64d38da4-3add-46d8-a8d2-88eea11f29b6',
   
   // Voice Assistant Configuration

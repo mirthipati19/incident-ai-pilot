@@ -1,95 +1,99 @@
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useImprovedAuth } from '@/contexts/ImprovedAuthContext';
+import { cookieUtils } from '@/utils/cookieUtils';
 import { useToast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
 
-export const useSessionTimeout = (timeoutMinutes: number = 30) => {
-  const { signOut, user } = useImprovedAuth();
+const INACTIVITY_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+const WARNING_TIME = 2 * 60 * 1000; // 2 minutes before timeout
+
+export const useSessionTimeout = () => {
+  const { user, signOut } = useImprovedAuth();
   const { toast } = useToast();
-  const navigate = useNavigate();
-  const timeoutRef = useRef<NodeJS.Timeout>();
-  const warningTimeoutRef = useRef<NodeJS.Timeout>();
-  const lastActivityRef = useRef<number>(Date.now());
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const warningTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const [showWarning, setShowWarning] = useState(false);
 
-  const resetTimeout = () => {
+  const resetTimer = () => {
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
     if (warningTimeoutRef.current) {
       clearTimeout(warningTimeoutRef.current);
     }
+    setShowWarning(false);
 
     if (user) {
-      lastActivityRef.current = Date.now();
+      // Update session expiry in cookie
+      cookieUtils.updateSessionExpiry();
       
-      // Warning at 2 minutes before timeout
-      const warningTime = (timeoutMinutes - 2) * 60 * 1000;
+      // Set warning timer
       warningTimeoutRef.current = setTimeout(() => {
+        setShowWarning(true);
         toast({
           title: "Session Warning",
           description: "Your session will expire in 2 minutes due to inactivity.",
-          variant: "destructive"
+          variant: "default",
         });
-      }, warningTime);
+      }, INACTIVITY_TIMEOUT - WARNING_TIME);
 
-      // Actual timeout
-      timeoutRef.current = setTimeout(async () => {
+      // Set logout timer
+      timeoutRef.current = setTimeout(() => {
+        signOut();
         toast({
           title: "Session Expired",
-          description: "You have been logged out due to inactivity.",
-          variant: "destructive"
+          description: "You have been signed out due to inactivity.",
+          variant: "destructive",
         });
-        await signOut();
-        navigate('/signin');
-      }, timeoutMinutes * 60 * 1000);
+      }, INACTIVITY_TIMEOUT);
     }
   };
 
-  const checkSession = () => {
-    const now = Date.now();
-    const timeSinceLastActivity = now - lastActivityRef.current;
-    
-    // If more than timeout period has passed, force logout
-    if (timeSinceLastActivity > timeoutMinutes * 60 * 1000) {
-      signOut();
-      navigate('/signin');
-      toast({
-        title: "Session Expired",
-        description: "Your session has expired. Please sign in again.",
-        variant: "destructive"
-      });
-    }
+  const extendSession = () => {
+    resetTimer();
+    toast({
+      title: "Session Extended",
+      description: "Your session has been extended for another 30 minutes.",
+      variant: "default",
+    });
   };
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      if (warningTimeoutRef.current) {
+        clearTimeout(warningTimeoutRef.current);
+      }
+      setShowWarning(false);
+      return;
+    }
 
-    const events = [
-      'mousedown', 'mousemove', 'keypress', 'scroll', 
-      'touchstart', 'click', 'keydown', 'wheel'
-    ];
-    
-    const resetTimeoutHandler = () => resetTimeout();
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
     
     events.forEach(event => {
-      document.addEventListener(event, resetTimeoutHandler, true);
+      document.addEventListener(event, resetTimer, true);
     });
 
-    // Check session validity every minute
-    const sessionCheckInterval = setInterval(checkSession, 60000);
-
-    resetTimeout();
+    resetTimer();
 
     return () => {
       events.forEach(event => {
-        document.removeEventListener(event, resetTimeoutHandler, true);
+        document.removeEventListener(event, resetTimer, true);
       });
-      clearInterval(sessionCheckInterval);
-      if (timeoutRef.current) clearTimeout(timeoutRef.current);
-      if (warningTimeoutRef.current) clearTimeout(warningTimeoutRef.current);
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+      if (warningTimeoutRef.current) {
+        clearTimeout(warningTimeoutRef.current);
+      }
     };
-  }, [user, timeoutMinutes]);
+  }, [user]);
 
-  return { resetTimeout };
+  return {
+    showWarning,
+    extendSession,
+    timeRemaining: INACTIVITY_TIMEOUT
+  };
 };
