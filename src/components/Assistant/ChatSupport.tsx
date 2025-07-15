@@ -29,11 +29,12 @@ const ChatSupport: React.FC<ChatSupportProps> = ({ onClose, onMessageSent }) => 
     scrollToBottom();
   }, [messages]);
 
-  // Load chat history when component mounts
+  // Load chat history when component mounts and user is available
   useEffect(() => {
     const loadChatHistory = async () => {
+      // Only load if user is authenticated and history hasn't been loaded yet
       if (user?.id && !historyLoaded) {
-        console.log('Loading chat history for user:', user.id);
+        console.log('Loading chat history for authenticated user:', user.id);
         setIsLoadingHistory(true);
         
         try {
@@ -46,10 +47,11 @@ const ChatSupport: React.FC<ChatSupportProps> = ({ onClose, onMessageSent }) => 
           } else {
             // Set default welcome message if no history exists
             const welcomeMessage: ChatMessage = {
-              id: 1,
+              id: Date.now(),
               text: "Hello! I'm your Authexa support assistant. Describe any issues you're experiencing and I'll help you resolve them.",
               isBot: true,
-              timestamp: new Date()
+              timestamp: new Date(),
+              userId: user.id
             };
             setMessages([welcomeMessage]);
             console.log('No history found, set welcome message');
@@ -58,10 +60,11 @@ const ChatSupport: React.FC<ChatSupportProps> = ({ onClose, onMessageSent }) => 
           console.error('Error loading chat history:', error);
           // Set default welcome message on error
           const welcomeMessage: ChatMessage = {
-            id: 1,
+            id: Date.now(),
             text: "Hello! I'm your Authexa support assistant. Describe any issues you're experiencing and I'll help you resolve them.",
             isBot: true,
-            timestamp: new Date()
+            timestamp: new Date(),
+            userId: user.id
           };
           setMessages([welcomeMessage]);
         } finally {
@@ -69,20 +72,34 @@ const ChatSupport: React.FC<ChatSupportProps> = ({ onClose, onMessageSent }) => 
           setIsLoadingHistory(false);
         }
       } else if (!user?.id) {
+        console.log('No authenticated user, showing unauthenticated message');
         setIsLoadingHistory(false);
+        const unauthenticatedMessage: ChatMessage = {
+          id: Date.now(),
+          text: "Please sign in to access chat support and view your conversation history.",
+          isBot: true,
+          timestamp: new Date()
+        };
+        setMessages([unauthenticatedMessage]);
+        setHistoryLoaded(true);
       }
     };
 
     loadChatHistory();
   }, [user?.id, historyLoaded]);
 
-  // Save chat history whenever messages change (but only after history is loaded)
+  // Save chat history whenever messages change (but only after history is loaded and user is authenticated)
   useEffect(() => {
     const saveChatHistory = async () => {
       if (user?.id && historyLoaded && messages.length > 0) {
         console.log('Attempting to save chat history, messages count:', messages.length);
         try {
-          await chatHistoryService.saveChatHistory(user.id, messages);
+          // Add userId to all messages before saving
+          const messagesWithUserId = messages.map(msg => ({
+            ...msg,
+            userId: user.id
+          }));
+          await chatHistoryService.saveChatHistory(user.id, messagesWithUserId);
           console.log('Chat history saved successfully');
         } catch (error) {
           console.error('Error saving chat history:', error);
@@ -97,11 +114,18 @@ const ChatSupport: React.FC<ChatSupportProps> = ({ onClose, onMessageSent }) => 
 
   const handleSend = async () => {
     if (inputValue.trim() && !isLoading) {
+      // Check if user is authenticated
+      if (!user?.id) {
+        console.warn('User not authenticated, cannot send message');
+        return;
+      }
+
       const userMessage: ChatMessage = {
         id: Date.now(),
         text: inputValue,
         isBot: false,
-        timestamp: new Date()
+        timestamp: new Date(),
+        userId: user.id
       };
 
       setMessages(prev => [...prev, userMessage]);
@@ -124,8 +148,8 @@ const ChatSupport: React.FC<ChatSupportProps> = ({ onClose, onMessageSent }) => 
           },
           body: JSON.stringify({
             message: messageText,
-            userId: user?.id || null,
-            userEmail: user?.email || null,
+            userId: user.id,
+            userEmail: user.email || null,
             timestamp: new Date().toISOString(),
             source: 'authexa_chat_support'
           })
@@ -158,7 +182,8 @@ const ChatSupport: React.FC<ChatSupportProps> = ({ onClose, onMessageSent }) => 
             id: Date.now() + 1,
             text: botResponseText,
             isBot: true,
-            timestamp: new Date()
+            timestamp: new Date(),
+            userId: user.id
           };
           
           setMessages(prev => [...prev, botResponse]);
@@ -173,7 +198,8 @@ const ChatSupport: React.FC<ChatSupportProps> = ({ onClose, onMessageSent }) => 
           id: Date.now() + 1,
           text: `I understand you're experiencing: "${messageText}". I'm having trouble connecting to our support system right now, but I've logged your message and our team will respond as soon as possible.`,
           isBot: true,
-          timestamp: new Date()
+          timestamp: new Date(),
+          userId: user.id
         };
         
         setMessages(prev => [...prev, errorResponse]);
@@ -184,7 +210,7 @@ const ChatSupport: React.FC<ChatSupportProps> = ({ onClose, onMessageSent }) => 
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !isLoading) {
+    if (e.key === 'Enter' && !isLoading && user?.id) {
       handleSend();
     }
   };
@@ -265,13 +291,13 @@ const ChatSupport: React.FC<ChatSupportProps> = ({ onClose, onMessageSent }) => 
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Describe your IT issue..."
+            placeholder={user?.id ? "Describe your IT issue..." : "Please sign in to chat"}
             className="bg-slate-700 border-slate-500 text-white placeholder-slate-400 text-sm"
-            disabled={isLoading}
+            disabled={isLoading || !user?.id}
           />
           <Button
             onClick={handleSend}
-            disabled={!inputValue.trim() || isLoading}
+            disabled={!inputValue.trim() || isLoading || !user?.id}
             size="sm"
             className="bg-blue-600 hover:bg-blue-700 disabled:opacity-50"
           >

@@ -2,6 +2,7 @@
 import { useImprovedAuth } from '@/contexts/ImprovedAuthContext';
 import { Navigate } from 'react-router-dom';
 import { Loader2 } from 'lucide-react';
+import { useSessionTimeout } from '@/hooks/useSessionTimeout';
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -9,6 +10,9 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { user, loading } = useImprovedAuth();
+  
+  // Enable session timeout for protected routes
+  useSessionTimeout(30); // 30 minutes timeout
 
   if (loading) {
     return (

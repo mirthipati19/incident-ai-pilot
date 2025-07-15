@@ -43,9 +43,34 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
     // Initialize admin user on startup
     createAdminUserIfNeeded();
     
-    const getSession = async () => {
+    // Set up auth state change listener first
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      logAuthEvent('Auth state changed with enhanced security', { event, email: session?.user?.email });
+      
+      if (session?.user) {
+        // Generate and store session token for additional security
+        const sessionToken = generateSessionToken();
+        localStorage.setItem('auth_session_token', sessionToken);
+        
+        await updateUserFromSession(session.user);
+      } else {
+        localStorage.removeItem('auth_session_token');
+        setUser(null);
+      }
+      setLoading(false);
+    });
+
+    // Then get initial session
+    const getInitialSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('❌ Session retrieval error:', error);
+          setLoading(false);
+          return;
+        }
+
         if (session?.user) {
           // Validate session token if it exists
           const sessionToken = localStorage.getItem('auth_session_token');
@@ -59,33 +84,18 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
           
           await updateUserFromSession(session.user);
         }
+        setLoading(false);
       } catch (error) {
-        console.error('❌ Session retrieval error:', error);
+        console.error('❌ Session initialization error:', error);
+        setLoading(false);
       }
-      setLoading(false);
     };
 
-    getSession();
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      logAuthEvent('Auth state changed with enhanced security', { event, email: session?.user?.email });
-      
-      if (session?.user) {
-        // Generate and store session token
-        const sessionToken = generateSessionToken();
-        localStorage.setItem('auth_session_token', sessionToken);
-        
-        await updateUserFromSession(session.user);
-      } else {
-        localStorage.removeItem('auth_session_token');
-        setUser(null);
-      }
-      setLoading(false);
-    });
+    getInitialSession();
 
     // Security: Clear sensitive data on page unload
     const handleBeforeUnload = () => {
-      if (performance.navigation.type === 1) {
+      if (performance.navigation?.type === 1) {
         localStorage.removeItem('temp_auth_data');
       }
     };
