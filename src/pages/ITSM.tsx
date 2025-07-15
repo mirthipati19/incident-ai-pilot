@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -17,6 +16,7 @@ import VoiceControllerInstaller from '@/components/VoiceController/VoiceControll
 import { incidentService } from '@/services/incidentService';
 import { useToast } from '@/hooks/use-toast';
 import { useImprovedAuth } from '@/contexts/ImprovedAuthContext';
+import ImprovedChatSupport from '@/components/Assistant/ImprovedChatSupport';
 
 const ITSM = () => {
   const { user } = useImprovedAuth();
@@ -223,7 +223,7 @@ const ITSM = () => {
           <CallSupport onClose={() => setShowCallSupport(false)} />
         )}
 
-        <ChatSupport 
+        <ImprovedChatSupport 
           isOpen={showChatSupport} 
           onClose={() => setShowChatSupport(false)} 
         />
