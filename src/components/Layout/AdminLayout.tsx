@@ -1,17 +1,14 @@
 
 import React from 'react';
+import { Outlet } from 'react-router-dom';
 import { MainNavigation } from '@/components/Navigation/MainNavigation';
 
-interface AdminLayoutProps {
-  children: React.ReactNode;
-}
-
-const AdminLayout = ({ children }: AdminLayoutProps) => {
+const AdminLayout = () => {
   return (
     <div className="min-h-screen w-full">
       <MainNavigation />
       <main className="pt-16 w-full min-h-screen">
-        {children}
+        <Outlet />
       </main>
     </div>
   );
