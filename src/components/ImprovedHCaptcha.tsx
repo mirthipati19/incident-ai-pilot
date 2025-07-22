@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -20,6 +21,7 @@ const ImprovedHCaptcha = forwardRef<ImprovedHCaptchaRef, ImprovedHCaptchaProps>(
     const [HCaptchaComponent, setHCaptchaComponent] = useState<any>(null);
     const [hcaptchaRef, setHcaptchaRef] = useState<any>(null);
     const [captchaKey, setCaptchaKey] = useState(0); // Force re-render
+    const [isExpired, setIsExpired] = useState(false);
     const { toast } = useToast();
     
     const siteKey = '3772ca70-f05a-4270-bac8-9c4ae950872a';
@@ -29,6 +31,7 @@ const ImprovedHCaptcha = forwardRef<ImprovedHCaptchaRef, ImprovedHCaptchaProps>(
       resetCaptcha: () => {
         console.log('🔄 Resetting captcha...');
         setCaptchaError(null);
+        setIsExpired(false);
         setCaptchaKey(prev => prev + 1); // Force component re-render
         
         if (hcaptchaRef && hcaptchaRef.resetCaptcha) {
@@ -63,6 +66,7 @@ const ImprovedHCaptcha = forwardRef<ImprovedHCaptchaRef, ImprovedHCaptchaProps>(
     const handleCaptchaVerify = (token: string) => {
       console.log('✅ Captcha verified successfully with token:', token.substring(0, 20) + '...');
       setCaptchaError(null);
+      setIsExpired(false);
       onVerify(token);
     };
 
@@ -70,6 +74,7 @@ const ImprovedHCaptcha = forwardRef<ImprovedHCaptchaRef, ImprovedHCaptchaProps>(
       console.error('❌ Captcha error:', err);
       const errorMessage = `Security verification error: ${err}`;
       setCaptchaError(errorMessage);
+      setIsExpired(false);
       onError?.(err);
       
       toast({
@@ -81,8 +86,8 @@ const ImprovedHCaptcha = forwardRef<ImprovedHCaptchaRef, ImprovedHCaptchaProps>(
 
     const handleCaptchaExpire = () => {
       console.log('⏰ Captcha expired');
-      const expireMessage = 'Security verification expired. Please try again.';
-      setCaptchaError(expireMessage);
+      setIsExpired(true);
+      setCaptchaError('Security verification expired. Please complete it again.');
       onExpire?.();
       
       toast({
@@ -95,6 +100,14 @@ const ImprovedHCaptcha = forwardRef<ImprovedHCaptchaRef, ImprovedHCaptchaProps>(
     const handleCaptchaLoad = () => {
       console.log('📥 Captcha loaded and ready');
       setCaptchaError(null);
+      setIsExpired(false);
+    };
+
+    const handleRetryClick = () => {
+      console.log('🔄 User clicked retry button');
+      setCaptchaError(null);
+      setIsExpired(false);
+      setCaptchaKey(prev => prev + 1);
     };
 
     if (isLoading) {
@@ -108,15 +121,24 @@ const ImprovedHCaptcha = forwardRef<ImprovedHCaptchaRef, ImprovedHCaptchaProps>(
       );
     }
 
-    if (captchaError) {
+    if (captchaError || isExpired) {
       return (
-        <div className="my-4">
+        <div className="my-4 space-y-3">
           <Alert className="border-orange-200 bg-orange-50">
             <AlertTriangle className="h-4 w-4 text-orange-600" />
             <AlertDescription className="text-orange-800">
               {captchaError}
             </AlertDescription>
           </Alert>
+          <div className="flex justify-center">
+            <button
+              onClick={handleRetryClick}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 bg-blue-50 border border-blue-200 rounded-lg hover:bg-blue-100 transition-colors"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Retry Security Verification
+            </button>
+          </div>
         </div>
       );
     }
@@ -136,6 +158,8 @@ const ImprovedHCaptcha = forwardRef<ImprovedHCaptchaRef, ImprovedHCaptchaProps>(
               onLoad={handleCaptchaLoad}
               theme="light"
               size="normal"
+              // Increase expiration time to 10 minutes (600 seconds)
+              expiry={600}
             />
           </div>
         </div>
