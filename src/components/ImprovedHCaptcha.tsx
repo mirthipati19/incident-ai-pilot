@@ -22,7 +22,7 @@ const ImprovedHCaptcha = forwardRef<ImprovedHCaptchaRef, ImprovedHCaptchaProps>(
     const [captchaKey, setCaptchaKey] = useState(0); // Force re-render
     const { toast } = useToast();
     
-    const siteKey = '3b44032c-8648-406c-b16e-2a5c0ce29b4c';
+    const siteKey = '3772ca70-f05a-4270-bac8-9c4ae950872a';
 
     // Expose reset function to parent
     useImperativeHandle(ref, () => ({
