@@ -20,6 +20,7 @@ const ImprovedHCaptcha = forwardRef<ImprovedHCaptchaRef, ImprovedHCaptchaProps>(
     const [isLoading, setIsLoading] = useState(true);
     const [HCaptchaComponent, setHCaptchaComponent] = useState<any>(null);
     const [hcaptchaRef, setHcaptchaRef] = useState<any>(null);
+    const [captchaKey, setCaptchaKey] = useState(0); // Force re-render
     const { toast } = useToast();
     
     const siteKey = '3b44032c-8648-406c-b16e-2a5c0ce29b4c';
@@ -27,12 +28,16 @@ const ImprovedHCaptcha = forwardRef<ImprovedHCaptchaRef, ImprovedHCaptchaProps>(
     // Expose reset function to parent
     useImperativeHandle(ref, () => ({
       resetCaptcha: () => {
+        console.log('🔄 Resetting captcha...');
+        setCaptchaError(null);
+        setCaptchaKey(prev => prev + 1); // Force component re-render
+        
         if (hcaptchaRef && hcaptchaRef.resetCaptcha) {
           try {
             hcaptchaRef.resetCaptcha();
             console.log('✅ hCaptcha reset successfully');
           } catch (error) {
-            console.warn('⚠️ Could not reset hCaptcha:', error);
+            console.warn('⚠️ Could not reset hCaptcha via ref:', error);
           }
         }
       }
@@ -45,6 +50,7 @@ const ImprovedHCaptcha = forwardRef<ImprovedHCaptchaRef, ImprovedHCaptchaProps>(
           const HCaptcha = await import('@hcaptcha/react-hcaptcha');
           setHCaptchaComponent(() => HCaptcha.default);
           setIsLoading(false);
+          console.log('✅ HCaptcha loaded successfully');
         } catch (error) {
           console.error('❌ HCaptcha package not available:', error);
           setCaptchaError('Security verification temporarily unavailable');
@@ -56,21 +62,40 @@ const ImprovedHCaptcha = forwardRef<ImprovedHCaptchaRef, ImprovedHCaptchaProps>(
     }, []);
 
     const handleCaptchaVerify = (token: string) => {
-      console.log('✅ Captcha verified successfully');
+      console.log('✅ Captcha verified successfully with token:', token.substring(0, 20) + '...');
       setCaptchaError(null);
       onVerify(token);
     };
 
     const handleCaptchaError = (err: string) => {
       console.error('❌ Captcha error:', err);
-      setCaptchaError(`Security verification error: ${err}`);
+      const errorMessage = `Security verification error: ${err}`;
+      setCaptchaError(errorMessage);
       onError?.(err);
+      
+      toast({
+        title: "Security Verification Error",
+        description: "Please try refreshing the captcha.",
+        variant: "destructive",
+      });
     };
 
     const handleCaptchaExpire = () => {
       console.log('⏰ Captcha expired');
-      setCaptchaError('Security verification expired. Please try again.');
+      const expireMessage = 'Security verification expired. Please try again.';
+      setCaptchaError(expireMessage);
       onExpire?.();
+      
+      toast({
+        title: "Captcha Expired",
+        description: "Please complete the security verification again.",
+        variant: "destructive",
+      });
+    };
+
+    const handleCaptchaLoad = () => {
+      console.log('📥 Captcha loaded and ready');
+      setCaptchaError(null);
     };
 
     if (isLoading) {
@@ -103,11 +128,13 @@ const ImprovedHCaptcha = forwardRef<ImprovedHCaptchaRef, ImprovedHCaptchaProps>(
         <div className="flex justify-center my-4">
           <div className="w-full max-w-sm">
             <HCaptchaComponent
+              key={captchaKey} // Force re-render on reset
               ref={setHcaptchaRef}
               sitekey={siteKey}
               onVerify={handleCaptchaVerify}
               onError={handleCaptchaError}
               onExpire={handleCaptchaExpire}
+              onLoad={handleCaptchaLoad}
               theme="light"
               size="normal"
             />

@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useImprovedAuth } from "@/contexts/ImprovedAuthContext";
 import { Eye, EyeOff, Mail, Lock, User as UserIcon, Bot, Shield, Zap, Users, BarChart3, CheckCircle } from "lucide-react";
-import ImprovedHCaptcha from "@/components/ImprovedHCaptcha";
+import ImprovedHCaptcha, { ImprovedHCaptchaRef } from "@/components/ImprovedHCaptcha";
 
 const SignUp = () => {
   const [name, setName] = useState("");
@@ -19,21 +19,33 @@ const SignUp = () => {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const captchaRef = useRef<ImprovedHCaptchaRef | null>(null);
 
   const { signUp } = useImprovedAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
   const handleCaptchaVerify = (token: string) => {
+    console.log('✅ Captcha verified with token length:', token.length);
     setCaptchaToken(token);
   };
 
   const handleCaptchaError = (error: string) => {
-    toast({
-      title: "Security Verification Failed",
-      description: "Please try the security verification again.",
-      variant: "destructive",
-    });
+    console.error('❌ Captcha error:', error);
+    setCaptchaToken(null);
+  };
+
+  const handleCaptchaExpire = () => {
+    console.log('⏰ Captcha expired');
+    setCaptchaToken(null);
+  };
+
+  const resetCaptcha = () => {
+    console.log('🔄 Resetting captcha');
+    setCaptchaToken(null);
+    if (captchaRef.current) {
+      captchaRef.current.resetCaptcha();
+    }
   };
 
   const validateForm = () => {
@@ -95,6 +107,7 @@ const SignUp = () => {
     setIsLoading(true);
 
     try {
+      console.log('🔐 Attempting sign up with email:', email);
       const result = await signUp(email, password, name, captchaToken);
       
       if (result.success) {
@@ -105,18 +118,22 @@ const SignUp = () => {
         });
         navigate("/signin");
       } else {
+        console.error('❌ Sign up failed:', result.error);
         toast({
           title: "Sign Up Failed",
           description: result.error || "Failed to create account. Please try again.",
           variant: "destructive",
         });
+        resetCaptcha();
       }
     } catch (error) {
+      console.error('❌ Sign up error:', error);
       toast({
         title: "Error",
         description: "An unexpected error occurred. Please try again.",
         variant: "destructive",
       });
+      resetCaptcha();
     } finally {
       setIsLoading(false);
     }
@@ -124,7 +141,7 @@ const SignUp = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex">
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDM0di00aC0ydjRoLTR2Mmg0djRoMnYtNGg0di0yaC00em0wLTMwVjBoLTJ2NGgtNHYyaDR2NGgyVjZoNFY0aC00ek02IDM0di00SDR2NEgwdjJoNHY0aDJ2LTRoNHYtMkg2ek02IDRWMEg0djRIMHYyaDR2MEgyVjZoNFY0SDZ6Ci8+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDM0di00aC0ydjRoLTR2Mmg0djRoMnYtNGg0di0yaC00em0wLTMwVjBoLTJ2NGgtNHYyaDR2NGgyVjZoNFY0aC00ek02IDM0di00SDR2NEgwdjJoNHY0aDJ2LTRoNHYtMkg2ek02IDRWMEg0djRIMHYyaDR2NEgyVjZoNFY0SDZ6Ci8+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
       
       {/* Left Side - Sign Up Form */}
       <div className="flex-1 flex items-center justify-center p-4 lg:p-12">
@@ -225,8 +242,10 @@ const SignUp = () => {
               </div>
 
               <ImprovedHCaptcha 
+                ref={captchaRef}
                 onVerify={handleCaptchaVerify}
                 onError={handleCaptchaError}
+                onExpire={handleCaptchaExpire}
               />
 
               <Button 
