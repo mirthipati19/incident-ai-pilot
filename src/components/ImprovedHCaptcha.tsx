@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, forwardRef, useImperativeHandle } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { Alert, AlertDescription } from '@/components/ui/alert';
@@ -23,7 +22,7 @@ const ImprovedHCaptcha = forwardRef<ImprovedHCaptchaRef, ImprovedHCaptchaProps>(
     const [captchaKey, setCaptchaKey] = useState(0); // Force re-render
     const { toast } = useToast();
     
-    const siteKey = '3b44032c-8648-406c-b16e-2a5c0ce29b4c';
+    const siteKey = '6264678a-bfca-40ec-848c-8ef24604275a';
 
     // Expose reset function to parent
     useImperativeHandle(ref, () => ({
