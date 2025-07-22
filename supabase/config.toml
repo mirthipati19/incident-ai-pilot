@@ -33,8 +33,8 @@ site_url = "http://localhost:3000"
 additional_redirect_urls = ["https://localhost:3000"]
 jwt_expiry = 3600
 refresh_token_rotation_enabled = true
-security_captcha_enabled = false
-security_captcha_secret = ""
+security_captcha_enabled = true
+security_captcha_secret = "ES_eeeb844f4be849e5af87f4770bac107c"
 enable_signup = true
 enable_confirmations = true
 enable_recoveries = true
@@ -45,3 +45,4 @@ port = 54327
 
 [functions.send-mfa-email]
 verify_jwt = false
+
