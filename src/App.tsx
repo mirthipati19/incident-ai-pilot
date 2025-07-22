@@ -65,19 +65,51 @@ const App = () => (
                     </AdminRoute>
                   } />
 
-                  {/* Protected user routes */}
-                  <Route element={<ProtectedRoute><ProtectedLayout /></ProtectedRoute>}>
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/itsm" element={<ITSM />} />
-                    <Route path="/service-catalog" element={<ServiceCatalogPage />} />
-                    <Route path="/knowledge-base" element={<KnowledgeBasePage />} />
-                    <Route path="/asset-management" element={<AssetManagementPage />} />
-                  </Route>
+                  {/* Protected user routes with proper nesting */}
+                  <Route path="/dashboard" element={
+                    <ProtectedRoute>
+                      <ProtectedLayout>
+                        <Dashboard />
+                      </ProtectedLayout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/itsm" element={
+                    <ProtectedRoute>
+                      <ProtectedLayout>
+                        <ITSM />
+                      </ProtectedLayout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/service-catalog" element={
+                    <ProtectedRoute>
+                      <ProtectedLayout>
+                        <ServiceCatalogPage />
+                      </ProtectedLayout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/knowledge-base" element={
+                    <ProtectedRoute>
+                      <ProtectedLayout>
+                        <KnowledgeBasePage />
+                      </ProtectedLayout>
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/asset-management" element={
+                    <ProtectedRoute>
+                      <ProtectedLayout>
+                        <AssetManagementPage />
+                      </ProtectedLayout>
+                    </ProtectedRoute>
+                  } />
 
-                  {/* Old admin routes (deprecated) */}
-                  <Route element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
-                    <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                  </Route>
+                  {/* Old admin routes (deprecated) with proper nesting */}
+                  <Route path="/admin/dashboard" element={
+                    <ProtectedRoute>
+                      <AdminLayout>
+                        <AdminDashboard />
+                      </AdminLayout>
+                    </ProtectedRoute>
+                  } />
 
                   {/* Catch all */}
                   <Route path="*" element={<Navigate to="/404" replace />} />
