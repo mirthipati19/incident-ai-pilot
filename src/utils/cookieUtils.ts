@@ -4,6 +4,7 @@ export interface SessionCookie {
   refreshToken: string;
   expiresAt: number;
   userId: string;
+  sessionToken?: string; // Add session token for tracking
 }
 
 const COOKIE_NAME = 'authexa_session';
@@ -18,7 +19,7 @@ export const cookieUtils = {
       const cookieValue = JSON.stringify(sessionData);
       document.cookie = `${COOKIE_NAME}=${encodeURIComponent(cookieValue)}; expires=${expiryDate.toUTCString()}; path=/; SameSite=Lax; Secure`;
       
-      console.log('✅ Session cookie set successfully');
+      console.log('✅ Session cookie set successfully with session management');
     } catch (error) {
       console.error('❌ Failed to set session cookie:', error);
     }
@@ -72,6 +73,14 @@ export const cookieUtils = {
         expiresAt: Date.now() + (30 * 60 * 1000) // 30 minutes from now
       };
       cookieUtils.setSessionCookie(updatedSession);
+      console.log('🔄 Session expiry updated for session management');
     }
+  },
+
+  // New method to generate session token for tracking
+  generateSessionToken: (): string => {
+    const timestamp = Date.now().toString();
+    const random = Math.random().toString(36).substring(2);
+    return `session_${timestamp}_${random}`;
   }
 };

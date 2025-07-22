@@ -1,4 +1,3 @@
-
 import { useState, useRef } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +8,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useImprovedAuth } from "@/contexts/ImprovedAuthContext";
 import { Eye, EyeOff, Mail, Lock, User as UserIcon, Bot, Shield, Zap, Users, BarChart3, CheckCircle } from "lucide-react";
 import ImprovedHCaptcha, { ImprovedHCaptchaRef } from "@/components/ImprovedHCaptcha";
+import SessionManager from "@/components/SessionManager";
 
 const SignUp = () => {
   const [name, setName] = useState("");
@@ -141,6 +141,9 @@ const SignUp = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex">
+      {/* Add SessionManager to track sessions during signup */}
+      <SessionManager />
+      
       <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDM0di00aC0ydjRoLTR2Mmg0djRoMnYtNGg0di0yaC00em0wLTMwVjBoLTJ2NGgtNHYyaDR2NGgyVjZoNFY0aC00ek02IDM0di00SDR2NEgwdjJoNHY0aDJ2LTRoNHYtMkg2ek02IDRWMEg0djRIMHYyaDR2NEgyVjZoNFY0SDZ6Ci8+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
       
       {/* Left Side - Sign Up Form */}

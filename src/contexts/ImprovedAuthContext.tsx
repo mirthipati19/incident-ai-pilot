@@ -1,4 +1,3 @@
-
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
@@ -39,8 +38,24 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
+  // Create user session in database
+  const createUserSession = async (userId: string, sessionToken: string) => {
+    try {
+      await supabase
+        .from('user_sessions')
+        .insert({
+          user_id: userId,
+          session_token: sessionToken,
+          is_active: true
+        });
+      console.log('✅ User session created in database');
+    } catch (error) {
+      console.error('❌ Failed to create user session:', error);
+    }
+  };
+
   useEffect(() => {
-    logAuthEvent('Initializing production auth context with cookie-based session persistence');
+    logAuthEvent('Initializing production auth context with session management');
     
     // Initialize admin user on startup
     createAdminUserIfNeeded();
@@ -50,7 +65,7 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
       const sessionCookie = cookieUtils.getSessionCookie();
       if (sessionCookie) {
         try {
-          console.log('🍪 Attempting to restore session from cookie');
+          console.log('🍪 Attempting to restore session from cookie with session management');
           
           // Set the session in Supabase
           const { data, error } = await supabase.auth.setSession({
@@ -76,17 +91,24 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
 
     // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      logAuthEvent('Auth state changed with cookie persistence', { event, email: session?.user?.email });
+      logAuthEvent('Auth state changed with session management', { event, email: session?.user?.email });
       
       if (session?.user) {
+        // Generate session token for tracking
+        const sessionToken = cookieUtils.generateSessionToken();
+        
         // Store session in cookie for persistence
         const sessionData: SessionCookie = {
           accessToken: session.access_token,
           refreshToken: session.refresh_token,
           expiresAt: Date.now() + (30 * 60 * 1000), // 30 minutes
-          userId: session.user.id
+          userId: session.user.id,
+          sessionToken
         };
         cookieUtils.setSessionCookie(sessionData);
+        
+        // Create session record in database
+        await createUserSession(session.user.id, sessionToken);
         
         await updateUserFromSession(session.user);
       } else {
@@ -160,7 +182,7 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
         isAdmin
       });
       
-      logAuthEvent('User session updated with cookie persistence', { 
+      logAuthEvent('User session updated with session management', { 
         email: authUser.email, 
         isAdmin: isAdmin ? '(Admin)' : '(User)' 
       });
@@ -223,7 +245,7 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signUp = async (email: string, password: string, name: string, captchaToken?: string) => {
     try {
-      logAuthEvent('Sign up attempt with cookie persistence', { email });
+      logAuthEvent('Sign up attempt with session management', { email });
       
       if (!captchaToken) {
         return { success: false, error: 'Security verification required' };
@@ -267,7 +289,7 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
           return { success: false, error: 'Failed to create user profile' };
         }
 
-        logAuthEvent('Sign up successful with cookie persistence', { userId });
+        logAuthEvent('Sign up successful with session management', { userId });
         
         toast({
           title: "Account Created!",
@@ -286,7 +308,7 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signIn = async (email: string, password: string, isAdmin = false, captchaToken?: string) => {
     try {
-      logAuthEvent('Sign in attempt with cookie persistence', { email, isAdmin: isAdmin ? '(Admin)' : '(User)' });
+      logAuthEvent('Sign in attempt with session management', { email, isAdmin: isAdmin ? '(Admin)' : '(User)' });
       
       if (isAdmin) {
         const result = await adminDirectLogin(email, password, captchaToken);
@@ -328,7 +350,7 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
       localStorage.removeItem('temp_auth_data');
       
       await supabase.auth.signOut();
-      logAuthEvent('User signed out successfully with cookie cleanup');
+      logAuthEvent('User signed out successfully with session cleanup');
     } catch (error) {
       console.error('❌ Sign out error:', error);
     }
