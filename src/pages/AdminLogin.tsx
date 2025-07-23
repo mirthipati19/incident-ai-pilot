@@ -9,6 +9,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useAdminAuth } from '@/contexts/AdminAuthContext';
 import { Eye, EyeOff, Mail, Lock, Building2, Shield } from 'lucide-react';
 import { Organization } from '@/services/newAdminAuthService';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { toast as sonnerToast } from "sonner";
 
 const AdminLogin = () => {
   const [email, setEmail] = useState('');
@@ -17,6 +19,8 @@ const AdminLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [organization, setOrganization] = useState<Organization | null>(null);
   const [emailFocused, setEmailFocused] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [isResetDialogOpen, setIsResetDialogOpen] = useState(false);
 
   const { login, getOrganizationByEmail, isAuthenticated } = useAdminAuth();
   const { toast } = useToast();
@@ -85,6 +89,39 @@ const AdminLogin = () => {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleForgotPassword = async () => {
+    if (!resetEmail) {
+      sonnerToast.error('Please enter your email address');
+      return;
+    }
+
+    try {
+      const response = await fetch('https://opwiwaysvdmkajmhhbzr.supabase.co/functions/v1/admin-auth-functions', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9wd2l3YXlzdmRta2FqbWhoYnpyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTAwNzAyODQsImV4cCI6MjA2NTY0NjI4NH0.U-eyRsfuwHtKq94BD-sYiDVjH2yg9b2fp33xeSPlmL0`
+        },
+        body: JSON.stringify({
+          action: 'forgotPassword',
+          email: resetEmail
+        })
+      });
+
+      const result = await response.json();
+      
+      if (result.error) {
+        sonnerToast.error(result.error.message);
+      } else {
+        sonnerToast.success('Password reset instructions sent to your email');
+        setIsResetDialogOpen(false);
+        setResetEmail('');
+      }
+    } catch (error) {
+      sonnerToast.error('Failed to send reset instructions');
     }
   };
 
@@ -180,6 +217,39 @@ const AdminLogin = () => {
                 {isLoading ? "Signing In..." : "Sign In to Admin Portal"}
               </Button>
             </form>
+
+            <div className="mt-4 text-center">
+              <Dialog open={isResetDialogOpen} onOpenChange={setIsResetDialogOpen}>
+                <DialogTrigger asChild>
+                  <Button variant="link" className="text-sm text-blue-200 hover:text-white">
+                    Forgot your password?
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="bg-white text-black">
+                  <DialogHeader>
+                    <DialogTitle>Reset Password</DialogTitle>
+                    <DialogDescription>
+                      Enter your email address and we'll send you instructions to reset your password.
+                    </DialogDescription>
+                  </DialogHeader>
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="reset-email">Email</Label>
+                      <Input
+                        id="reset-email"
+                        type="email"
+                        placeholder="Enter your email"
+                        value={resetEmail}
+                        onChange={(e) => setResetEmail(e.target.value)}
+                      />
+                    </div>
+                    <Button onClick={handleForgotPassword} className="w-full">
+                      Send Reset Instructions
+                    </Button>
+                  </div>
+                </DialogContent>
+              </Dialog>
+            </div>
 
             <div className="mt-8 text-center space-y-4">
               <div className="text-sm text-blue-200">

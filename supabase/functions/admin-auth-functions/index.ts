@@ -46,18 +46,35 @@ serve(async (req) => {
         break;
 
       case 'loginAdmin':
-        // Simple password verification (in production, use proper hashing)
+        // Get admin user from auth.users first, then check admin_users table
+        const { data: authUser } = await supabaseClient.auth.admin.getUserByEmail(params.email);
+        if (!authUser.user) {
+          result = { data: null, error: { message: 'User not found' } };
+          break;
+        }
+
+        // Verify password using Supabase auth
+        const { data: loginData, error: loginError } = await supabaseClient.auth.signInWithPassword({
+          email: params.email,
+          password: params.password
+        });
+
+        if (loginError) {
+          result = { data: null, error: { message: 'Invalid credentials' } };
+          break;
+        }
+
+        // Get admin user details with organization
         result = await supabaseClient
-          .from('admin_users_new')
+          .from('admin_users')
           .select(`
             *,
             organizations (*)
           `)
-          .eq('email', params.email)
-          .eq('is_active', true)
+          .eq('user_id', authUser.user.id)
           .single();
 
-        if (result.data && params.password === 'Authexa@2024!Admin') {
+        if (result.data) {
           // Create session
           const sessionToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
           const expiresAt = new Date();
@@ -81,9 +98,59 @@ serve(async (req) => {
             },
             error: null
           };
-        } else {
-          result = { data: null, error: { message: 'Invalid credentials' } };
         }
+        break;
+
+      case 'forgotPassword':
+        // Generate reset token
+        const resetToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
+        const resetExpiry = new Date();
+        resetExpiry.setHours(resetExpiry.getHours() + 1);
+
+        result = await supabaseClient
+          .from('admin_password_resets')
+          .insert({
+            email: params.email,
+            token: resetToken,
+            expires_at: resetExpiry.toISOString()
+          })
+          .select()
+          .single();
+        break;
+
+      case 'resetPassword':
+        // Verify reset token and update password
+        const { data: resetData } = await supabaseClient
+          .from('admin_password_resets')
+          .select('*')
+          .eq('token', params.token)
+          .eq('used', false)
+          .gt('expires_at', new Date().toISOString())
+          .single();
+
+        if (!resetData) {
+          result = { data: null, error: { message: 'Invalid or expired reset token' } };
+          break;
+        }
+
+        // Update password in auth.users
+        const { error: updateError } = await supabaseClient.auth.admin.updateUserById(
+          params.userId,
+          { password: params.newPassword }
+        );
+
+        if (updateError) {
+          result = { data: null, error: { message: 'Failed to update password' } };
+          break;
+        }
+
+        // Mark token as used
+        await supabaseClient
+          .from('admin_password_resets')
+          .update({ used: true })
+          .eq('id', resetData.id);
+
+        result = { data: { success: true }, error: null };
         break;
 
       default:
