@@ -695,6 +695,74 @@ export type Database = {
         }
         Relationships: []
       }
+      remote_sessions: {
+        Row: {
+          approved_at: string | null
+          connection_quality: string | null
+          created_at: string
+          duration_minutes: number | null
+          ended_at: string | null
+          id: string
+          metadata: Json | null
+          notes: string | null
+          purpose: string | null
+          requested_at: string
+          resolution: string | null
+          session_code: string
+          started_at: string | null
+          status: Database["public"]["Enums"]["session_status"]
+          support_engineer_id: string
+          target_user_id: string
+          updated_at: string
+        }
+        Insert: {
+          approved_at?: string | null
+          connection_quality?: string | null
+          created_at?: string
+          duration_minutes?: number | null
+          ended_at?: string | null
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          purpose?: string | null
+          requested_at?: string
+          resolution?: string | null
+          session_code: string
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["session_status"]
+          support_engineer_id: string
+          target_user_id: string
+          updated_at?: string
+        }
+        Update: {
+          approved_at?: string | null
+          connection_quality?: string | null
+          created_at?: string
+          duration_minutes?: number | null
+          ended_at?: string | null
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          purpose?: string | null
+          requested_at?: string
+          resolution?: string | null
+          session_code?: string
+          started_at?: string | null
+          status?: Database["public"]["Enums"]["session_status"]
+          support_engineer_id?: string
+          target_user_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "remote_sessions_support_engineer_id_fkey"
+            columns: ["support_engineer_id"]
+            isOneToOne: false
+            referencedRelation: "support_engineers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       service_catalog: {
         Row: {
           approval_workflow_id: string | null
@@ -802,6 +870,41 @@ export type Database = {
           },
         ]
       }
+      session_activities: {
+        Row: {
+          activity_type: string
+          description: string | null
+          id: string
+          metadata: Json | null
+          session_id: string
+          timestamp: string
+        }
+        Insert: {
+          activity_type: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          session_id: string
+          timestamp?: string
+        }
+        Update: {
+          activity_type?: string
+          description?: string | null
+          id?: string
+          metadata?: Json | null
+          session_id?: string
+          timestamp?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_activities_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "remote_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sla_policies: {
         Row: {
           created_at: string
@@ -892,6 +995,39 @@ export type Database = {
           updated_at?: string
           used_licenses?: number | null
           vendor?: string | null
+        }
+        Relationships: []
+      }
+      support_engineers: {
+        Row: {
+          added_by: string | null
+          can_request_sessions: boolean
+          created_at: string
+          id: string
+          is_active: boolean
+          role: Database["public"]["Enums"]["support_role"]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          added_by?: string | null
+          can_request_sessions?: boolean
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          role?: Database["public"]["Enums"]["support_role"]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          added_by?: string | null
+          can_request_sessions?: boolean
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          role?: Database["public"]["Enums"]["support_role"]
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -1034,6 +1170,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      generate_session_code: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
       generate_unique_user_id: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -1050,7 +1190,14 @@ export type Database = {
       }
     }
     Enums: {
-      [_ in never]: never
+      session_status:
+        | "pending"
+        | "approved"
+        | "active"
+        | "completed"
+        | "denied"
+        | "cancelled"
+      support_role: "support_engineer" | "senior_support" | "admin_support"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1177,6 +1324,16 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      session_status: [
+        "pending",
+        "approved",
+        "active",
+        "completed",
+        "denied",
+        "cancelled",
+      ],
+      support_role: ["support_engineer", "senior_support", "admin_support"],
+    },
   },
 } as const

@@ -18,6 +18,7 @@ const ITSM = lazy(() => import("./pages/ITSM"));
 const ServiceCatalogPage = lazy(() => import("./pages/ServiceCatalog"));
 const KnowledgeBasePage = lazy(() => import("./pages/KnowledgeBase"));
 const AssetManagementPage = lazy(() => import("./pages/AssetManagement"));
+const RemoteDesktopPage = lazy(() => import("./pages/RemoteDesktop"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const ProtectedLayout = lazy(() => import("./components/Layout/ProtectedLayout"));
@@ -65,14 +66,15 @@ const App = () => (
                     </AdminRoute>
                   } />
 
-                  {/* Protected user routes */}
-                  <Route element={<ProtectedRoute><ProtectedLayout /></ProtectedRoute>}>
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/itsm" element={<ITSM />} />
-                    <Route path="/service-catalog" element={<ServiceCatalogPage />} />
-                    <Route path="/knowledge-base" element={<KnowledgeBasePage />} />
-                    <Route path="/asset-management" element={<AssetManagementPage />} />
-                  </Route>
+          {/* Protected user routes */}
+          <Route element={<ProtectedRoute><ProtectedLayout /></ProtectedRoute>}>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/itsm" element={<ITSM />} />
+            <Route path="/service-catalog" element={<ServiceCatalogPage />} />
+            <Route path="/knowledge-base" element={<KnowledgeBasePage />} />
+            <Route path="/asset-management" element={<AssetManagementPage />} />
+            <Route path="/remote-desktop" element={<RemoteDesktopPage />} />
+          </Route>
 
                   {/* Old admin routes (deprecated) */}
                   <Route element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>

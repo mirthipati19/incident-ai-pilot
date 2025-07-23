@@ -14,7 +14,8 @@ import {
   Shield,
   Bell,
   Settings,
-  ChevronDown
+  ChevronDown,
+  Package
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -32,7 +33,8 @@ const navigationItems = [
   { path: "/itsm", label: "Self Service Portal", icon: Ticket },
   { path: "/service-catalog", label: "Service Catalog", icon: ShoppingCart },
   { path: "/knowledge-base", label: "Knowledge Base", icon: BookOpen },
-  { path: "/asset-management", label: "Asset Management", icon: Monitor },
+  { path: "/asset-management", label: "Asset Management", icon: Package },
+  { path: "/remote-desktop", label: "Remote Desktop", icon: Monitor },
 ];
 
 export const MainNavigation: React.FC = () => {
