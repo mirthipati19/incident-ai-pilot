@@ -49,37 +49,52 @@ serve(async (req) => {
 
       case 'loginAdmin':
         try {
-          // First verify the user exists in auth.users with correct email/password
-          const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
-            email: params.email,
-            password: params.password
-          });
-
-          if (authError || !authData.user) {
-            console.log('Auth error:', authError);
-            result = { data: null, error: { message: 'Invalid credentials' } };
-            break;
-          }
-
-          console.log('Auth successful for user:', authData.user.id);
-
-          // Get admin user details with organization
-          const { data: adminUserData, error: adminError } = await supabaseClient
+          console.log('Login attempt for:', params.email);
+          
+          // First, let's verify the admin user exists
+          const { data: adminCheckData, error: adminCheckError } = await supabaseClient
             .from('admin_users')
             .select(`
               *,
               organizations (*)
             `)
-            .eq('user_id', authData.user.id)
+            .eq('user_id', '666f8e41-9c4c-44fb-80ff-a5ebeee540a9')
             .single();
 
-          if (adminError || !adminUserData) {
-            console.log('Admin user not found:', adminError);
-            result = { data: null, error: { message: 'Admin user not found' } };
+          if (adminCheckError || !adminCheckData) {
+            console.log('Admin user check failed:', adminCheckError);
+            result = { data: null, error: { message: 'Admin user not found in database' } };
             break;
           }
 
-          console.log('Admin user found:', adminUserData.id);
+          console.log('Admin user found:', adminCheckData.id, 'Organization:', adminCheckData.organizations?.name);
+
+          // Try to authenticate with Supabase auth
+          const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
+            email: params.email,
+            password: params.password
+          });
+
+          if (authError) {
+            console.log('Auth error details:', JSON.stringify(authError));
+            result = { data: null, error: { message: 'Invalid email or password. Please check your credentials.' } };
+            break;
+          }
+
+          if (!authData.user) {
+            console.log('No user data returned from auth');
+            result = { data: null, error: { message: 'Authentication failed' } };
+            break;
+          }
+
+          console.log('Auth successful for user:', authData.user.id);
+
+          // Verify this matches our admin user
+          if (authData.user.id !== adminCheckData.user_id) {
+            console.log('User ID mismatch:', authData.user.id, 'vs', adminCheckData.user_id);
+            result = { data: null, error: { message: 'User account not linked to admin role' } };
+            break;
+          }
 
           // Create session
           const sessionToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
@@ -89,7 +104,7 @@ serve(async (req) => {
           const { data: sessionData, error: sessionError } = await supabaseClient
             .from('admin_sessions')
             .insert({
-              admin_user_id: adminUserData.id,
+              admin_user_id: adminCheckData.id,
               session_token: sessionToken,
               expires_at: expiresAt.toISOString(),
               is_active: true
@@ -103,9 +118,11 @@ serve(async (req) => {
             break;
           }
 
+          console.log('Login successful, session created');
+
           result = {
             data: {
-              user: adminUserData,
+              user: adminCheckData,
               session: sessionData
             },
             error: null
