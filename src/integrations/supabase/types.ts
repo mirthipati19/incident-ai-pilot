@@ -450,6 +450,42 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_notifications: {
+        Row: {
+          created_at: string
+          expires_at: string
+          id: string
+          is_read: boolean | null
+          message_content: string
+          message_id: string
+          sender_name: string | null
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          is_read?: boolean | null
+          message_content: string
+          message_id: string
+          sender_name?: string | null
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          expires_at?: string
+          id?: string
+          is_read?: boolean | null
+          message_content?: string
+          message_id?: string
+          sender_name?: string | null
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       community_answers: {
         Row: {
           author_id: string
@@ -719,6 +755,54 @@ export type Database = {
           logo_url?: string | null
           name?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          bio: string | null
+          created_at: string
+          department: string | null
+          full_name: string | null
+          id: string
+          job_title: string | null
+          location: string | null
+          notification_preferences: Json | null
+          phone: string | null
+          timezone: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          department?: string | null
+          full_name?: string | null
+          id?: string
+          job_title?: string | null
+          location?: string | null
+          notification_preferences?: Json | null
+          phone?: string | null
+          timezone?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          department?: string | null
+          full_name?: string | null
+          id?: string
+          job_title?: string | null
+          location?: string | null
+          notification_preferences?: Json | null
+          phone?: string | null
+          timezone?: string | null
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -1277,6 +1361,30 @@ export type Database = {
           },
         ]
       }
+      user_roles: {
+        Row: {
+          assigned_at: string
+          assigned_by: string | null
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          assigned_at?: string
+          assigned_by?: string | null
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          assigned_at?: string
+          assigned_by?: string | null
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_sessions: {
         Row: {
           created_at: string
@@ -1526,6 +1634,10 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: undefined
       }
+      cleanup_expired_notifications: {
+        Args: Record<PropertyKey, never>
+        Returns: undefined
+      }
       generate_session_code: {
         Args: Record<PropertyKey, never>
         Returns: string
@@ -1533,6 +1645,17 @@ export type Database = {
       generate_unique_user_id: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      has_role: {
+        Args: {
+          _user_id: string
+          _role: Database["public"]["Enums"]["app_role"]
+        }
+        Returns: boolean
+      }
+      is_admin: {
+        Args: { _user_id: string }
+        Returns: boolean
       }
       verify_mfa_token_bypass: {
         Args: { email_arg: string; token_arg: string }
@@ -1546,6 +1669,7 @@ export type Database = {
       }
     }
     Enums: {
+      app_role: "admin" | "moderator" | "user"
       session_status:
         | "pending"
         | "approved"
@@ -1681,6 +1805,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      app_role: ["admin", "moderator", "user"],
       session_status: [
         "pending",
         "approved",
