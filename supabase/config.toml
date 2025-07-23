@@ -46,3 +46,6 @@ port = 54327
 [functions.send-mfa-email]
 verify_jwt = false
 
+[functions.simple-admin-auth]
+verify_jwt = false
+
