@@ -205,26 +205,9 @@ const AdminRegister = () => {
     setIsLoading(true);
 
     try {
-      console.log('🔐 Creating organization and admin user...');
+      console.log('🔐 Starting organization and admin user creation...');
 
-      // 1️⃣ First create the organization using edge function (bypasses RLS)
-      const { data: createOrgResponse, error: createOrgError } = await supabase.functions.invoke('admin-auth-functions', {
-        body: { 
-          action: 'createOrganization',
-          name: formData.organizationName,
-          domain: formData.domain,
-          logoUrl: null // Will update later if logo uploaded
-        }
-      });
-
-      if (createOrgError || !createOrgResponse?.organization) {
-        throw new Error(`Failed to create organization: ${createOrgError?.message || 'Unknown error'}`);
-      }
-
-      const orgData = createOrgResponse.organization;
-      console.log('🏢 Organization created:', orgData);
-
-      // 2️⃣ Now sign up the admin user
+      // 1️⃣ Sign up the admin user first
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -232,7 +215,6 @@ const AdminRegister = () => {
           data: {
             name: formData.adminName,
             role: 'admin',
-            organization_id: orgData.id,
           },
           emailRedirectTo: `${window.location.origin}/admin/login`,
           captchaToken: captchaToken,
@@ -240,19 +222,33 @@ const AdminRegister = () => {
       });
 
       if (authError || !authData.user) {
-        // Cleanup organization if auth fails
-        await supabase.from('organizations').delete().eq('id', orgData.id);
         throw new Error(`Failed to create admin user: ${authError?.message}`);
       }
 
       const adminUserId = authData.user.id;
       console.log('✅ Admin user created:', adminUserId);
 
-      // 3️⃣ Update organization with the created_by field
-      await supabase
+      // 2️⃣ Create organization directly (RLS policy now allows it)
+      const { data: orgData, error: orgError } = await supabase
         .from('organizations')
-        .update({ created_by: adminUserId })
-        .eq('id', orgData.id);
+        .insert({
+          name: formData.organizationName,
+          domain: formData.domain,
+          created_by: adminUserId,
+        })
+        .select()
+        .single();
+
+      if (orgError) {
+        console.error('❌ Organization creation failed:', orgError);
+        // Cleanup auth user if org creation fails
+        try {
+          await supabase.auth.admin.deleteUser(adminUserId);
+        } catch (cleanupError) {
+          console.error('Failed to cleanup auth user:', cleanupError);
+        }
+        throw new Error(`Failed to create organization: ${orgError.message}`);
+      }
 
       console.log('🏢 Organization created:', orgData);
 
