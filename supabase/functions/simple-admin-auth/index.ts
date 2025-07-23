@@ -117,7 +117,8 @@ serve(async (req) => {
           admin_user_id: adminData.id,
           session_token: sessionToken,
           expires_at: expiresAt.toISOString(),
-          is_active: true
+          is_active: true,
+          created_at: new Date().toISOString()
         })
         .select()
         .single();
