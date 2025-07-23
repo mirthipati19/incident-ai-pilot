@@ -332,8 +332,8 @@ const NewAdminPortal = () => {
               
               <div>
                 <Label className="text-sm text-gray-300">Status</Label>
-                <Badge variant={organization.is_active ? "default" : "destructive"} className="ml-2">
-                  {organization.is_active ? "Active" : "Inactive"}
+                <Badge variant="default" className="ml-2">
+                  Active
                 </Badge>
               </div>
               

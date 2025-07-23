@@ -28,7 +28,8 @@ serve(async (req) => {
           .from('organizations')
           .select('*')
           .eq('domain', params.domain)
-          .eq('is_active', true)
+          .order('created_at', { ascending: false })
+          .limit(1)
           .single();
         break;
 
@@ -38,67 +39,62 @@ serve(async (req) => {
           .insert({
             name: params.name,
             domain: params.domain,
-            logo_url: params.logoUrl,
-            is_active: true
+            logo_url: params.logoUrl
           })
           .select()
           .single();
         break;
 
       case 'loginAdmin':
-        // Get admin user from auth.users first, then check admin_users table
-        const { data: authUser } = await supabaseClient.auth.admin.getUserByEmail(params.email);
-        if (!authUser.user) {
-          result = { data: null, error: { message: 'User not found' } };
-          break;
-        }
-
-        // Verify password using Supabase auth
-        const { data: loginData, error: loginError } = await supabaseClient.auth.signInWithPassword({
+        // Authenticate with Supabase auth first
+        const { data: authData, error: authError } = await supabaseClient.auth.signInWithPassword({
           email: params.email,
           password: params.password
         });
 
-        if (loginError) {
+        if (authError || !authData.user) {
           result = { data: null, error: { message: 'Invalid credentials' } };
           break;
         }
 
         // Get admin user details with organization
-        result = await supabaseClient
+        const adminUser = await supabaseClient
           .from('admin_users')
           .select(`
             *,
             organizations (*)
           `)
-          .eq('user_id', authUser.user.id)
+          .eq('user_id', authData.user.id)
           .single();
 
-        if (result.data) {
-          // Create session
-          const sessionToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
-          const expiresAt = new Date();
-          expiresAt.setHours(expiresAt.getHours() + 24);
-
-          const sessionResult = await supabaseClient
-            .from('admin_sessions')
-            .insert({
-              admin_user_id: result.data.id,
-              session_token: sessionToken,
-              expires_at: expiresAt.toISOString(),
-              is_active: true
-            })
-            .select()
-            .single();
-
-          result = {
-            data: {
-              user: result.data,
-              session: sessionResult.data
-            },
-            error: null
-          };
+        if (!adminUser.data) {
+          result = { data: null, error: { message: 'Admin user not found' } };
+          break;
         }
+
+        // Create session
+        const sessionToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
+        const expiresAt = new Date();
+        expiresAt.setHours(expiresAt.getHours() + 24);
+
+        const sessionResult = await supabaseClient
+          .from('admin_sessions')
+          .insert({
+            admin_user_id: adminUser.data.id,
+            session_token: sessionToken,
+            expires_at: expiresAt.toISOString(),
+            is_active: true
+          })
+          .select()
+          .single();
+
+        result = {
+          data: {
+            user: adminUser.data,
+            session: sessionResult.data
+          },
+          error: null
+        };
         break;
 
       case 'forgotPassword':
