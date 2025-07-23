@@ -205,9 +205,26 @@ const AdminRegister = () => {
     setIsLoading(true);
 
     try {
-      console.log('🔐 Signing up admin user first...');
+      console.log('🔐 Creating organization and admin user...');
 
-      // 1️⃣ Sign up the admin user with captcha token
+      // 1️⃣ First create the organization using edge function (bypasses RLS)
+      const { data: createOrgResponse, error: createOrgError } = await supabase.functions.invoke('admin-auth-functions', {
+        body: { 
+          action: 'createOrganization',
+          name: formData.organizationName,
+          domain: formData.domain,
+          logoUrl: null // Will update later if logo uploaded
+        }
+      });
+
+      if (createOrgError || !createOrgResponse?.organization) {
+        throw new Error(`Failed to create organization: ${createOrgError?.message || 'Unknown error'}`);
+      }
+
+      const orgData = createOrgResponse.organization;
+      console.log('🏢 Organization created:', orgData);
+
+      // 2️⃣ Now sign up the admin user
       const { data: authData, error: authError } = await supabase.auth.signUp({
         email: formData.email,
         password: formData.password,
@@ -215,6 +232,7 @@ const AdminRegister = () => {
           data: {
             name: formData.adminName,
             role: 'admin',
+            organization_id: orgData.id,
           },
           emailRedirectTo: `${window.location.origin}/admin/login`,
           captchaToken: captchaToken,
@@ -222,35 +240,19 @@ const AdminRegister = () => {
       });
 
       if (authError || !authData.user) {
+        // Cleanup organization if auth fails
+        await supabase.from('organizations').delete().eq('id', orgData.id);
         throw new Error(`Failed to create admin user: ${authError?.message}`);
       }
 
       const adminUserId = authData.user.id;
       console.log('✅ Admin user created:', adminUserId);
 
-      // 2️⃣ Wait for session to be established and then create organization
-      if (authData.session) {
-        await supabase.auth.setSession(authData.session);
-      }
-
-      // Small delay to ensure session is properly set
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      const { data: orgData, error: orgError } = await supabase
+      // 3️⃣ Update organization with the created_by field
+      await supabase
         .from('organizations')
-        .insert({
-          name: formData.organizationName,
-          domain: formData.domain,
-          created_by: adminUserId,
-        })
-        .select()
-        .single();
-
-      if (orgError) {
-        // Cleanup auth user if org creation fails
-        await supabase.auth.admin.deleteUser(adminUserId);
-        throw new Error(`Failed to create organization: ${orgError.message}`);
-      }
+        .update({ created_by: adminUserId })
+        .eq('id', orgData.id);
 
       console.log('🏢 Organization created:', orgData);
 
@@ -300,13 +302,15 @@ const AdminRegister = () => {
       <div className="relative z-10 w-full max-w-2xl">
         <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white shadow-2xl">
           <CardHeader className="text-center pb-8">
-            <div className="flex items-center justify-center gap-3 mb-6">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-xl flex items-center justify-center">
-                <Shield className="w-6 h-6 text-white" />
+            <div className="flex items-center justify-center gap-4 mb-6">
+              <div className="w-14 h-14 bg-gradient-to-br from-blue-400 to-purple-500 rounded-xl flex items-center justify-center shadow-lg">
+                <Shield className="w-7 h-7 text-white" />
               </div>
-              <div>
-                <h1 className="text-2xl font-bold">Register Organization</h1>
-                <p className="text-sm text-blue-200">Authexa Service Portal Admin</p>
+              <div className="text-center">
+                <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-200 to-white bg-clip-text text-transparent">
+                  Authexa Service Portal
+                </h1>
+                <p className="text-sm text-blue-300 font-medium">Enterprise IT Management Platform</p>
               </div>
             </div>
             
