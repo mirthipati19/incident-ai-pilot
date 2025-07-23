@@ -8,6 +8,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { ImprovedAuthProvider } from "@/contexts/ImprovedAuthContext";
 import { AdminAuthProvider } from "@/contexts/AdminAuthContext";
+import { SimpleAdminAuthProvider } from "@/contexts/SimpleAdminAuthContext";
 
 // Lazy load components
 const Index = lazy(() => import("./pages/Index"));
@@ -26,7 +27,13 @@ const AdminLayout = lazy(() => import("./components/Layout/AdminLayout"));
 const ProtectedRoute = lazy(() => import("./components/ProtectedRoute"));
 const AdminRoute = lazy(() => import("./components/AdminRoute"));
 
-// New admin components
+// New simple admin components
+const SimpleAdminLogin = lazy(() => import("./pages/SimpleAdminLogin"));
+const SimpleAdminRegister = lazy(() => import("./pages/SimpleAdminRegister"));
+const SimpleAdminPortal = lazy(() => import("./pages/SimpleAdminPortal"));
+const SimpleAdminRoute = lazy(() => import("./components/SimpleAdminRoute"));
+
+// Old admin components (deprecated)
 const AdminLogin = lazy(() => import("./pages/AdminLogin"));
 const AdminRegister = lazy(() => import("./pages/AdminRegister"));
 const NewAdminPortal = lazy(() => import("./pages/NewAdminPortal"));
@@ -38,6 +45,7 @@ const App = () => (
     <ThemeProvider>
       <ImprovedAuthProvider>
         <AdminAuthProvider>
+          <SimpleAdminAuthProvider>
           <TooltipProvider>
             <Toaster />
             <Sonner />
@@ -57,7 +65,16 @@ const App = () => (
                   <Route path="/signup" element={<SignUp />} />
                   <Route path="/404" element={<NotFound />} />
 
-                  {/* New Admin routes */}
+                  {/* New Simple Admin routes */}
+                  <Route path="/simple-admin-login" element={<SimpleAdminLogin />} />
+                  <Route path="/simple-admin-register" element={<SimpleAdminRegister />} />
+                  <Route path="/simple-admin-portal" element={
+                    <SimpleAdminRoute>
+                      <SimpleAdminPortal />
+                    </SimpleAdminRoute>
+                  } />
+
+                  {/* Old Admin routes (deprecated) */}
                   <Route path="/admin/login" element={<AdminLogin />} />
                   <Route path="/admin/register" element={<AdminRegister />} />
                   <Route path="/admin/portal" element={
@@ -87,6 +104,7 @@ const App = () => (
               </Suspense>
             </BrowserRouter>
           </TooltipProvider>
+          </SimpleAdminAuthProvider>
         </AdminAuthProvider>
       </ImprovedAuthProvider>
     </ThemeProvider>
