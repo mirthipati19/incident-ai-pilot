@@ -226,10 +226,16 @@ const AdminRegister = () => {
       }
 
       const adminUserId = authData.user.id;
-
       console.log('✅ Admin user created:', adminUserId);
 
-      // 2️⃣ Now create the organization as this user (authenticated)
+      // 2️⃣ Wait for session to be established and then create organization
+      if (authData.session) {
+        await supabase.auth.setSession(authData.session);
+      }
+
+      // Small delay to ensure session is properly set
+      await new Promise(resolve => setTimeout(resolve, 100));
+
       const { data: orgData, error: orgError } = await supabase
         .from('organizations')
         .insert({
