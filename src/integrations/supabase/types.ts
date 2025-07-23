@@ -722,6 +722,133 @@ export type Database = {
         }
         Relationships: []
       }
+      quick_response_templates: {
+        Row: {
+          category: string
+          content: string
+          created_at: string
+          created_by: string | null
+          id: string
+          is_active: boolean | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          content: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          content?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          is_active?: boolean | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      remote_session_messages: {
+        Row: {
+          created_at: string
+          file_url: string | null
+          id: string
+          is_read: boolean | null
+          message_content: string
+          message_type: string
+          metadata: Json | null
+          sender_id: string
+          sender_type: string
+          session_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          file_url?: string | null
+          id?: string
+          is_read?: boolean | null
+          message_content: string
+          message_type?: string
+          metadata?: Json | null
+          sender_id: string
+          sender_type: string
+          session_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          file_url?: string | null
+          id?: string
+          is_read?: boolean | null
+          message_content?: string
+          message_type?: string
+          metadata?: Json | null
+          sender_id?: string
+          sender_type?: string
+          session_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "remote_session_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "remote_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      remote_session_timing: {
+        Row: {
+          event_timestamp: string
+          event_type: string
+          id: string
+          metadata: Json | null
+          notes: string | null
+          response_time_seconds: number | null
+          session_id: string
+          total_session_duration_seconds: number | null
+          triggered_by: string | null
+        }
+        Insert: {
+          event_timestamp?: string
+          event_type: string
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          response_time_seconds?: number | null
+          session_id: string
+          total_session_duration_seconds?: number | null
+          triggered_by?: string | null
+        }
+        Update: {
+          event_timestamp?: string
+          event_type?: string
+          id?: string
+          metadata?: Json | null
+          notes?: string | null
+          response_time_seconds?: number | null
+          session_id?: string
+          total_session_duration_seconds?: number | null
+          triggered_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "remote_session_timing_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "remote_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       remote_sessions: {
         Row: {
           approved_at: string | null
@@ -931,6 +1058,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      session_escalation_rules: {
+        Row: {
+          created_at: string
+          escalation_action: string
+          id: string
+          is_active: boolean | null
+          rule_name: string
+          threshold_minutes: number | null
+          trigger_condition: string
+        }
+        Insert: {
+          created_at?: string
+          escalation_action: string
+          id?: string
+          is_active?: boolean | null
+          rule_name: string
+          threshold_minutes?: number | null
+          trigger_condition: string
+        }
+        Update: {
+          created_at?: string
+          escalation_action?: string
+          id?: string
+          is_active?: boolean | null
+          rule_name?: string
+          threshold_minutes?: number | null
+          trigger_condition?: string
+        }
+        Relationships: []
       }
       sla_policies: {
         Row: {

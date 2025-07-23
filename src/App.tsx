@@ -29,6 +29,7 @@ const AdminRoute = lazy(() => import("./components/AdminRoute"));
 
 // New simple admin components
 const VisionAssist = lazy(() => import("./pages/VisionAssist"));
+const RemoteSessionDetail = lazy(() => import("./pages/RemoteSessionDetail"));
 const SimpleAdminLogin = lazy(() => import("./pages/SimpleAdminLogin"));
 const SimpleAdminRegister = lazy(() => import("./pages/SimpleAdminRegister"));
 const SimpleAdminPortal = lazy(() => import("./pages/SimpleAdminPortal"));
@@ -68,6 +69,7 @@ const App = () => (
 
                   {/* New Simple Admin routes */}
             <Route path="/vision-assist" element={<VisionAssist />} />
+            <Route path="/remote-session/:sessionId" element={<RemoteSessionDetail />} />
             <Route path="/simple-admin-login" element={<SimpleAdminLogin />} />
                   <Route path="/simple-admin-register" element={<SimpleAdminRegister />} />
                   <Route path="/simple-admin-portal" element={
