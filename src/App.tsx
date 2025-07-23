@@ -28,6 +28,7 @@ const ProtectedRoute = lazy(() => import("./components/ProtectedRoute"));
 const AdminRoute = lazy(() => import("./components/AdminRoute"));
 
 // New simple admin components
+const VisionAssist = lazy(() => import("./pages/VisionAssist"));
 const SimpleAdminLogin = lazy(() => import("./pages/SimpleAdminLogin"));
 const SimpleAdminRegister = lazy(() => import("./pages/SimpleAdminRegister"));
 const SimpleAdminPortal = lazy(() => import("./pages/SimpleAdminPortal"));
@@ -66,7 +67,8 @@ const App = () => (
                   <Route path="/404" element={<NotFound />} />
 
                   {/* New Simple Admin routes */}
-                  <Route path="/simple-admin-login" element={<SimpleAdminLogin />} />
+            <Route path="/vision-assist" element={<VisionAssist />} />
+            <Route path="/simple-admin-login" element={<SimpleAdminLogin />} />
                   <Route path="/simple-admin-register" element={<SimpleAdminRegister />} />
                   <Route path="/simple-admin-portal" element={
                     <SimpleAdminRoute>

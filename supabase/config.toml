@@ -49,3 +49,6 @@ verify_jwt = false
 [functions.simple-admin-auth]
 verify_jwt = false
 
+[functions.vision-assist]
+verify_jwt = false
+

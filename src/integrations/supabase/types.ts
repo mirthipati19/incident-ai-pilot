@@ -1188,6 +1188,178 @@ export type Database = {
           },
         ]
       }
+      vision_chat_messages: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          message_type: string | null
+          metadata: Json | null
+          role: string
+          session_id: string
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          message_type?: string | null
+          metadata?: Json | null
+          role: string
+          session_id: string
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          message_type?: string | null
+          metadata?: Json | null
+          role?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vision_chat_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "vision_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vision_privacy_settings: {
+        Row: {
+          allow_ai_control: boolean | null
+          auto_redact_passwords: boolean | null
+          consent_given_at: string | null
+          id: string
+          mask_sensitive_fields: boolean | null
+          session_retention_days: number | null
+          store_screenshots: boolean | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          allow_ai_control?: boolean | null
+          auto_redact_passwords?: boolean | null
+          consent_given_at?: string | null
+          id?: string
+          mask_sensitive_fields?: boolean | null
+          session_retention_days?: number | null
+          store_screenshots?: boolean | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          allow_ai_control?: boolean | null
+          auto_redact_passwords?: boolean | null
+          consent_given_at?: string | null
+          id?: string
+          mask_sensitive_fields?: boolean | null
+          session_retention_days?: number | null
+          store_screenshots?: boolean | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      vision_session_steps: {
+        Row: {
+          ai_analysis: Json | null
+          completed_at: string | null
+          created_at: string
+          execution_time_ms: number | null
+          id: string
+          instruction: string
+          screenshot_url: string | null
+          session_id: string
+          status: string
+          step_number: number
+          ui_elements: Json | null
+          user_action: string | null
+        }
+        Insert: {
+          ai_analysis?: Json | null
+          completed_at?: string | null
+          created_at?: string
+          execution_time_ms?: number | null
+          id?: string
+          instruction: string
+          screenshot_url?: string | null
+          session_id: string
+          status?: string
+          step_number: number
+          ui_elements?: Json | null
+          user_action?: string | null
+        }
+        Update: {
+          ai_analysis?: Json | null
+          completed_at?: string | null
+          created_at?: string
+          execution_time_ms?: number | null
+          id?: string
+          instruction?: string
+          screenshot_url?: string | null
+          session_id?: string
+          status?: string
+          step_number?: number
+          ui_elements?: Json | null
+          user_action?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "vision_session_steps_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "vision_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      vision_sessions: {
+        Row: {
+          auto_control_enabled: boolean | null
+          completed_at: string | null
+          created_at: string
+          current_step: number | null
+          id: string
+          intent_description: string | null
+          privacy_mode: boolean | null
+          status: string
+          title: string
+          total_steps: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          auto_control_enabled?: boolean | null
+          completed_at?: string | null
+          created_at?: string
+          current_step?: number | null
+          id?: string
+          intent_description?: string | null
+          privacy_mode?: boolean | null
+          status?: string
+          title: string
+          total_steps?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          auto_control_enabled?: boolean | null
+          completed_at?: string | null
+          created_at?: string
+          current_step?: number | null
+          id?: string
+          intent_description?: string | null
+          privacy_mode?: boolean | null
+          status?: string
+          title?: string
+          total_steps?: number | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
