@@ -41,6 +41,26 @@ serve(async (req) => {
       const db = client.database("authexa_chat")
       const chatCollection = db.collection("chat_history")
 
+      // Ensure TTL index exists for 1-week expiry
+      try {
+        await chatCollection.createIndexes({
+          indexes: [
+            {
+              key: { updatedAt: 1 },
+              name: "updatedAt_ttl",
+              expireAfterSeconds: 604800 // 7 days = 7 * 24 * 60 * 60 seconds
+            },
+            {
+              key: { userId: 1 },
+              name: "userId_index"
+            }
+          ]
+        })
+        console.log('✅ TTL and userId indexes ensured')
+      } catch (indexError) {
+        console.log('ℹ️ Indexes may already exist:', indexError.message)
+      }
+
       let result = null
 
       switch (action) {

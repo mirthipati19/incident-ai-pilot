@@ -6,7 +6,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Send, Bot, User, MessageCircle, X, Loader2, Minimize2, Maximize2 } from 'lucide-react';
 import { useImprovedAuth } from '@/contexts/ImprovedAuthContext';
-import { chatHistoryService, ChatMessage } from '@/services/chatHistoryService';
+import { ChatMessage } from '@/services/chatHistoryService';
+import { sessionChatService, ChatSession } from '@/services/sessionChatService';
 import { getWebhookUrl } from '@/utils/authexaConfig';
 
 interface ImprovedChatSupportProps {
@@ -15,7 +16,7 @@ interface ImprovedChatSupportProps {
 }
 
 const ImprovedChatSupport: React.FC<ImprovedChatSupportProps> = ({ isOpen, onClose }) => {
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [chatSession, setChatSession] = useState<ChatSession | null>(null);
   const [inputMessage, setInputMessage] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [isChatHistoryLoading, setIsChatHistoryLoading] = useState(false);
@@ -26,23 +27,20 @@ const ImprovedChatSupport: React.FC<ImprovedChatSupportProps> = ({ isOpen, onClo
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { user } = useImprovedAuth();
 
-  // Load chat history when component mounts and user is available
+  // Initialize chat session when component mounts and user is available
   useEffect(() => {
-    const loadChatHistory = async () => {
+    const initializeChatSession = async () => {
       if (!user?.id || isInitialized) return;
       
       setIsChatHistoryLoading(true);
-      console.log('🔄 Loading chat history for user:', user.id);
+      console.log('🔄 Initializing chat session for user:', user.id);
       
       try {
-        const history = await chatHistoryService.getChatHistory(user.id);
-        console.log('📚 Chat history loaded:', history.length, 'messages');
+        const session = await sessionChatService.initializeSession(user.id);
+        console.log('📚 Chat session initialized:', session.messages.length, 'messages');
         
-        if (history.length > 0) {
-          setMessages(history);
-          console.log('✅ Chat history set in state');
-        } else {
-          // Add welcome message if no history
+        // If no messages exist, add welcome message
+        if (session.messages.length === 0) {
           const welcomeMessage: ChatMessage = {
             id: Date.now(),
             text: "Hello! I'm here to help you with any questions or issues you might have. How can I assist you today?",
@@ -50,13 +48,19 @@ const ImprovedChatSupport: React.FC<ImprovedChatSupportProps> = ({ isOpen, onClo
             timestamp: new Date(),
             userId: user.id
           };
-          setMessages([welcomeMessage]);
+          
+          const updatedSession = await sessionChatService.addMessage(session, welcomeMessage);
+          setChatSession(updatedSession);
           console.log('👋 Added welcome message for new conversation');
+        } else {
+          setChatSession(session);
+          console.log('✅ Chat session restored with history');
         }
+        
         setIsInitialized(true);
       } catch (error) {
-        console.error('❌ Failed to load chat history:', error);
-        // Add welcome message on error
+        console.error('❌ Failed to initialize chat session:', error);
+        // Create minimal session with welcome message on error
         const welcomeMessage: ChatMessage = {
           id: Date.now(),
           text: "Hello! I'm here to help you with any questions or issues you might have. How can I assist you today?",
@@ -64,7 +68,16 @@ const ImprovedChatSupport: React.FC<ImprovedChatSupportProps> = ({ isOpen, onClo
           timestamp: new Date(),
           userId: user.id
         };
-        setMessages([welcomeMessage]);
+        
+        const fallbackSession: ChatSession = {
+          sessionId: `fallback_${user.id}_${Date.now()}`,
+          userId: user.id,
+          messages: [welcomeMessage],
+          lastActivity: new Date(),
+          isActive: true
+        };
+        
+        setChatSession(fallbackSession);
         setIsInitialized(true);
       } finally {
         setIsChatHistoryLoading(false);
@@ -72,34 +85,24 @@ const ImprovedChatSupport: React.FC<ImprovedChatSupportProps> = ({ isOpen, onClo
     };
 
     if (isOpen && user?.id) {
-      loadChatHistory();
+      initializeChatSession();
     }
   }, [isOpen, user?.id, isInitialized]);
 
-  // Save chat history whenever messages change
+  // Update session activity when messages change
   useEffect(() => {
-    const saveChatHistory = async () => {
-      if (!user?.id || messages.length === 0 || !isInitialized) return;
-      
-      try {
-        console.log('💾 Saving chat history:', messages.length, 'messages');
-        await chatHistoryService.saveChatHistory(user.id, messages);
-        console.log('✅ Chat history saved successfully');
-      } catch (error) {
-        console.error('❌ Failed to save chat history:', error);
-      }
-    };
-
-    saveChatHistory();
-  }, [messages, user?.id, isInitialized]);
+    if (chatSession && chatSession.messages.length > 0) {
+      sessionChatService.updateActivity();
+    }
+  }, [chatSession]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, streamingMessage]);
+  }, [chatSession?.messages, streamingMessage]);
 
   const sendMessage = async () => {
-    if (!inputMessage.trim() || isLoading || !user?.id) return;
+    if (!inputMessage.trim() || isLoading || !user?.id || !chatSession) return;
 
     const userMessage: ChatMessage = {
       id: Date.now(),
@@ -109,7 +112,10 @@ const ImprovedChatSupport: React.FC<ImprovedChatSupportProps> = ({ isOpen, onClo
       userId: user.id
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    // Add user message to session
+    const updatedSession = await sessionChatService.addMessage(chatSession, userMessage);
+    setChatSession(updatedSession);
+    
     const currentMessage = inputMessage.trim();
     setInputMessage('');
     setIsLoading(true);
@@ -129,7 +135,7 @@ const ImprovedChatSupport: React.FC<ImprovedChatSupportProps> = ({ isOpen, onClo
           userId: user.id,
           userName: user.name || user.email || 'User',
           timestamp: new Date().toISOString(),
-          sessionId: `chat_${user.id}_${Date.now()}`,
+          sessionId: updatedSession.sessionId,
           stream: true
         }),
       });
@@ -164,7 +170,9 @@ const ImprovedChatSupport: React.FC<ImprovedChatSupportProps> = ({ isOpen, onClo
             userId: user.id
           };
 
-          setMessages(prev => [...prev, botMessage]);
+          // Add bot message to session
+          const finalSession = await sessionChatService.addMessage(updatedSession, botMessage);
+          setChatSession(finalSession);
         } catch (streamError) {
           console.error('❌ Streaming error:', streamError);
           throw streamError;
@@ -182,7 +190,9 @@ const ImprovedChatSupport: React.FC<ImprovedChatSupportProps> = ({ isOpen, onClo
           userId: user.id
         };
 
-        setMessages(prev => [...prev, botMessage]);
+        // Add bot message to session
+        const finalSession = await sessionChatService.addMessage(updatedSession, botMessage);
+        setChatSession(finalSession);
       }
     } catch (error) {
       console.error('❌ Error sending message:', error);
@@ -195,7 +205,9 @@ const ImprovedChatSupport: React.FC<ImprovedChatSupportProps> = ({ isOpen, onClo
         userId: user.id
       };
       
-      setMessages(prev => [...prev, errorMessage]);
+      // Add error message to session
+      const errorSession = await sessionChatService.addMessage(updatedSession, errorMessage);
+      setChatSession(errorSession);
     } finally {
       setIsLoading(false);
       setIsStreaming(false);
@@ -261,7 +273,7 @@ const ImprovedChatSupport: React.FC<ImprovedChatSupportProps> = ({ isOpen, onClo
               </div>
             ) : (
               <div className="space-y-4">
-                {messages.map((message) => (
+                {chatSession?.messages.map((message) => (
                   <div
                     key={message.id}
                     className={`flex gap-3 ${message.isBot ? 'justify-start' : 'justify-end'}`}
