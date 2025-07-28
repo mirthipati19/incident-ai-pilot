@@ -208,12 +208,22 @@ const AdminDashboard = () => {
 
         {/* Quick Actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="cursor-pointer hover:bg-gray-50 transition-colors">
+          <Card className="cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => navigate('/knowledge-base')}>
             <CardContent className="flex items-center justify-center p-6">
               <div className="text-center">
-                <Users className="w-8 h-8 mx-auto mb-2 text-blue-600" />
-                <p className="font-medium">Manage Users</p>
-                <p className="text-sm text-gray-500">View and edit users</p>
+                <Bot className="w-8 h-8 mx-auto mb-2 text-blue-600" />
+                <p className="font-medium">Knowledge Base</p>
+                <p className="text-sm text-gray-500">Manage articles & FAQ</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="cursor-pointer hover:bg-gray-50 transition-colors" onClick={() => navigate('/service-catalog')}>
+            <CardContent className="flex items-center justify-center p-6">
+              <div className="text-center">
+                <Zap className="w-8 h-8 mx-auto mb-2 text-green-600" />
+                <p className="font-medium">Service Catalog</p>
+                <p className="text-sm text-gray-500">Define service offerings</p>
               </div>
             </CardContent>
           </Card>
@@ -221,9 +231,9 @@ const AdminDashboard = () => {
           <Card className="cursor-pointer hover:bg-gray-50 transition-colors">
             <CardContent className="flex items-center justify-center p-6">
               <div className="text-center">
-                <Ticket className="w-8 h-8 mx-auto mb-2 text-green-600" />
-                <p className="font-medium">Incident Queue</p>
-                <p className="text-sm text-gray-500">Review all incidents</p>
+                <Users className="w-8 h-8 mx-auto mb-2 text-purple-600" />
+                <p className="font-medium">User Management</p>
+                <p className="text-sm text-gray-500">Manage user access</p>
               </div>
             </CardContent>
           </Card>
@@ -231,19 +241,9 @@ const AdminDashboard = () => {
           <Card className="cursor-pointer hover:bg-gray-50 transition-colors">
             <CardContent className="flex items-center justify-center p-6">
               <div className="text-center">
-                <TrendingUp className="w-8 h-8 mx-auto mb-2 text-purple-600" />
+                <TrendingUp className="w-8 h-8 mx-auto mb-2 text-orange-600" />
                 <p className="font-medium">Analytics</p>
                 <p className="text-sm text-gray-500">Performance metrics</p>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="cursor-pointer hover:bg-gray-50 transition-colors">
-            <CardContent className="flex items-center justify-center p-6">
-              <div className="text-center">
-                <Activity className="w-8 h-8 mx-auto mb-2 text-orange-600" />
-                <p className="font-medium">System Health</p>
-                <p className="text-sm text-gray-500">Monitor services</p>
               </div>
             </CardContent>
           </Card>

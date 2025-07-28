@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 import { useImprovedAuth } from "@/contexts/ImprovedAuthContext";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import PricingPlans from "@/components/PricingPlans";
 
 const Index = () => {
   const { user, loading } = useImprovedAuth();
@@ -266,6 +267,9 @@ const Index = () => {
           </div>
         </div>
       </section>
+      
+      {/* Pricing Plans Section */}
+      <PricingPlans />
       
       {/* CTA Section */}
       <section className="relative z-10 py-20 px-6">

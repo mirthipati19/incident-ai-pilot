@@ -3,18 +3,24 @@ import React, { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ServiceCatalogGrid } from "@/components/ServiceCatalog/ServiceCatalogGrid";
+import ServiceCatalogAdminGrid from "@/components/ServiceCatalog/ServiceCatalogAdminGrid";
+import ServiceCatalogForm from "@/components/ServiceCatalog/ServiceCatalogForm";
 import { ServiceRequestForm } from "@/components/ServiceCatalog/ServiceRequestForm";
 import { ServiceRequestsList } from "@/components/ServiceCatalog/ServiceRequestsList";
 import { serviceCatalogService, ServiceCatalog, ServiceRequest } from "@/services/serviceCatalogService";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import { roleService } from "@/services/roleService";
 
 export const ServiceCatalogPage: React.FC = () => {
   const [services, setServices] = useState<ServiceCatalog[]>([]);
   const [requests, setRequests] = useState<ServiceRequest[]>([]);
   const [selectedService, setSelectedService] = useState<ServiceCatalog | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isServiceFormOpen, setIsServiceFormOpen] = useState(false);
+  const [editingService, setEditingService] = useState<ServiceCatalog | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [currentUser, setCurrentUser] = useState<any>(null);
   const { toast } = useToast();
 
@@ -22,10 +28,22 @@ export const ServiceCatalogPage: React.FC = () => {
     const getCurrentUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setCurrentUser(user);
+      if (user) {
+        checkAdminStatus();
+      }
       loadData();
     };
     getCurrentUser();
   }, []);
+
+  const checkAdminStatus = async () => {
+    try {
+      const adminStatus = await roleService.isAdmin();
+      setIsAdmin(adminStatus);
+    } catch (error) {
+      console.error('Error checking admin status:', error);
+    }
+  };
 
   const loadData = async () => {
     try {
@@ -84,6 +102,82 @@ export const ServiceCatalogPage: React.FC = () => {
     }
   };
 
+  const handleCreateService = async (serviceData: any) => {
+    try {
+      const newService = await serviceCatalogService.createServiceCatalogItem({
+        ...serviceData,
+        created_by: currentUser?.id
+      });
+      setServices(prev => [...prev, newService]);
+      setIsServiceFormOpen(false);
+      setEditingService(null);
+      
+      toast({
+        title: "Success",
+        description: "Service created successfully"
+      });
+    } catch (error) {
+      console.error('Error creating service:', error);
+      toast({
+        title: "Error",
+        description: "Failed to create service",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleUpdateService = async (serviceData: any) => {
+    if (!editingService) return;
+    
+    try {
+      const updatedService = await serviceCatalogService.updateServiceCatalogItem(
+        editingService.id, 
+        serviceData
+      );
+      setServices(prev => prev.map(service => 
+        service.id === editingService.id ? updatedService : service
+      ));
+      setIsServiceFormOpen(false);
+      setEditingService(null);
+      
+      toast({
+        title: "Success",
+        description: "Service updated successfully"
+      });
+    } catch (error) {
+      console.error('Error updating service:', error);
+      toast({
+        title: "Error",
+        description: "Failed to update service",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleDeleteService = async (id: string) => {
+    try {
+      await serviceCatalogService.updateServiceCatalogItem(id, { is_active: false });
+      setServices(prev => prev.filter(service => service.id !== id));
+      
+      toast({
+        title: "Success",
+        description: "Service deleted successfully"
+      });
+    } catch (error) {
+      console.error('Error deleting service:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete service",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleEditService = (service: ServiceCatalog) => {
+    setEditingService(service);
+    setIsServiceFormOpen(true);
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 flex items-center justify-center">
@@ -104,9 +198,10 @@ export const ServiceCatalogPage: React.FC = () => {
         </div>
 
         <Tabs defaultValue="catalog" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-2 bg-white/10 backdrop-blur-sm border-white/20">
+          <TabsList className={`grid w-full ${isAdmin ? 'grid-cols-3' : 'grid-cols-2'} bg-white/10 backdrop-blur-sm border-white/20`}>
             <TabsTrigger value="catalog" className="text-white data-[state=active]:bg-white/20">Service Catalog</TabsTrigger>
             <TabsTrigger value="requests" className="text-white data-[state=active]:bg-white/20">My Requests</TabsTrigger>
+            {isAdmin && <TabsTrigger value="manage" className="text-white data-[state=active]:bg-white/20">Manage Services</TabsTrigger>}
           </TabsList>
 
           <TabsContent value="catalog">
@@ -138,11 +233,35 @@ export const ServiceCatalogPage: React.FC = () => {
                 <ServiceRequestsList
                   requests={requests}
                   onUpdateStatus={handleUpdateStatus}
-                  isAdmin={true}
+                  isAdmin={isAdmin}
                 />
               </CardContent>
             </Card>
           </TabsContent>
+
+          {isAdmin && (
+            <TabsContent value="manage">
+              <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white">
+                <CardHeader>
+                  <CardTitle>Service Management</CardTitle>
+                  <CardDescription className="text-blue-200">
+                    Create and manage service catalog entries
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ServiceCatalogAdminGrid
+                    services={services}
+                    onEdit={handleEditService}
+                    onDelete={handleDeleteService}
+                    onCreate={() => {
+                      setEditingService(null);
+                      setIsServiceFormOpen(true);
+                    }}
+                  />
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
         </Tabs>
 
         <ServiceRequestForm
@@ -151,6 +270,21 @@ export const ServiceCatalogPage: React.FC = () => {
           onClose={() => setIsFormOpen(false)}
           onSubmit={handleSubmitRequest}
         />
+
+        {isServiceFormOpen && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="max-w-2xl w-full">
+              <ServiceCatalogForm
+                service={editingService}
+                onSubmit={editingService ? handleUpdateService : handleCreateService}
+                onCancel={() => {
+                  setIsServiceFormOpen(false);
+                  setEditingService(null);
+                }}
+              />
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

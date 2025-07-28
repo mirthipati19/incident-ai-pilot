@@ -12,6 +12,7 @@ import { knowledgeBaseService, KnowledgeArticle } from '@/services/knowledgeBase
 import { useToast } from '@/hooks/use-toast';
 import { useImprovedAuth } from '@/contexts/ImprovedAuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { roleService } from '@/services/roleService';
 
 const KnowledgeBase = () => {
   const { user } = useImprovedAuth();
@@ -36,13 +37,8 @@ const KnowledgeBase = () => {
     if (!user) return;
     
     try {
-      const { data, error } = await supabase
-        .from('admin_users')
-        .select('role')
-        .eq('user_id', user.id)
-        .single();
-      
-      setIsAdmin(!!data && data.role === 'admin');
+      const adminStatus = await roleService.isAdmin();
+      setIsAdmin(adminStatus);
     } catch (error) {
       console.error('Error checking admin status:', error);
     }
