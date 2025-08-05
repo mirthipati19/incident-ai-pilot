@@ -42,77 +42,79 @@ const NewAdminPortal = lazy(() => import("./pages/NewAdminPortal"));
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider>
-      <ImprovedAuthProvider>
-        <AdminAuthProvider>
-          <SimpleAdminAuthProvider>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner />
-            <BrowserRouter>
-              <Suspense fallback={
-                <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
-                  <div className="text-white text-center">
-                    <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-white mx-auto mb-4"></div>
-                    <p>Loading...</p>
+function App() {
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <ImprovedAuthProvider>
+          <AdminAuthProvider>
+            <SimpleAdminAuthProvider>
+            <TooltipProvider>
+              <Toaster />
+              <Sonner />
+              <BrowserRouter>
+                <Suspense fallback={
+                  <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
+                    <div className="text-white text-center">
+                      <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-white mx-auto mb-4"></div>
+                      <p>Loading...</p>
+                    </div>
                   </div>
-                </div>
-              }>
-                <Routes>
-                  {/* Public routes */}
-                  <Route path="/" element={<Index />} />
-                  <Route path="/signin" element={<SignIn />} />
-                  <Route path="/signup" element={<SignUp />} />
-                  <Route path="/404" element={<NotFound />} />
+                }>
+                  <Routes>
+                    {/* Public routes */}
+                    <Route path="/" element={<Index />} />
+                    <Route path="/signin" element={<SignIn />} />
+                    <Route path="/signup" element={<SignUp />} />
+                    <Route path="/404" element={<NotFound />} />
 
-                  {/* New Simple Admin routes */}
-            <Route path="/vision-assist" element={<VisionAssist />} />
-            <Route path="/remote-session/:sessionId" element={<RemoteSessionDetail />} />
-            <Route path="/simple-admin-login" element={<SimpleAdminLogin />} />
-                  <Route path="/simple-admin-register" element={<SimpleAdminRegister />} />
-                  <Route path="/simple-admin-portal" element={
-                    <SimpleAdminRoute>
-                      <SimpleAdminPortal />
-                    </SimpleAdminRoute>
-                  } />
+                    {/* New Simple Admin routes */}
+              <Route path="/vision-assist" element={<VisionAssist />} />
+              <Route path="/remote-session/:sessionId" element={<RemoteSessionDetail />} />
+              <Route path="/simple-admin-login" element={<SimpleAdminLogin />} />
+                    <Route path="/simple-admin-register" element={<SimpleAdminRegister />} />
+                    <Route path="/simple-admin-portal" element={
+                      <SimpleAdminRoute>
+                        <SimpleAdminPortal />
+                      </SimpleAdminRoute>
+                    } />
 
-                  {/* Old Admin routes (deprecated) */}
-                  <Route path="/admin/login" element={<AdminLogin />} />
-                  <Route path="/admin/register" element={<AdminRegister />} />
-                  <Route path="/admin/portal" element={
-                    <AdminRoute>
-                      <NewAdminPortal />
-                    </AdminRoute>
-                  } />
+                    {/* Old Admin routes (deprecated) */}
+                    <Route path="/admin/login" element={<AdminLogin />} />
+                    <Route path="/admin/register" element={<AdminRegister />} />
+                    <Route path="/admin/portal" element={
+                      <AdminRoute>
+                        <NewAdminPortal />
+                      </AdminRoute>
+                    } />
 
-          {/* Protected user routes */}
-          <Route element={<ProtectedRoute><ProtectedLayout /></ProtectedRoute>}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/itsm" element={<ITSM />} />
-            <Route path="/service-catalog" element={<ServiceCatalogPage />} />
-            <Route path="/knowledge-base" element={<KnowledgeBasePage />} />
-            <Route path="/asset-management" element={<AssetManagementPage />} />
-            <Route path="/remote-desktop" element={<RemoteDesktopPage />} />
-          </Route>
+            {/* Protected user routes */}
+            <Route element={<ProtectedRoute><ProtectedLayout /></ProtectedRoute>}>
+              <Route path="/dashboard" element={<Dashboard />} />
+              <Route path="/itsm" element={<ITSM />} />
+              <Route path="/service-catalog" element={<ServiceCatalogPage />} />
+              <Route path="/knowledge-base" element={<KnowledgeBasePage />} />
+              <Route path="/asset-management" element={<AssetManagementPage />} />
+              <Route path="/remote-desktop" element={<RemoteDesktopPage />} />
+            </Route>
 
-                  {/* Old admin routes (deprecated) */}
-                  <Route element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
-                    <Route path="/admin/dashboard" element={<AdminDashboard />} />
-                  </Route>
+                    {/* Old admin routes (deprecated) */}
+                    <Route element={<ProtectedRoute><AdminLayout /></ProtectedRoute>}>
+                      <Route path="/admin/dashboard" element={<AdminDashboard />} />
+                    </Route>
 
-                  {/* Catch all */}
-                  <Route path="*" element={<Navigate to="/404" replace />} />
-                </Routes>
-              </Suspense>
-            </BrowserRouter>
-          </TooltipProvider>
-          </SimpleAdminAuthProvider>
-        </AdminAuthProvider>
-      </ImprovedAuthProvider>
-    </ThemeProvider>
-  </QueryClientProvider>
-);
+                    {/* Catch all */}
+                    <Route path="*" element={<Navigate to="/404" replace />} />
+                  </Routes>
+                </Suspense>
+              </BrowserRouter>
+            </TooltipProvider>
+            </SimpleAdminAuthProvider>
+          </AdminAuthProvider>
+        </ImprovedAuthProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
+  );
+}
 
 export default App;
