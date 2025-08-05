@@ -1,10 +1,9 @@
+
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
 import { adminDirectLogin, regularUserLogin, completeMFALogin, createAdminUserIfNeeded } from '@/services/authService';
 import { authConfig, logAuthEvent } from '@/utils/authConfig';
-import { generateSessionToken, validateSessionToken } from '@/utils/urlEncryption';
-import { cookieUtils, SessionCookie } from '@/utils/cookieUtils';
 import { useToast } from '@/hooks/use-toast';
 
 interface AuthUser extends User {
@@ -38,81 +37,19 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
-  // Create user session in database
-  const createUserSession = async (userId: string, sessionToken: string) => {
-    try {
-      await supabase
-        .from('user_sessions')
-        .insert({
-          user_id: userId,
-          session_token: sessionToken,
-          is_active: true
-        });
-      console.log('✅ User session created in database');
-    } catch (error) {
-      console.error('❌ Failed to create user session:', error);
-    }
-  };
-
   useEffect(() => {
-    logAuthEvent('Initializing production auth context with session management');
+    logAuthEvent('Initializing auth context');
     
     // Initialize admin user on startup
     createAdminUserIfNeeded();
     
-    // First try to restore session from cookie
-    const restoreSessionFromCookie = async () => {
-      const sessionCookie = cookieUtils.getSessionCookie();
-      if (sessionCookie) {
-        try {
-          console.log('🍪 Attempting to restore session from cookie with session management');
-          
-          // Set the session in Supabase
-          const { data, error } = await supabase.auth.setSession({
-            access_token: sessionCookie.accessToken,
-            refresh_token: sessionCookie.refreshToken
-          });
-          
-          if (error) {
-            console.error('❌ Failed to restore session from cookie:', error);
-            cookieUtils.clearSessionCookie();
-          } else if (data.user) {
-            console.log('✅ Session restored from cookie successfully');
-            await updateUserFromSession(data.user);
-            return true;
-          }
-        } catch (error) {
-          console.error('❌ Cookie session restoration failed:', error);
-          cookieUtils.clearSessionCookie();
-        }
-      }
-      return false;
-    };
-
     // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      logAuthEvent('Auth state changed with session management', { event, email: session?.user?.email });
+      logAuthEvent('Auth state changed', { event, email: session?.user?.email });
       
       if (session?.user) {
-        // Generate session token for tracking
-        const sessionToken = cookieUtils.generateSessionToken();
-        
-        // Store session in cookie for persistence
-        const sessionData: SessionCookie = {
-          accessToken: session.access_token,
-          refreshToken: session.refresh_token,
-          expiresAt: Date.now() + (30 * 60 * 1000), // 30 minutes
-          userId: session.user.id,
-          sessionToken
-        };
-        cookieUtils.setSessionCookie(sessionData);
-        
-        // Create session record in database
-        await createUserSession(session.user.id, sessionToken);
-        
         await updateUserFromSession(session.user);
       } else {
-        cookieUtils.clearSessionCookie();
         setUser(null);
       }
       setLoading(false);
@@ -120,22 +57,16 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
 
     // Initialize session
     const initializeSession = async () => {
-      // First try cookie restoration
-      const cookieRestored = await restoreSessionFromCookie();
-      
-      if (!cookieRestored) {
-        // Fallback to Supabase session
-        try {
-          const { data: { session }, error } = await supabase.auth.getSession();
-          
-          if (error) {
-            console.error('❌ Session retrieval error:', error);
-          } else if (session?.user) {
-            await updateUserFromSession(session.user);
-          }
-        } catch (error) {
-          console.error('❌ Session initialization error:', error);
+      try {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('❌ Session retrieval error:', error);
+        } else if (session?.user) {
+          await updateUserFromSession(session.user);
         }
+      } catch (error) {
+        console.error('❌ Session initialization error:', error);
       }
       
       setLoading(false);
@@ -143,23 +74,9 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
 
     initializeSession();
 
-    // Activity tracking for session renewal
-    const handleUserActivity = () => {
-      cookieUtils.updateSessionExpiry();
-    };
-
-    // Listen for user activity
-    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart', 'click'];
-    events.forEach(event => {
-      document.addEventListener(event, handleUserActivity, true);
-    });
-
     // Cleanup
     return () => {
       subscription.unsubscribe();
-      events.forEach(event => {
-        document.removeEventListener(event, handleUserActivity, true);
-      });
     };
   }, []);
 
@@ -182,7 +99,7 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
         isAdmin
       });
       
-      logAuthEvent('User session updated with session management', { 
+      logAuthEvent('User session updated', { 
         email: authUser.email, 
         isAdmin: isAdmin ? '(Admin)' : '(User)' 
       });
@@ -245,7 +162,7 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signUp = async (email: string, password: string, name: string, captchaToken?: string) => {
     try {
-      logAuthEvent('Sign up attempt with session management', { email });
+      logAuthEvent('Sign up attempt', { email });
       
       if (!captchaToken) {
         return { success: false, error: 'Security verification required' };
@@ -289,7 +206,7 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
           return { success: false, error: 'Failed to create user profile' };
         }
 
-        logAuthEvent('Sign up successful with session management', { userId });
+        logAuthEvent('Sign up successful', { userId });
         
         toast({
           title: "Account Created!",
@@ -308,7 +225,7 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signIn = async (email: string, password: string, isAdmin = false, captchaToken?: string) => {
     try {
-      logAuthEvent('Sign in attempt with session management', { email, isAdmin: isAdmin ? '(Admin)' : '(User)' });
+      logAuthEvent('Sign in attempt', { email, isAdmin: isAdmin ? '(Admin)' : '(User)' });
       
       if (isAdmin) {
         const result = await adminDirectLogin(email, password, captchaToken);
@@ -335,22 +252,8 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
 
   const signOut = async () => {
     try {
-      if (user?.id) {
-        // Mark current session as inactive
-        await supabase
-          .from('user_sessions')
-          .update({ is_active: false, ended_at: new Date().toISOString() })
-          .eq('user_id', user.id)
-          .eq('is_active', true);
-      }
-      
-      // Clear cookie and local storage
-      cookieUtils.clearSessionCookie();
-      localStorage.removeItem('auth_session_token');
-      localStorage.removeItem('temp_auth_data');
-      
       await supabase.auth.signOut();
-      logAuthEvent('User signed out successfully with session cleanup');
+      logAuthEvent('User signed out successfully');
     } catch (error) {
       console.error('❌ Sign out error:', error);
     }
