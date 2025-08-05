@@ -16,7 +16,7 @@ import VoiceControllerInstaller from '@/components/VoiceController/VoiceControll
 import { incidentService } from '@/services/incidentService';
 import { useToast } from '@/hooks/use-toast';
 import { useImprovedAuth } from '@/contexts/ImprovedAuthContext';
-import ImprovedChatSupport from '@/components/Assistant/ImprovedChatSupport';
+
 
 const ITSM = () => {
   const { user } = useImprovedAuth();
@@ -223,7 +223,7 @@ const ITSM = () => {
           <CallSupport onClose={() => setShowCallSupport(false)} />
         )}
 
-        <ImprovedChatSupport 
+        <ChatSupport 
           isOpen={showChatSupport} 
           onClose={() => setShowChatSupport(false)} 
         />
