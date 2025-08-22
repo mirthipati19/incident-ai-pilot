@@ -118,13 +118,13 @@ const Dashboard = () => {
   }
 
   return (
-    <div className="min-h-screen w-full bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 p-4">
-      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDM0di00aC0ydjRoLTR2Mmg0djRoMnYtNGg0di0yaC00em0wLTMwVjBoLTJ2NGgtNHYyaDR2NGgyVjZoNFY0aC00ek02IDM0di00SDR2NEgwdjJoNHY0aDJ2LTRoNHYtMkg2ek02IDRWMEg0djRIMHYyaDR2NEgyVjZoNFY0SDZ6Ci8+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
+    <div className="min-h-screen w-full bg-gradient-to-br from-black via-gray-900 to-black p-4">
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDM0di00aC0ydjRoLTR2Mmg0djRoMnYtNGg0di0yaC00em0wLTMwVjBoLTJ2NGgtNHYyaDR2NGgyVjZoNFY0aC00ek02IDM0di00SDR2NEgwdjJoNHY0aDJ2LTRoNHYtMkg2ek02IDRWMEg0djRIMHYyaDR2NEgyVjZoNFY0SDZ6Ci8+PC9nPjwvZz48L3N2Zz4=')] opacity-10"></div>
       
       <div className="relative z-10 container mx-auto px-4 py-8">
         <div className="mb-8">
           <h1 className="text-3xl font-bold mb-2 text-white">Dashboard</h1>
-          <p className="text-blue-200">Welcome back, {user?.name || 'User'}! Here's your IT service overview.</p>
+          <p className="text-gray-300">Welcome back, {user?.name || 'User'}! Here's your IT service overview.</p>
         </div>
 
         {/* Statistics Cards */}
@@ -137,7 +137,7 @@ const Dashboard = () => {
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold">{stat.value}</div>
-                <p className="text-xs text-blue-200">{stat.description}</p>
+                <p className="text-xs text-gray-300">{stat.description}</p>
               </CardContent>
             </Card>
           ))}
@@ -154,8 +154,8 @@ const Dashboard = () => {
                     <div className={`w-12 h-12 ${action.color} rounded-lg flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform`}>
                       <action.icon className="h-6 w-6 text-white" />
                     </div>
-                    <CardTitle className="text-lg group-hover:text-blue-200 transition-colors">{action.title}</CardTitle>
-                    <CardDescription className="text-blue-200">{action.description}</CardDescription>
+                    <CardTitle className="text-lg group-hover:text-gray-200 transition-colors">{action.title}</CardTitle>
+                    <CardDescription className="text-gray-300">{action.description}</CardDescription>
                   </CardHeader>
                 </Card>
               </Link>
@@ -176,17 +176,17 @@ const Dashboard = () => {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">Average Resolution Time</span>
-                  <span className="text-sm text-blue-200">{stats.avgResolutionTime}h</span>
+                  <span className="text-sm text-gray-300">{stats.avgResolutionTime}h</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">Resolution Rate</span>
-                  <span className="text-sm text-blue-200">
+                  <span className="text-sm text-gray-300">
                     {stats.totalIncidents > 0 ? Math.round((stats.resolvedIncidents / stats.totalIncidents) * 100) : 0}%
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">Critical Issues</span>
-                  <span className="text-sm text-blue-200">{stats.criticalIncidents}</span>
+                  <span className="text-sm text-gray-300">{stats.criticalIncidents}</span>
                 </div>
               </div>
             </CardContent>

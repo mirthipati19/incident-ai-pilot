@@ -139,10 +139,12 @@ export const MainNavigation: React.FC = () => {
                   <p className="text-sm font-medium text-gray-900">John Doe</p>
                   <p className="text-xs text-gray-500">john.doe@company.com</p>
                 </div>
-                <DropdownMenuItem className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50">
+              <DropdownMenuItem asChild className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50">
+                <Link to="/profile">
                   <User className="h-4 w-4" />
                   <span>Profile</span>
-                </DropdownMenuItem>
+                </Link>
+              </DropdownMenuItem>
                 <DropdownMenuItem className="flex items-center space-x-2 cursor-pointer hover:bg-gray-50">
                   <Settings className="h-4 w-4" />
                   <span>Settings</span>

@@ -20,7 +20,9 @@ const ServiceCatalogPage = lazy(() => import("./pages/ServiceCatalog"));
 const KnowledgeBasePage = lazy(() => import("./pages/KnowledgeBase"));
 const AssetManagementPage = lazy(() => import("./pages/AssetManagement"));
 const RemoteDesktopPage = lazy(() => import("./pages/RemoteDesktop"));
+const MyProfile = lazy(() => import("./pages/MyProfile"));
 const AdminDashboard = lazy(() => import("./pages/AdminDashboard"));
+const AdminUserManagement = lazy(() => import("./pages/AdminUserManagement"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const ProtectedLayout = lazy(() => import("./components/Layout/ProtectedLayout"));
 const AdminLayout = lazy(() => import("./components/Layout/AdminLayout"));
@@ -143,6 +145,14 @@ function App() {
                       }>
                         <Route index element={<RemoteDesktopPage />} />
                       </Route>
+                      
+                      <Route path="/profile" element={
+                        <ProtectedRoute>
+                          <ProtectedLayout />
+                        </ProtectedRoute>
+                      }>
+                        <Route index element={<MyProfile />} />
+                      </Route>
 
                       {/* Old admin routes (deprecated) */}
                       <Route path="/admin/dashboard" element={
@@ -151,6 +161,14 @@ function App() {
                         </ProtectedRoute>
                       }>
                         <Route index element={<AdminDashboard />} />
+                      </Route>
+                      
+                      <Route path="/admin/users" element={
+                        <ProtectedRoute>
+                          <AdminLayout />
+                        </ProtectedRoute>
+                      }>
+                        <Route index element={<AdminUserManagement />} />
                       </Route>
 
                       {/* Catch all */}
