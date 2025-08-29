@@ -760,51 +760,125 @@ export type Database = {
       }
       profiles: {
         Row: {
+          address: string | null
           avatar_url: string | null
           bio: string | null
+          certifications: string[] | null
+          city: string | null
+          country: string | null
           created_at: string
+          date_of_birth: string | null
           department: string | null
+          email: string | null
+          emergency_contact_name: string | null
+          emergency_contact_phone: string | null
+          experience_years: number | null
+          first_name: string | null
           full_name: string | null
+          gender: string | null
+          hire_date: string | null
           id: string
           job_title: string | null
+          last_name: string | null
           location: string | null
+          manager_id: string | null
           notification_preferences: Json | null
           phone: string | null
+          postal_code: string | null
+          preferred_language: string | null
+          security_clearance: string | null
+          skills: string[] | null
+          social_links: Json | null
+          state: string | null
+          status: string | null
           timezone: string | null
           updated_at: string
           user_id: string
+          username: string | null
         }
         Insert: {
+          address?: string | null
           avatar_url?: string | null
           bio?: string | null
+          certifications?: string[] | null
+          city?: string | null
+          country?: string | null
           created_at?: string
+          date_of_birth?: string | null
           department?: string | null
+          email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          experience_years?: number | null
+          first_name?: string | null
           full_name?: string | null
+          gender?: string | null
+          hire_date?: string | null
           id?: string
           job_title?: string | null
+          last_name?: string | null
           location?: string | null
+          manager_id?: string | null
           notification_preferences?: Json | null
           phone?: string | null
+          postal_code?: string | null
+          preferred_language?: string | null
+          security_clearance?: string | null
+          skills?: string[] | null
+          social_links?: Json | null
+          state?: string | null
+          status?: string | null
           timezone?: string | null
           updated_at?: string
           user_id: string
+          username?: string | null
         }
         Update: {
+          address?: string | null
           avatar_url?: string | null
           bio?: string | null
+          certifications?: string[] | null
+          city?: string | null
+          country?: string | null
           created_at?: string
+          date_of_birth?: string | null
           department?: string | null
+          email?: string | null
+          emergency_contact_name?: string | null
+          emergency_contact_phone?: string | null
+          experience_years?: number | null
+          first_name?: string | null
           full_name?: string | null
+          gender?: string | null
+          hire_date?: string | null
           id?: string
           job_title?: string | null
+          last_name?: string | null
           location?: string | null
+          manager_id?: string | null
           notification_preferences?: Json | null
           phone?: string | null
+          postal_code?: string | null
+          preferred_language?: string | null
+          security_clearance?: string | null
+          skills?: string[] | null
+          social_links?: Json | null
+          state?: string | null
+          status?: string | null
           timezone?: string | null
           updated_at?: string
           user_id?: string
+          username?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profiles_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       quick_response_templates: {
         Row: {

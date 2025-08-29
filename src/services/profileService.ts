@@ -36,7 +36,7 @@ export const profileService = {
         .single();
 
       if (error && error.code !== 'PGRST116') throw error;
-      return data as UserProfile;
+      return data as unknown as UserProfile;
     } catch (error) {
       console.error('Error fetching profile:', error);
       return null;
@@ -59,7 +59,7 @@ export const profileService = {
         .single();
 
       if (error) throw error;
-      return data as UserProfile;
+      return data as unknown as UserProfile;
     } catch (error) {
       console.error('Error updating profile:', error);
       throw error;
@@ -111,7 +111,7 @@ export const profileService = {
         .single();
 
       if (error) throw error;
-      return data as UserProfile;
+      return data as unknown as UserProfile;
     } catch (error) {
       console.error('Error creating profile:', error);
       throw error;

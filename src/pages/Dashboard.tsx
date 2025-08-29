@@ -121,23 +121,23 @@ const Dashboard = () => {
     <div className="min-h-screen w-full bg-gradient-to-br from-black via-gray-900 to-black p-4">
       <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4wMyI+PHBhdGggZD0iTTM2IDM0di00aC0ydjRoLTR2Mmg0djRoMnYtNGg0di0yaC00em0wLTMwVjBoLTJ2NGgtNHYyaDR2NGgyVjZoNFY0aC00ek02IDM0di00SDR2NEgwdjJoNHY0aDJ2LTRoNHYtMkg2ek02IDRWMEg0djRIMHYyaDR2NEgyVjZoNFY0SDZ6Ci8+PC9nPjwvZz48L3N2Zz4=')] opacity-10"></div>
       
-      <div className="relative z-10 container mx-auto px-4 py-8">
+      <div className="relative z-10 container mx-auto px-4 py-8 max-w-7xl">
         <div className="mb-8">
-          <h1 className="text-3xl font-bold mb-2 text-white">Dashboard</h1>
-          <p className="text-gray-300">Welcome back, {user?.name || 'User'}! Here's your IT service overview.</p>
+          <h1 className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-2 text-white">Dashboard</h1>
+          <p className="text-white/80 text-sm sm:text-base">Welcome back, {user?.name || 'User'}! Here's your IT service overview.</p>
         </div>
 
         {/* Statistics Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 mb-8">
           {statCards.map((stat) => (
-            <Card key={stat.title} className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/15 transition-all duration-300">
+            <Card key={stat.title} className="bg-white/10 backdrop-blur-md border-white/20 text-white hover:bg-white/15 transition-all duration-300 hover:scale-105">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">{stat.title}</CardTitle>
+                <CardTitle className="text-xs sm:text-sm font-medium">{stat.title}</CardTitle>
                 <stat.icon className={`h-4 w-4 ${stat.color}`} />
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold">{stat.value}</div>
-                <p className="text-xs text-gray-300">{stat.description}</p>
+                <div className="text-xl sm:text-2xl font-bold">{stat.value}</div>
+                <p className="text-xs text-white/70">{stat.description}</p>
               </CardContent>
             </Card>
           ))}
@@ -145,17 +145,17 @@ const Dashboard = () => {
 
         {/* Quick Actions */}
         <div className="mb-8">
-          <h2 className="text-xl font-semibold mb-4 text-white">Quick Actions</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          <h2 className="text-lg sm:text-xl font-semibold mb-4 text-white">Quick Actions</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             {quickActions.map((action) => (
               <Link key={action.title} to={action.link}>
-                <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white hover:bg-white/15 transition-all duration-300 cursor-pointer group">
-                  <CardHeader className="text-center">
-                    <div className={`w-12 h-12 ${action.color} rounded-lg flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform`}>
-                      <action.icon className="h-6 w-6 text-white" />
+                <Card className="bg-white/10 backdrop-blur-md border-white/20 text-white hover:bg-white/15 transition-all duration-300 cursor-pointer group hover:scale-105">
+                  <CardHeader className="text-center p-4 sm:p-6">
+                    <div className={`w-10 h-10 sm:w-12 sm:h-12 ${action.color} rounded-lg flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform shadow-lg`}>
+                      <action.icon className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
                     </div>
-                    <CardTitle className="text-lg group-hover:text-gray-200 transition-colors">{action.title}</CardTitle>
-                    <CardDescription className="text-gray-300">{action.description}</CardDescription>
+                    <CardTitle className="text-sm sm:text-lg group-hover:text-white/90 transition-colors">{action.title}</CardTitle>
+                    <CardDescription className="text-xs sm:text-sm text-white/70">{action.description}</CardDescription>
                   </CardHeader>
                 </Card>
               </Link>
@@ -164,63 +164,63 @@ const Dashboard = () => {
         </div>
 
         {/* Recent Activity & Performance */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          <Card className="bg-white/10 backdrop-blur-md border-white/20 text-white">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <TrendingUp className="h-5 w-5" />
+              <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5" />
                 Performance Overview
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Average Resolution Time</span>
-                  <span className="text-sm text-gray-300">{stats.avgResolutionTime}h</span>
+                  <span className="text-xs sm:text-sm font-medium">Average Resolution Time</span>
+                  <span className="text-xs sm:text-sm text-white/70">{stats.avgResolutionTime}h</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Resolution Rate</span>
-                  <span className="text-sm text-gray-300">
+                  <span className="text-xs sm:text-sm font-medium">Resolution Rate</span>
+                  <span className="text-xs sm:text-sm text-white/70">
                     {stats.totalIncidents > 0 ? Math.round((stats.resolvedIncidents / stats.totalIncidents) * 100) : 0}%
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-medium">Critical Issues</span>
-                  <span className="text-sm text-gray-300">{stats.criticalIncidents}</span>
+                  <span className="text-xs sm:text-sm font-medium">Critical Issues</span>
+                  <span className="text-xs sm:text-sm text-white/70">{stats.criticalIncidents}</span>
                 </div>
               </div>
             </CardContent>
           </Card>
 
-          <Card className="bg-white/10 backdrop-blur-sm border-white/20 text-white">
+          <Card className="bg-white/10 backdrop-blur-md border-white/20 text-white">
             <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Activity className="h-5 w-5" />
+              <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                <Activity className="h-4 w-4 sm:h-5 sm:w-5" />
                 System Status
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span className="text-sm">IT Services</span>
+                    <span className="text-xs sm:text-sm">IT Services</span>
                   </div>
-                  <span className="text-sm text-green-400 font-medium">Operational</span>
+                  <span className="text-xs sm:text-sm text-green-400 font-medium">Operational</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                    <span className="text-sm">Network</span>
+                    <span className="text-xs sm:text-sm">Network</span>
                   </div>
-                  <span className="text-sm text-green-400 font-medium">Operational</span>
+                  <span className="text-xs sm:text-sm text-green-400 font-medium">Operational</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                    <span className="text-sm">Email Services</span>
+                    <span className="text-xs sm:text-sm">Email Services</span>
                   </div>
-                  <span className="text-sm text-yellow-400 font-medium">Maintenance</span>
+                  <span className="text-xs sm:text-sm text-yellow-400 font-medium">Maintenance</span>
                 </div>
               </div>
             </CardContent>
