@@ -450,6 +450,42 @@ export type Database = {
         }
         Relationships: []
       }
+      chat_messages: {
+        Row: {
+          created_at: string
+          id: string
+          is_bot: boolean
+          message_text: string
+          message_type: string | null
+          metadata: Json | null
+          session_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_bot?: boolean
+          message_text: string
+          message_type?: string | null
+          metadata?: Json | null
+          session_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_bot?: boolean
+          message_text?: string
+          message_type?: string | null
+          metadata?: Json | null
+          session_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       chat_notifications: {
         Row: {
           created_at: string
@@ -482,6 +518,36 @@ export type Database = {
           message_id?: string
           sender_name?: string | null
           session_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      chat_sessions: {
+        Row: {
+          created_at: string
+          id: string
+          last_activity: string
+          status: string | null
+          title: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id: string
+          last_activity?: string
+          status?: string | null
+          title?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          last_activity?: string
+          status?: string | null
+          title?: string | null
+          updated_at?: string
           user_id?: string
         }
         Relationships: []

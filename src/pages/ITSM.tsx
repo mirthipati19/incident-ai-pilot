@@ -11,7 +11,7 @@ import { Phone, MessageCircle, Plus, Ticket, Search, Filter, Clock, User, AlertC
 import CreateIncidentForm from '@/components/Incidents/CreateIncidentForm';
 import IncidentList from '@/components/Incidents/IncidentList';
 import CallSupport from '@/components/Assistant/CallSupport';
-import ChatSupport from '@/components/Assistant/ChatSupport';
+import EnhancedChatSupport from '@/components/EnhancedChatSupport/EnhancedChatSupport';
 import VoiceControllerInstaller from '@/components/VoiceController/VoiceControllerInstaller';
 import { incidentService } from '@/services/incidentService';
 import { useToast } from '@/hooks/use-toast';
@@ -223,10 +223,12 @@ const ITSM = () => {
           <CallSupport onClose={() => setShowCallSupport(false)} />
         )}
 
-        <ChatSupport 
-          isOpen={showChatSupport} 
-          onClose={() => setShowChatSupport(false)} 
-        />
+        {showChatSupport && (
+          <EnhancedChatSupport 
+            isOpen={showChatSupport} 
+            onClose={() => setShowChatSupport(false)} 
+          />
+        )}
 
         {showVoiceInstaller && (
           <VoiceControllerInstaller onClose={() => setShowVoiceInstaller(false)} />
