@@ -69,7 +69,7 @@ export const MainNavigation: React.FC = () => {
               </div>
               <div className="hidden sm:flex flex-col">
                 <span className="text-base sm:text-lg font-bold text-primary-foreground">
-                  Authexa Service Portal
+                  Authexa
                 </span>
                 <span className="text-xs text-primary-foreground/80 font-medium">Enterprise IT Management</span>
               </div>

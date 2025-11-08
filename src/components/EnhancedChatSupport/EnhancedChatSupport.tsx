@@ -284,9 +284,9 @@ const EnhancedChatSupport: React.FC<EnhancedChatSupportProps> = ({ isOpen, onClo
 
   if (isMinimized) {
     return (
-      <Card className="fixed bottom-4 right-4 w-80 shadow-lg z-50 bg-gradient-to-r from-blue-600 to-purple-600 text-white">
+      <Card className="fixed bottom-6 right-6 w-80 shadow-2xl z-[9999] bg-primary border-primary-foreground/20 text-primary-foreground">
         <CardHeader 
-          className="p-4 cursor-pointer hover:bg-white/10 transition-colors"
+          className="p-4 cursor-pointer hover:bg-primary-foreground/10 transition-colors"
           onClick={() => setIsMinimized(false)}
         >
           <div className="flex items-center justify-between">
@@ -294,7 +294,7 @@ const EnhancedChatSupport: React.FC<EnhancedChatSupportProps> = ({ isOpen, onClo
               <MessageSquare className="w-5 h-5" />
               <span className="font-medium">AI Assistant</span>
               {unreadCount > 0 && (
-                <Badge variant="secondary" className="bg-red-500 text-white text-xs">
+                <Badge variant="destructive" className="text-xs">
                   {unreadCount}
                 </Badge>
               )}
@@ -306,7 +306,7 @@ const EnhancedChatSupport: React.FC<EnhancedChatSupportProps> = ({ isOpen, onClo
                 e.stopPropagation();
                 onClose();
               }}
-              className="text-white hover:bg-white/20 h-6 w-6 p-0"
+              className="text-primary-foreground hover:bg-primary-foreground/20 h-6 w-6 p-0"
             >
               <X className="w-4 h-4" />
             </Button>
@@ -317,19 +317,22 @@ const EnhancedChatSupport: React.FC<EnhancedChatSupportProps> = ({ isOpen, onClo
   }
 
   return (
-    <Card className="fixed bottom-4 right-4 w-[420px] h-[600px] shadow-2xl z-50 flex flex-col bg-gradient-to-br from-white to-slate-50 border border-slate-200">
-      <CardHeader className="bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-t-lg flex-shrink-0 relative overflow-hidden">
-        <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiNmZmZmZmYiIGZpbGwtb3BhY2l0eT0iMC4xIj48Y2lyY2xlIGN4PSIzMCIgY3k9IjMwIiByPSI0Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-20"></div>
-        
-        <div className="relative flex items-center justify-between">
+    <Card className="fixed bottom-6 right-6 w-[400px] h-[650px] max-h-[90vh] shadow-2xl z-[9999] flex flex-col bg-card border-border">
+      <CardHeader className="bg-primary text-primary-foreground rounded-t-lg flex-shrink-0 p-4 border-b border-border">
+        <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="relative">
-              <Bot className="w-6 h-6" />
-              <Sparkles className="w-3 h-3 absolute -top-1 -right-1 text-yellow-300" />
+              <div className="w-10 h-10 bg-primary-foreground/10 rounded-full flex items-center justify-center">
+                <Bot className="w-5 h-5" />
+              </div>
+              <Sparkles className="w-3 h-3 absolute -top-1 -right-1 text-yellow-400" />
             </div>
             <div>
-              <CardTitle className="text-lg font-semibold">Enhanced AI Assistant</CardTitle>
-              <p className="text-white/80 text-sm">Real-time & Reliable</p>
+              <CardTitle className="text-lg font-semibold">AI Assistant</CardTitle>
+              <p className="text-primary-foreground/80 text-sm flex items-center gap-2">
+                {getConnectionIcon()}
+                {getConnectionText()}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -337,7 +340,7 @@ const EnhancedChatSupport: React.FC<EnhancedChatSupportProps> = ({ isOpen, onClo
               variant="ghost" 
               size="sm" 
               onClick={() => setIsMinimized(true)}
-              className="text-white hover:bg-white/20 h-8 w-8 p-0 rounded-full"
+              className="text-primary-foreground hover:bg-primary-foreground/10 h-8 w-8 p-0"
             >
               <span className="text-sm">−</span>
             </Button>
@@ -345,44 +348,29 @@ const EnhancedChatSupport: React.FC<EnhancedChatSupportProps> = ({ isOpen, onClo
               variant="ghost" 
               size="sm" 
               onClick={onClose}
-              className="text-white hover:bg-white/20 h-8 w-8 p-0 rounded-full"
+              className="text-primary-foreground hover:bg-primary-foreground/10 h-8 w-8 p-0"
             >
               <X className="w-4 h-4" />
             </Button>
           </div>
         </div>
         
-        <div className="flex items-center justify-between mt-2">
-          <div className="flex items-center gap-2">
-            {getConnectionIcon()}
-            <span className="text-white/90 text-xs">{getConnectionText()}</span>
-            {connectionStatus === 'disconnected' && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={retryConnection}
-                className="text-white hover:bg-white/20 h-6 px-2 text-xs"
-              >
-                <RefreshCw className="w-3 h-3 mr-1" />
-                Retry
-              </Button>
-            )}
+        {connectionStatus === 'disconnected' && (
+          <div className="mt-2 flex items-center gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={retryConnection}
+              className="text-primary-foreground hover:bg-primary-foreground/10 h-7 px-2 text-xs"
+            >
+              <RefreshCw className="w-3 h-3 mr-1" />
+              Retry Connection
+            </Button>
           </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="secondary" className="bg-white/20 text-white border-white/30 text-xs">
-              Enhanced
-            </Badge>
-            {currentSession && (
-              <div className="flex items-center gap-1 text-xs text-white/80">
-                <Clock className="w-3 h-3" />
-                <span>{new Date(currentSession.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-              </div>
-            )}
-          </div>
-        </div>
+        )}
       </CardHeader>
 
-      <CardContent className="flex flex-col flex-1 p-0 bg-gradient-to-b from-slate-50 to-white">
+      <CardContent className="flex flex-col flex-1 p-0 bg-background overflow-hidden">
         {connectionStatus === 'disconnected' && (
           <Alert className="m-4 mb-2">
             <AlertCircle className="h-4 w-4" />
@@ -392,28 +380,28 @@ const EnhancedChatSupport: React.FC<EnhancedChatSupportProps> = ({ isOpen, onClo
           </Alert>
         )}
 
-        <ScrollArea className="flex-1 p-4">
-          <div className="space-y-4">
+        <ScrollArea className="flex-1 p-4 h-full">
+          <div className="space-y-4 pb-4">
             {messages.map((message) => (
               <div key={message.id}>
                 <div className={`flex gap-3 ${message.is_bot ? 'justify-start' : 'justify-end'}`}>
                   {message.is_bot && (
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0 shadow-md">
-                      <Bot className="w-4 h-4 text-white" />
-                    </div>
+                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0 shadow-md">
+                  <Bot className="w-4 h-4 text-primary-foreground" />
+                </div>
                   )}
                   
                   <div className={`max-w-[85%] p-4 rounded-2xl shadow-sm ${
                     message.is_bot
                       ? message.message_type === 'error'
-                        ? 'bg-red-50 border border-red-200 text-red-700'
-                        : 'bg-white border border-slate-200 text-slate-700'
-                      : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
+                        ? 'bg-destructive/10 border border-destructive/20 text-destructive'
+                        : 'bg-muted border border-border text-foreground'
+                      : 'bg-primary text-primary-foreground'
                   }`}>
                     <p className="text-sm leading-relaxed whitespace-pre-wrap">{message.message_text}</p>
                     <div className="flex items-center justify-between mt-2">
                       <span className={`text-xs opacity-70 ${
-                        message.is_bot ? 'text-slate-500' : 'text-white/80'
+                        message.is_bot ? 'text-muted-foreground' : 'text-primary-foreground/80'
                       }`}>
                         {new Date(message.created_at).toLocaleTimeString([], { 
                           hour: '2-digit', 
@@ -430,9 +418,9 @@ const EnhancedChatSupport: React.FC<EnhancedChatSupportProps> = ({ isOpen, onClo
                   </div>
 
                   {!message.is_bot && (
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-400 to-slate-600 flex items-center justify-center flex-shrink-0 shadow-md">
-                      <User className="w-4 h-4 text-white" />
-                    </div>
+                <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center flex-shrink-0 shadow-md">
+                  <User className="w-4 h-4 text-muted-foreground" />
+                </div>
                   )}
                 </div>
 
@@ -444,7 +432,7 @@ const EnhancedChatSupport: React.FC<EnhancedChatSupportProps> = ({ isOpen, onClo
                         variant="outline"
                         size="sm"
                         onClick={() => handleQuickAction(action.action)}
-                        className="text-xs bg-white hover:bg-slate-50 border-slate-300 text-slate-700 rounded-full px-3 py-1 h-auto"
+                        className="text-xs bg-background hover:bg-muted border-border text-foreground rounded-full px-3 py-1 h-auto"
                       >
                         {action.text}
                       </Button>
@@ -456,17 +444,17 @@ const EnhancedChatSupport: React.FC<EnhancedChatSupportProps> = ({ isOpen, onClo
             
             {isTyping && (
               <div className="flex gap-3 justify-start">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0 shadow-md">
-                  <Bot className="w-4 h-4 text-white" />
+                <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0 shadow-md">
+                  <Bot className="w-4 h-4 text-primary-foreground" />
                 </div>
-                <div className="bg-white border border-slate-200 p-4 rounded-2xl shadow-sm">
+                <div className="bg-muted border border-border p-4 rounded-2xl shadow-sm">
                   <div className="flex items-center space-x-2">
                     <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" />
-                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
-                      <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                      <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" />
+                      <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                      <div className="w-2 h-2 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
                     </div>
-                    <span className="text-xs text-slate-500">AI is thinking...</span>
+                    <span className="text-xs text-muted-foreground">AI is thinking...</span>
                   </div>
                 </div>
               </div>
@@ -476,52 +464,54 @@ const EnhancedChatSupport: React.FC<EnhancedChatSupportProps> = ({ isOpen, onClo
           </div>
         </ScrollArea>
 
-        <div className="border-t border-slate-200 p-4 flex-shrink-0 bg-white">
+        <div className="border-t border-border p-4 flex-shrink-0 bg-background">
           <div className="flex gap-3 items-end">
             <div className="flex-1">
-              <Input
-                ref={inputRef}
-                value={inputMessage}
-                onChange={(e) => setInputMessage(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Ask me anything about your account, tech issues, or support..."
-                disabled={isLoading || !user?.id}
-                className="rounded-2xl border-slate-300 focus:border-blue-500 focus:ring-blue-500 bg-slate-50 px-4 py-3 text-sm"
-              />
-            </div>
-            <Button 
-              onClick={() => sendMessage()}
-              disabled={isLoading || !inputMessage.trim() || !user?.id}
-              className="rounded-2xl bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 h-12 w-12 p-0 shadow-lg"
-            >
-              {isLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                <Send className="w-5 h-5" />
-              )}
-            </Button>
-          </div>
-          
-          {!user?.id && (
-            <div className="flex items-center gap-2 mt-3 p-3 bg-orange-50 border border-orange-200 rounded-lg">
-              <AlertCircle className="w-4 h-4 text-orange-600" />
-              <p className="text-xs text-orange-700">
-                Please sign in to use AI chat support
-              </p>
-            </div>
-          )}
-          
-          {user?.id && (
-            <div className="flex items-center justify-between mt-2 text-xs text-slate-500">
-              <div className="flex items-center gap-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                <span>Enhanced AI • Real-time Updates</span>
+                <Input
+                  ref={inputRef}
+                  value={inputMessage}
+                  onChange={(e) => setInputMessage(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Ask me anything about your account, tech issues, or support..."
+                  disabled={isLoading || !user?.id}
+                  className="rounded-2xl border-border focus:border-primary focus:ring-primary bg-background px-4 py-3 text-sm"
+                />
               </div>
-              <div className="flex items-center gap-2">
-                <span>Session: {currentSession?.id.slice(-8)}</span>
-              </div>
+              <Button 
+                onClick={() => sendMessage()}
+                disabled={isLoading || !inputMessage.trim() || !user?.id}
+                className="rounded-2xl bg-primary hover:bg-primary/90 h-12 w-12 p-0 shadow-lg"
+              >
+                {isLoading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  <Send className="w-5 h-5" />
+                )}
+              </Button>
             </div>
-          )}
+            
+            {!user?.id && (
+              <div className="flex items-center gap-2 mt-3 p-3 bg-destructive/10 border border-destructive/20 rounded-lg">
+                <AlertCircle className="w-4 h-4 text-destructive" />
+                <p className="text-xs text-destructive">
+                  Please sign in to use AI chat support
+                </p>
+              </div>
+            )}
+            
+            {user?.id && (
+              <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 rounded-full ${
+                    connectionStatus === 'connected' ? 'bg-green-500' : 'bg-yellow-500'
+                  }`}></div>
+                  <span>Enhanced AI • Real-time</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span>Session: {currentSession?.id.slice(-8)}</span>
+                </div>
+              </div>
+            )}
         </div>
       </CardContent>
     </Card>
