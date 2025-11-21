@@ -719,7 +719,7 @@ export type Database = {
           helpful_votes: number | null
           id: string
           is_auto_generated: boolean | null
-          search_vector: unknown | null
+          search_vector: unknown
           source_incident_id: string | null
           status: string
           summary: string | null
@@ -738,7 +738,7 @@ export type Database = {
           helpful_votes?: number | null
           id?: string
           is_auto_generated?: boolean | null
-          search_vector?: unknown | null
+          search_vector?: unknown
           source_incident_id?: string | null
           status?: string
           summary?: string | null
@@ -757,7 +757,7 @@ export type Database = {
           helpful_votes?: number | null
           id?: string
           is_auto_generated?: boolean | null
-          search_vector?: unknown | null
+          search_vector?: unknown
           source_incident_id?: string | null
           status?: string
           summary?: string | null
@@ -1770,22 +1770,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      cleanup_expired_admin_tokens: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      cleanup_expired_notifications: {
-        Args: Record<PropertyKey, never>
-        Returns: undefined
-      }
-      generate_session_code: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      generate_unique_user_id: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      cleanup_expired_admin_tokens: { Args: never; Returns: undefined }
+      cleanup_expired_notifications: { Args: never; Returns: undefined }
+      generate_session_code: { Args: never; Returns: string }
+      generate_unique_user_id: { Args: never; Returns: string }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -1793,10 +1781,7 @@ export type Database = {
         }
         Returns: boolean
       }
-      is_admin: {
-        Args: { _user_id: string }
-        Returns: boolean
-      }
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
       verify_mfa_token_bypass: {
         Args: { email_arg: string; token_arg: string }
         Returns: {
