@@ -127,47 +127,20 @@ serve(async (req) => {
         break;
 
       case 'forgotPassword':
-        // Use Supabase's built-in password reset
-        const { data: resetData, error: resetError } = await supabaseClient.auth.resetPasswordForEmail(
-          params.email,
-          {
-            redirectTo: `${params.redirectUrl || 'https://id-preview--2c9c9049-b133-49cb-98a4-54224d43cb10.lovable.app'}/admin/reset-password`
-          }
-        );
+        // Generate reset token
+        const resetToken = Math.random().toString(36).substring(2) + Date.now().toString(36);
+        const resetExpiry = new Date();
+        resetExpiry.setHours(resetExpiry.getHours() + 1);
 
-        if (resetError) {
-          result = { data: null, error: { message: resetError.message } };
-        } else {
-          result = { data: { success: true, message: 'Password reset email sent' }, error: null };
-        }
-        break;
-      
-      case 'resetPasswordDirect':
-        // Direct password reset for admin support (requires email verification)
-        try {
-          // Find user by email
-          const { data: { users }, error: findError } = await supabaseClient.auth.admin.listUsers();
-          const targetUser = users?.find(u => u.email === params.email);
-          
-          if (!targetUser) {
-            result = { data: null, error: { message: 'User not found' } };
-            break;
-          }
-
-          // Update password directly
-          const { error: updateError } = await supabaseClient.auth.admin.updateUserById(
-            targetUser.id,
-            { password: params.newPassword }
-          );
-
-          if (updateError) {
-            result = { data: null, error: { message: 'Failed to update password: ' + updateError.message } };
-          } else {
-            result = { data: { success: true, message: 'Password updated successfully' }, error: null };
-          }
-        } catch (error) {
-          result = { data: null, error: { message: 'Password reset failed: ' + error.message } };
-        }
+        result = await supabaseClient
+          .from('admin_password_resets')
+          .insert({
+            email: params.email,
+            token: resetToken,
+            expires_at: resetExpiry.toISOString()
+          })
+          .select()
+          .single();
         break;
 
       case 'resetPassword':
