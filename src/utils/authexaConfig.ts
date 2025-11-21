@@ -16,9 +16,8 @@ export const AUTHEXA_CONFIG = {
     WEBHOOK_URL: 'https://api.authexa.com/webhook/voice-support'
   },
   
-  // Admin Configuration
-  ADMIN_EMAIL: 'murari.mirthipati@authexa.me',
-  ADMIN_PASSWORD: 'Qwertyuiop@0987654321',
+  // Admin Configuration - DO NOT HARDCODE PASSWORDS
+  ADMIN_EMAIL: 'murari.mirthipati@authexa.me', // Only used for identification
   
   // Auto-resolution settings
   AUTO_RESOLUTION: {

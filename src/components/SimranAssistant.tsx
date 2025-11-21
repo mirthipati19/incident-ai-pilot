@@ -51,9 +51,9 @@ const SimranAssistant = () => {
     } else if (msg.includes('install') || msg.includes('software')) {
       return "Our Voice-Controlled Software Installer is perfect for this! You can either speak your request or type it. I'll check our winget library first, and if the software isn't found there, I'll use AI to generate the installation script for you.";
     } else if (msg.includes('login') || msg.includes('sign in') || msg.includes('authentication')) {
-      return "For login issues, make sure you've confirmed your email after registration. If you're still having trouble, try clearing your browser cache or use the 'Forgot Password' option. Admin credentials are: murari.mirthipati@authexa.me with password Authexa@2024!Admin";
+      return "For login issues, make sure you've confirmed your email after registration. If you're still having trouble, try clearing your browser cache or use the 'Forgot Password' option. For admin access, please contact your system administrator.";
     } else if (msg.includes('admin') || msg.includes('credentials')) {
-      return "The admin credentials are:\nEmail: murari.mirthipati@authexa.me\nPassword: Authexa@2024!Admin\n\nPlease keep these secure and only use them for administrative purposes.";
+      return "For admin access and credentials, please contact your system administrator. Admin accounts are managed securely through Supabase Auth and should never be shared publicly.";
     } else if (msg.includes('service catalog') || msg.includes('knowledge base')) {
       return "You can access the Service Catalog and Knowledge Base through the main navigation menu. These sections help you browse available services and find helpful articles for common issues.";
     } else if (msg.includes('help') || msg.includes('how')) {

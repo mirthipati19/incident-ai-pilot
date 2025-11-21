@@ -2,7 +2,7 @@
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { User } from '@supabase/supabase-js';
-import { adminDirectLogin, regularUserLogin, completeMFALogin, createAdminUserIfNeeded } from '@/services/authService';
+import { adminDirectLogin, regularUserLogin, completeMFALogin } from '@/services/authService';
 import { authConfig, logAuthEvent } from '@/utils/authConfig';
 import { useToast } from '@/hooks/use-toast';
 
@@ -39,9 +39,6 @@ export const ImprovedAuthProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     logAuthEvent('Initializing auth context');
-    
-    // Initialize admin user on startup
-    createAdminUserIfNeeded();
     
     // Set up auth state change listener
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
