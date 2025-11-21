@@ -3,10 +3,9 @@ export const authConfig = {
   // Development mode detection - DISABLED for production
   isDevelopment: false,
   
-  // Admin configuration
-  adminEmail: 'murari.mirthipati@authexa.me',
-  adminPassword: 'Authexa@2024!Admin',
-  adminUserId: '000001',
+  // Admin configuration - DO NOT HARDCODE CREDENTIALS
+  // Admin users are managed through Supabase Auth
+  adminEmail: 'murari.mirthipati@authexa.me', // Only used for identification, not authentication
   
   // MFA configuration
   mfaSettings: {
